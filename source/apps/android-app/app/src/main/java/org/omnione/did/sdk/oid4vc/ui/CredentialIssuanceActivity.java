@@ -1,0 +1,669 @@
+/*
+ * Copyright 2025 OmniOne.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.omnione.did.sdk.oid4vc.ui;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import android.app.Activity;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+
+import org.omnione.did.sdk.oid4vc.data.dto.AuthorizationDetails;
+import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
+import org.omnione.did.sdk.oid4vc.network.ApiService;
+import org.omnione.did.sdk.oid4vc.data.dto.CredentialOfferResponse;
+import org.omnione.did.sdk.oid4vc.data.dto.CredentialRequest;
+import org.omnione.did.sdk.oid4vc.data.dto.CredentialResponse;
+import org.omnione.did.sdk.oid4vc.data.dto.IssuerMetadataResponse;
+import org.omnione.did.sdk.oid4vc.data.dto.Proof;
+import org.omnione.did.sdk.oid4vc.data.dto.TokenResponse;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import okhttp3.OkHttpClient;
+import okhttp3.ResponseBody;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import org.omnione.did.sdk.oid4vc.R;
+
+public class CredentialIssuanceActivity extends AppCompatActivity {
+
+    private ProgressBar progressBar;
+    private TextView statusTextView;
+    private ImageView resultImageView;
+    private Button closeButton;
+
+    private Gson gson = new Gson();
+    private String preAuthCode = "";
+    private String issuerState;
+    private String generatedStateForAuthFlow;
+    private String issuerUrl;
+    private String tokenEndpointUrl;
+    private List<String> credentialConfigurationIds;
+    private String selectedCredentialIdentifiers;
+    private Map<String, IssuerMetadataResponse.CredentialConfiguration> issuerSupportedConfigurations;
+
+
+    private final ActivityResultLauncher<Intent> pinActivityLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    String pinCode = result.getData().getStringExtra("PIN_CODE");
+                    step2_getToken(pinCode);
+                } else {
+                    handleFailure("PIN entry canceled.");
+                }
+            });
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_credential_issuance);
+
+        progressBar = findViewById(R.id.progressBar);
+        statusTextView = findViewById(R.id.statusTextView);
+        resultImageView = findViewById(R.id.resultImageView);
+        closeButton = findViewById(R.id.closeButton);
+        closeButton.setOnClickListener(v -> finish());
+
+        String offerUriString = getIntent().getStringExtra("CREDENTIAL_OFFER_URI");
+        if (offerUriString == null) {
+            handleFailure("Credential Offer URI not found.");
+            return;
+        }
+        Log.d("sangjun", "------------------- Original Scanned QR Data -------------------");
+        Log.d("sangjun", offerUriString);
+        Log.d("sangjun", "-------------------------------------------------------------");
+
+        step0_fetchCredentialOffer(offerUriString);
+
+        // Respond directly to credential offer from QR data by value
+
+//        try {
+//            CredentialOfferResponse offer = gson.fromJson(qrData, CredentialOfferResponse.class);
+//
+//            if (offer == null || offer.getCredentialIssuer() == null || offer.getGrants() == null ||
+//                    offer.getGrants().getPreAuthorizedCode() == null || offer.getGrants().getPreAuthorizedCode().getPreAuthorizedCode() == null) {
+//                handleFailure("Required information is missing in the QR data.");
+//                return;
+//            }
+//
+//            issuerUrl = offer.getCredentialIssuer();
+//            preAuthCode = offer.getGrants().getPreAuthorizedCode().getPreAuthorizedCode();
+//
+//            step1_getIssuerInfo();
+//
+//
+//        } catch (JsonSyntaxException e) {
+//            Log.e("sangjun", "JSON parsing failed! Cause: " + e.getMessage());
+//            handleFailure("Invalid QR data format.");
+//
+//        } catch (Exception e) {
+//            Log.e("sangjun", "Unknown error occurred: " + e.getMessage());
+//            handleFailure("An error occurred while processing QR data.");
+//        }
+    }
+
+
+    private void step0_fetchCredentialOffer(String offerUriString) {
+        statusTextView.setText("Verifying Credential Offer...");
+
+        String credentialOfferUrl;
+        try {
+            Uri uri = Uri.parse(offerUriString);
+            Log.d("sangjun","offerUriString : " + offerUriString);
+            String encodedUrl = uri.getQueryParameter("credential_offer_uri");
+            if (encodedUrl == null) {
+                handleFailure("Could not find credential_offer_uri in URI.");
+                return;
+            }
+            credentialOfferUrl = URLDecoder.decode(encodedUrl, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            handleFailure("Invalid Credential Offer URI format.");
+            return;
+        }
+
+        ApiService apiService = createApiService(credentialOfferUrl);
+        apiService.getRequest(credentialOfferUrl).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String credentialOffer = response.body().string();
+                        // todo : eudiw
+//                        qrData = "{\"credential_issuer\": \"https://issuer.eudiw.dev\", \"credential_configuration_ids\": [\"eu.europa.ec.eudi.pid_vc_sd_jwt\"], \"grants\": {\"urn:ietf:params:oauth:grant-type:pre-authorized_code\": {\"pre-authorized_code\": \"4357c191-fd69-487b-a5bb-0e8c5ad0f558\", \"tx_code\": {\"length\": 5, \"input_mode\": \"numeric\", \"description\": \"Please provide the one-time code.\"}}}} ";
+                        CredentialOfferResponse offer = gson.fromJson(credentialOffer, CredentialOfferResponse.class);
+                        issuerUrl = offer.getCredentialIssuer();
+                        credentialConfigurationIds = offer.getCredentialConfigurationIds();
+                        if (credentialConfigurationIds == null || credentialConfigurationIds.isEmpty()) {
+                            handleFailure("No issuable Credential ID in Offer.");
+                            return;
+                        }
+
+                        if (offer.getGrants().getPreAuthorizedCodeGrant() != null) {
+                            // Pre-Authorized Code Flow
+                            Log.d("sangjun", "Pre-Authorized Code Flow");
+                            preAuthCode = offer.getGrants().getPreAuthorizedCodeGrant().getPreAuthorizedCode();
+
+                            if (preAuthCode == null || preAuthCode.isEmpty()) {
+                                handleFailure("Pre-Authorized Code not in Offer.");
+                                return;
+                            }
+
+                        } else if (offer.getGrants().getAuthorizationCodeGrant() != null) {
+                            // Authorization Code Flow
+                            Log.d("sangjun", "Authorization Code Flow");
+                            issuerState = offer.getGrants().getAuthorizationCodeGrant().getIssuerState();
+
+
+                        } else {
+                            handleFailure("Unsupported Grant type or missing Grants information.");
+                        }
+                        step1_getIssuerInfo();
+                    } catch (IOException e) {
+                        handleFailure("Failed to parse Credential Offer response.");
+                    }
+                } else {
+                    handleFailure("Failed to fetch Credential Offer (Code: " + response.code() + ")");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                handleFailure("Credential Offer request failed: " + t.getMessage());
+            }
+        });
+    }
+
+    // Query .well-known/openid-credential-issuer information
+    private void step1_getIssuerInfo() {
+        statusTextView.setText("Fetching issuer information...");
+
+        ApiService apiService = createApiService(issuerUrl);
+        apiService.getIssuerInfo().enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String responseString = response.body().string();
+                        IssuerMetadataResponse info = gson.fromJson(responseString, IssuerMetadataResponse.class);
+
+                        if (info.getAuthorizationServer() != null && !info.getAuthorizationServer().isEmpty()) {
+                            tokenEndpointUrl = info.getAuthorizationServer().get(0);
+                            Log.d("sangjun", "Token Endpoint URL: " + tokenEndpointUrl);
+                        } else {
+                            // If there is no authorization server information in the issuer metadata, issuer = authorization server
+                            handleFailure("'authorization_server' information not in response.");
+                            tokenEndpointUrl = issuerUrl;
+                        }
+
+                        // Save credential_configurations_supported map
+                        issuerSupportedConfigurations = info.getCredentialConfigurationsSupported();
+                        if (issuerSupportedConfigurations == null || issuerSupportedConfigurations.isEmpty()) {
+                            Log.d("sangjun", "No Credential setting information supported by Issuer.");
+                        }
+                        if(preAuthCode.isEmpty()) {
+                            // Call the next step of the Authorization Code Flow (display the authorization server login screen)
+                            startAuthorizationCodeFlow(info.getAuthorizationServer().get(0), issuerState, credentialConfigurationIds);
+                        } else {
+                            Intent intent = new Intent(CredentialIssuanceActivity.this, PinActivity.class);
+                            pinActivityLauncher.launch(intent);
+                        }
+
+                    } catch (IOException e) {
+                        handleFailure("Failed to parse issuer information: " + e.getMessage());
+                    }
+                } else {
+                    handleFailure("Failed to fetch issuer information (Code: " + response.code() + ")");
+                }
+            }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                handleFailure("Issuer information request failed: " + t.getMessage());
+            }
+        });
+    }
+
+    private AlertDialog selectionDialog;
+
+    private void showCredentialSelectionDialog(
+            List<AuthorizationDetails> authorizationDetails,
+            String accessToken,
+            List<AuthorizationDetails> tokenResponseAuthDetails) {
+
+        if (authorizationDetails == null || authorizationDetails.isEmpty()) {
+            handleFailure("No Credential information to select.");
+            return;
+        }
+
+        if (selectionDialog != null && selectionDialog.isShowing()) {
+            selectionDialog.dismiss();
+        }
+
+        LayoutInflater inflater = getLayoutInflater();
+        View dialogView = inflater.inflate(R.layout.dialog_credential_selection, null);
+        LinearLayout container = dialogView.findViewById(R.id.credentialOptionsContainer);
+
+        List<RadioGroup> radioGroups = new ArrayList<>();
+
+        for (AuthorizationDetails group : authorizationDetails) {
+            TextView groupTitle = new TextView(this);
+            groupTitle.setText(group.getCredentialConfigurationId());
+            groupTitle.setTextSize(18f);
+            groupTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+            groupTitle.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
+            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            titleParams.setMargins(0, 24, 0, 8);
+            groupTitle.setLayoutParams(titleParams);
+            container.addView(groupTitle);
+
+            RadioGroup radioGroup = new RadioGroup(this);
+            for (String identifier : group.getCredentialIdentifiers()) {
+                RadioButton radioButton = new RadioButton(this);
+                radioButton.setText(identifier);
+                radioButton.setTextSize(16f);
+                radioButton.setId(View.generateViewId());
+                radioGroup.addView(radioButton);
+            }
+            radioGroups.add(radioGroup);
+            container.addView(radioGroup);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setCancelable(true)
+                .setPositiveButton("Confirm", null)
+                .setNegativeButton("Cancel", null);
+
+        selectionDialog = builder.create();
+
+        selectionDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface d) {
+                final Button okButton = selectionDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                final Button cancelButton = selectionDialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+
+                cancelButton.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        handleFailure("Selection canceled.");
+                        selectionDialog.dismiss();
+                    }
+                });
+
+                okButton.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        String selected = null;
+                        for (RadioGroup rg : radioGroups) {
+                            int selectedId = rg.getCheckedRadioButtonId();
+                            if (selectedId != -1) {
+                                RadioButton rb = rg.findViewById(selectedId);
+                                selected = String.valueOf(rb.getText());
+                                break;
+                            }
+                        }
+
+                        if (selected == null) {
+                            Toast.makeText(CredentialIssuanceActivity.this, "Please select an item.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        final String selectedFinal = selected;
+
+                        okButton.setEnabled(false);
+                        selectionDialog.dismiss();
+                        step3_getCredential(accessToken, tokenResponseAuthDetails, selectedFinal);
+                    }
+                });
+            }
+        });
+        selectionDialog.show();
+    }
+
+    // Token request (to authorization server)
+    private void step2_getToken(String pinCode) {
+        statusTextView.setText("Issuing token...");
+
+        ApiService tokenApiService = createApiService(tokenEndpointUrl);
+        String authorizationHeader = "Basic b2lkNHZjaS1jbGllbnQ6c2VjcmV0";   //todo : client id : secret must be generated instead of a fixed value
+        String grantType = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
+
+        // Create Authorization header (Base64 encoding)
+//        String clientId = "your_client_id";
+//        String clientSecret = "your_client_secret";
+//        String credentials = clientId + ":" + clientSecret;
+//        String encodedCredentials = android.util.Base64.encodeToString(credentials.getBytes(), android.util.Base64.NO_WRAP);
+//        String authorizationHeader = "Basic " + encodedCredentials;
+        List<AuthorizationDetails> authDetailsList = new ArrayList<>();
+        for(String credentialConfigurationId : credentialConfigurationIds) {
+            AuthorizationDetails authDetails = new AuthorizationDetails("openid_credential", credentialConfigurationId, null);
+            authDetailsList.add(authDetails);
+        }
+
+        String authorizationDetailsJson = gson.toJson(authDetailsList);
+
+        tokenApiService.getTokenByPreAuthCode(authorizationHeader, grantType, preAuthCode, pinCode, authorizationDetailsJson).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String responseString = response.body().string();
+                        TokenResponse tokenResponse = gson.fromJson(responseString, TokenResponse.class);
+                        String accessToken = tokenResponse.getAccessToken();
+
+                        if (accessToken == null || accessToken.isEmpty()) {
+                            handleFailure("Could not find Access Token in response.");
+                            return;
+                        }
+                        Log.d("sangjun", "Access Token : " + accessToken);
+
+                        String authHeaderValue = "Bearer " + accessToken;
+
+                        List<AuthorizationDetails> responseAuthDetails = tokenResponse.getAuthorizationDetails();
+                        if (responseAuthDetails != null && !responseAuthDetails.isEmpty()) {
+                            List<String> credentialIdentifiers = new ArrayList<>();
+                            for (AuthorizationDetails id : responseAuthDetails) {
+                                Log.d("sangjun", "Response Authorization Details - ID: " + id.getCredentialConfigurationId());
+                                if (id.getCredentialIdentifiers() != null) {
+                                    // todo : how to handle this array?
+                                        showCredentialSelectionDialog(responseAuthDetails, authHeaderValue, tokenResponse.getAuthorizationDetails());
+                                    for (String actualId : id.getCredentialIdentifiers()) {
+                                        Log.d("sangjun", "  Actual Credential ID: " + actualId);
+                                    }
+                                }
+                            }
+
+                        } else {
+                            // todo : if authDetails is missing, use scope?
+//                            step3_getCredential(authHeaderValue, tokenResponse.getAuthorizationDetails());
+                        }
+                    } catch (IOException e) {
+                        handleFailure("Failed to parse token response.");
+                    }
+                } else {
+                    handleFailure("Token issuance failed (Code: " + response.code() + ")");
+                }
+            }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                handleFailure("Token request failed: " + t.getMessage());
+            }
+        });
+    }
+
+    // Final credential issuance request
+    // draft 14
+    // todo : if authorization Details are returned, use credential_identifier (select tec, ucr)
+    // todo : (e.g., if credential was requested as a scope value, or if pre-authorisation code was used but Authorization Details were not returned) use credential_configuration_id
+    private void step3_getCredential(String accessToken, List<AuthorizationDetails> tokenResponseAuthDetails, String selectedCredentialIdentifiers) {
+        statusTextView.setText("Requesting Credential...");
+        ApiService issuerApiService = createApiService(issuerUrl);
+
+        // TODO: Logic to create the actual CredentialRequest object
+        // Create Credential Request object
+        CredentialRequest credentialRequest;
+
+        if (tokenResponseAuthDetails != null && !tokenResponseAuthDetails.isEmpty()) {
+            // If authorization_details exist, issue with the selected credential
+            credentialRequest = createCredentialRequestWithIdentifier(selectedCredentialIdentifiers);
+            Log.d("sangjun", "Request with Credential Identifier: " + selectedCredentialIdentifiers);
+        } else {
+            // If authorization_details do not exist, based on selectedCredentialConfigurationId (ID selected from Offer)
+            // Find format and doctype in .well-known response and request
+            if (issuerSupportedConfigurations != null && !issuerSupportedConfigurations.isEmpty()) {
+                IssuerMetadataResponse.CredentialConfiguration config = issuerSupportedConfigurations.get(credentialConfigurationIds.get(0));
+                if (config != null && config.getFormat() != null) {
+                    credentialRequest = createCredentialRequestWithFormatAndDoctype(config.getFormat(), config.getDoctype());
+                    Log.d("sangjun", "Request with Format/Doctype: " + config.getFormat() + ", " + config.getDoctype());
+                } else {
+                    handleFailure("Could not find format information for '" + credentialConfigurationIds.get(0) + "' in Issuer support settings.");
+                    return;
+                }
+            } else {
+                handleFailure("Insufficient information for Credential request (authorization_details or .well-known settings).");
+                return;
+            }
+        }
+
+        issuerApiService.getCredential(accessToken, credentialRequest).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String responseJson = response.body().string();
+                        CredentialResponse credentialResponse = gson.fromJson(responseJson, CredentialResponse.class);
+                        WalletData walletData = new WalletData();
+                        // todo : 0th value in the list
+                        walletData.setCredential(credentialResponse.getCredentials().get(0).getCredential());
+                        Log.d("sangjun", "selectedCredentialIdentifiers to be saved in wallet : " + selectedCredentialIdentifiers);
+                        walletData.setFormat(selectedCredentialIdentifiers);
+
+
+                        if (walletData != null && walletData.getCredential() != null) {
+
+                            JsonArray jsonArrayToSave = new JsonArray();
+                            jsonArrayToSave.add(gson.toJsonTree(walletData));
+
+                            saveStringToFile(gson.toJson(jsonArrayToSave), "vc.json");
+
+                            handleSuccess();
+
+                        } else {
+                            handleFailure("Invalid credential response format.");
+                        }
+
+                    } catch (IOException e) {
+                        Log.e("sangjun", "Failed to read response body or save to file.", e);
+                        handleFailure("Failed to save response.");
+                    }
+                } else {
+                    handleFailure("Credential issuance failed (Code: " + response.code() + ")");
+                }
+            }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                handleFailure("Credential request failed: " + t.getMessage());
+            }
+        });
+    }
+
+    private ApiService createApiService(String baseUrl) {
+        if (!baseUrl.startsWith("http")) {
+            baseUrl = "http://" + baseUrl;
+        }
+        if (!baseUrl.endsWith("/")) {
+            baseUrl = baseUrl + "/";
+        }
+
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
+
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        return retrofit.create(ApiService.class);
+    }
+
+    private void handleSuccess() {
+        progressBar.setVisibility(View.GONE);
+        resultImageView.setVisibility(View.VISIBLE);
+        resultImageView.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_success));
+        statusTextView.setText("Credential issued successfully!");
+        closeButton.setVisibility(View.VISIBLE);
+    }
+
+    private void handleFailure(String message) {
+        progressBar.setVisibility(View.GONE);
+        resultImageView.setVisibility(View.VISIBLE);
+        resultImageView.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_failure));
+        statusTextView.setText("Error: " + message);
+        closeButton.setVisibility(View.VISIBLE);
+    }
+
+    private void saveStringToFile(String data, String fileName) {
+        File file = new File(getFilesDir(), fileName);
+
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data.getBytes());
+            Log.d("sangjun", "File saved successfully: " + file.getAbsolutePath());
+        } catch (IOException e) {
+            Log.e("sangjun", "Error occurred while saving file", e);
+            runOnUiThread(() -> Toast.makeText(CredentialIssuanceActivity.this, "Failed to save file", Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    //todo : credentialIdentifier must be specified.. receive from issuer metadata.. sd-jwt or TEC
+
+    private CredentialRequest createAndUseCredentialRequest() {
+        String exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        Proof proof = new Proof("jwt", exampleJwt);
+//        String credentialIdentifier = "TEC";
+//        String credentialIdentifier = "sd-jwt";
+        CredentialRequest credentialRequest = new CredentialRequest();
+        credentialRequest.setCredentialIdentifier(credentialConfigurationIds.get(0));
+        credentialRequest.setProof(proof);
+
+        Log.d("sangjun", "Credential Identifier to request: " + credentialRequest.getCredentialIdentifier());
+        Log.d("sangjun", "Proof Type: " + credentialRequest.getProof().getProofType());
+
+        return credentialRequest;
+    }
+
+
+    // Helper to create CredentialRequest requesting with credential_identifier
+    private CredentialRequest createCredentialRequestWithIdentifier(String identifier) {
+        String exampleJwtProof = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        Proof proof = new Proof("jwt", exampleJwtProof);
+
+        CredentialRequest request = new CredentialRequest();
+        request.setCredentialIdentifier(identifier);
+        request.setProof(proof);
+        return request;
+    }
+
+    // Helper to create CredentialRequest requesting with format and doctype
+    private CredentialRequest createCredentialRequestWithFormatAndDoctype(String format, String doctype) {
+        String exampleJwtProof = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        Proof proof = new Proof("jwt", exampleJwtProof);
+
+        CredentialRequest request = new CredentialRequest();
+        request.setFormat(format);
+        request.setDocType(doctype);
+        request.setProof(proof);
+        return request;
+    }
+
+    private void startAuthorizationCodeFlow(String authorizationEndpoint, String issuerState, List<String> credentialConfigurationIds) {
+        statusTextView.setText("Redirecting to authorization server...");
+
+        Intent authorizeIntent = new Intent(CredentialIssuanceActivity.this, AuthorizeActivity.class);
+        authorizeIntent.putExtra("AUTHORIZATION_ENDPOINT", authorizationEndpoint);
+        authorizeIntent.putExtra("ISSUER_URL", issuerUrl);
+        authorizeIntent.putExtra("ISSUER_STATE", issuerState);
+        authorizeIntent.putStringArrayListExtra("CREDENTIAL_CONFIG_IDS", new ArrayList<>(credentialConfigurationIds));
+        authorizeIntent.putExtra("CLIENT_ID", "oid4vci-android");
+        authorizeIntent.putExtra("TOKEN_ENDPOINT", authorizationEndpoint);
+
+        authFlowLauncher.launch(authorizeIntent);
+
+    }
+
+    private ActivityResultLauncher<Intent> authFlowLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) {
+                    Intent data = result.getData();
+                    if (data != null) {
+                        String flowResult = data.getStringExtra("AUTH_CODE_FLOW_RESULT");
+                        if ("SUCCESS".equals(flowResult)) {
+                            String accessToken = data.getStringExtra("ACCESS_TOKEN");
+                            String tokenResponseJson = data.getStringExtra("TOKEN_RESPONSE_JSON");
+                            TokenResponse tokenResponse = gson.fromJson(tokenResponseJson, TokenResponse.class);
+
+                            // TODO: Verify by comparing the state returned from AuthorizeActivity with generatedStateForAuthFlow
+
+                            Log.d("IssuanceActivity", "Authorization Code Flow successful! Access Token: " + accessToken);
+                            Toast.makeText(this, "Continuing with Credential issuance.", Toast.LENGTH_SHORT).show();
+
+                            String authHeaderValue = "Bearer " + accessToken;
+
+                            List<AuthorizationDetails> responseAuthDetails = tokenResponse.getAuthorizationDetails();
+                            if (responseAuthDetails != null && !responseAuthDetails.isEmpty()) {
+                                List<String> credentialIdentifiers = new ArrayList<>();
+                                for (AuthorizationDetails id : responseAuthDetails) {
+                                    Log.d("sangjun", "Response Authorization Details - ID: " + id.getCredentialConfigurationId());
+                                    if (id.getCredentialIdentifiers() != null) {
+                                        // todo : how to handle this array?
+                                        showCredentialSelectionDialog(responseAuthDetails, authHeaderValue, tokenResponse.getAuthorizationDetails());
+                                        for (String actualId : id.getCredentialIdentifiers()) {
+                                            Log.d("sangjun", "  Actual Credential ID: " + actualId);
+                                        }
+                                    }
+                                }
+
+                            } else {
+                                // todo : if authDetails is missing, use scope?
+//                            step3_getCredential(authHeaderValue, tokenResponse.getAuthorizationDetails());
+                            }
+                        }
+                    }
+                } else if (result.getResultCode() == Activity.RESULT_CANCELED) {
+                    Intent data = result.getData();
+                    String errorMessage = (data != null) ? data.getStringExtra("ERROR_MESSAGE") : "Unknown error";
+                    handleFailure("Authorization Code Flow failed: " + errorMessage);
+                } else {
+                    handleFailure("Unknown result of Authorization Code Flow.");
+                }
+            });
+}

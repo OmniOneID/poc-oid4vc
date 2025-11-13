@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="12dp"
+    tools:context=".ui.ApiActivity">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="API Test"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/issuerUrlEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:ems="10"
+        android:gravity="center"
+        android:hint="Enter server address (IP:Port)"
+        android:inputType="textUri"
+        android:text="10.48.17.124:8080"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleTextView" />
+
+    <EditText
+        android:id="@+id/tokenUrlEditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ems="10"
+        android:gravity="center"
+        android:hint="Enter server address (IP:Port)"
+        android:inputType="textUri"
+        android:text="10.48.17.124:8081"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/issuerUrlEditText" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tokenUrlEditText">
+
+        <Button
+            android:id="@+id/buttonCredentialOffer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Request Credential Offer"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/buttonIssuer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Query .well-known"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/buttonToken"
+            android:maxLines="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Request Token"
+            android:textAllCaps="false"/>
+
+        <EditText
+            android:id="@+id/preAuthCode"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:hint="pre authorized code"/>
+        <EditText
+            android:id="@+id/txCode"
+            android:maxLines="1"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:hint="tx code"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/buttonCredentials"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Request Credentials"
+            android:textAllCaps="false"/>
+
+        <EditText
+            android:id="@+id/accessToken"
+            android:maxLines="1"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:hint="access token"/>
+
+
+        <Button
+            android:id="@+id/buttonAuthorize"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:text="Request Authorize" />
+
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,24 @@
+{
+  "originHash" : "802720068ee0646b87aa1bb81f9228fe7fbe12dc998564adfb0d7664d66bcba3",
+  "pins" : [
+    {
+      "identity" : "codescanner",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/twostraws/CodeScanner.git",
+      "state" : {
+        "revision" : "5e886430238944c7200fc9e10dbf2d9550dba865",
+        "version" : "2.5.2"
+      }
+    },
+    {
+      "identity" : "multiformatvc-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pingidentity/MultiformatVC-iOS",
+      "state" : {
+        "branch" : "main",
+        "revision" : "def7218d734dfd0f1a8043740f5ca995208b3c5a"
+      }
+    }
+  ],
+  "version" : 3
+}

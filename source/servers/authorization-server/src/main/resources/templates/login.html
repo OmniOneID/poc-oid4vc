@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            background-color: #f4f4f4;
+        }
+        .login-container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 350px;
+            box-sizing: border-box;
+        }
+        h2 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; color: #555; text-align: left; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #FF8400;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover { background-color: #FF7400; }
+        .error-message {
+            color: #d9534f;
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .login-container .logo {
+            display: block;
+            width: 180px;
+            height: auto;
+            margin: 0 auto 20px;
+        }
+        .auth-example {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            color: #666;
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            word-wrap: break-word;
+            text-align: left;
+        }
+        .auth-example p { margin: 0; padding: 0; line-height: 1.4; }
+        .auth-example strong { color: #333; }
+        .social-login { margin-top: 1rem; text-align: center; }
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 24px;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #ddd;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .google-btn:hover { background-color: #f5f5f5; }
+        .google-btn img { width: 18px; height: 18px; margin-right: 10px; }
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #ccc;
+            margin: 1.5rem 0;
+        }
+        .separator::before, .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #eee;
+        }
+        .separator:not(:empty)::before { margin-right: .5em; }
+        .separator:not(:empty)::after { margin-left: .5em; }
+
+        @media (max-width: 400px) {
+            .login-container {
+                padding: 1.5rem 1rem;
+            }
+            .auth-example {
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="login-container">
+    <img th:src="@{/images/logo.png}" alt="logo" class="logo">
+    <br>
+    <div th:if="${errorMessage}" class="error-message" th:text="${errorMessage}">
+        Error message
+    </div>
+    <form th:action="@{/login}" method="post">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required autofocus>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="separator">OR</div>
+
+    <div class="social-login">
+        <a href="/oauth2/authorization/google" class="google-btn">
+            <img src="/images/google-logo.png" alt="Google logo"> Login with Google
+        </a>
+    </div>
+
+    <div class="auth-example">
+        <p><strong>Authorization Example</strong></p>
+        <p>http://localhost:8081/oauth2/authorize?response_type=code&amp;client_id=oid4vci-client&amp;scope=openid%20UniversityDegree&amp;redirect_uri=http://127.0.0.1:8081/auth/callback&amp;state=12345</p>
+        <p><strong>user / password</strong></p>
+    </div>
+</div>
+</body>
+</html>

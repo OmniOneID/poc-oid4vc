@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication Complete</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .code-box {
+            display: inline-block;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+<h2>Authentication Successful</h2>
+<p>Authorization Code</p>
+<div class="code-box">
+    <span id="auth-code">Loading...</span>
+</div>
+
+<script>
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        const authCode = params.get('code');
+        const codeDisplayElement = document.getElementById('auth-code');
+
+        if (authCode) {
+            codeDisplayElement.textContent = authCode;
+        } else {
+            codeDisplayElement.textContent = "Code not found.";
+            codeDisplayElement.style.color = 'red';
+        }
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,496 @@
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>OID4VP Verifier Test Console</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script><style>.tab-content{display:none}.tab-content.active{display:block}.tab-button.active{border-bottom:3px solid #3b82f6;color:#3b82f6}.json-editor{font-family:Monaco,Menlo,Ubuntu Mono,monospace;font-size:14px}.flow-diagram{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}.sub-tab-content{display:none}.sub-tab-content.active{display:block}.sub-tab-button.active{background-color:#3b82f6;color:#fff}.request-mode-content{display:none}.request-mode-content.active{display:block}</style></head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+  <!-- Header -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">OID4VP Verifier Test Console</h1>
+    <p class="text-gray-600">OpenID for Verifiable Presentations 1.0 - Advanced Testing Interface</p>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">DCQL Support</span>
+      <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Request URI</span>
+    </div>
+  </div>
+
+  <!-- Main Tabs -->
+  <div class="bg-white rounded-lg shadow-md mb-6">
+    <div class="border-b border-gray-200">
+      <nav class="flex space-x-8 px-6" aria-label="Tabs">
+        <button onclick="switchTab('dcql')" class="tab-button py-4 px-1 border-b-2 font-medium text-sm active">
+          Initiation
+        </button>
+      </nav>
+    </div>
+
+    <!-- DCQL Query Builder Tab -->
+    <div id="dcql-tab" class="tab-content p-6 active">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Query Builder -->
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Build DCQL Query</h3>
+
+          <!-- Quick Templates -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
+            <select onchange="loadTemplate(this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <option value="">-- Select Template --</option>
+              <option value="identity" selected>National ID (SD-JWT) - All Claims</option>
+              <option value="identity2">National ID (SD-JWT)</option>
+              <option value="tec">TEC Student ID Credential (Custom VC)</option>
+              <!--
+              <option value="education">Education Credential</option>
+              <option value="driver">Driver License (mDL)</option>
+              <option value="complex">Complex Multi-Credential</option>-->
+            </select>
+          </div>
+
+          <!-- DCQL Editor -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">DCQL Query JSON</label>
+            <textarea id="dcqlQuery" rows="15" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="{&quot;credentials&quot;: [...]}">{
+  "credentials": [
+    {
+      "id": "national_id",
+      "format": "vc+sd-jwt",
+      "meta": {
+        "vct_values": [
+          "https://credentials.gov.kr/identity_credential"
+        ]
+      }
+    }
+  ]
+}</textarea>
+          </div>
+
+          <!-- Validation -->
+          <div class="flex space-x-2">
+            <button onclick="validateDCQL()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Validate DCQL
+            </button>
+            <button onclick="formatJSON()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+              Format JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Options & Preview -->
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Request Options</h3>
+
+          <!-- Request Mode Selection -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Request Mode</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <input type="radio" name="requestMode" value="by_value" onchange="switchRequestMode('by_value')" class="mr-2 text-blue-600">
+                <span>Passing as URL with encoded parameters</span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="requestMode" value="request_uri" onchange="switchRequestMode('request_uri')" checked class="mr-2 text-blue-600">
+                <span>Request URI (Wallet fetches from /request/{id})</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Request URI Options -->
+          <div id="requestUriOptions" class="request-mode-content active">
+            <div class="bg-yellow-50 p-3 rounded-md mb-4">
+              <p class="text-sm text-yellow-800">
+                <strong>Request URI Mode:</strong> Only client_id and request_uri will be sent to wallet.
+                The wallet will fetch the full request from the provided URI.
+              </p>
+            </div>
+
+            <!-- Response Mode for Request URI -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Response Mode (for fetched request)</label>
+              <div class="space-y-2">
+                <label class="flex items-center">
+                  <input type="radio" name="responseMode" value="direct_post" checked="checked" class="mr-2 text-blue-600">
+                  <span>direct_post</span>
+                  <span>ㅤ</span>
+                  <input type="radio" name="responseMode" value="query" checked="" class="mr-2 text-blue-600">
+                  <span>query</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Client Metadata -->
+          <div class="mb-4" style="display: none;">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Client Metadata (Optional)
+            </label>
+            <textarea id="clientMetadata" rows="4" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="{&quot;client_name&quot;: &quot;Test Verifier&quot;}"></textarea>
+          </div>
+
+          <!-- Initiate Button -->
+          <button onclick="initiateVerification()" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-medium">
+            Initiate Verification Session
+          </button>
+
+          <!-- Results Display -->
+          <div id="qrContainer" class="mt-6 hidden">
+            <h4 class="text-md font-semibold mb-3">Verification Session</h4>
+
+            <!-- QR Code -->
+            <div class="bg-gray-100 p-4 rounded-lg text-center mb-4">
+              <div id="qrcode" class="inline-block" title=""><canvas width="256" height="256" style="display: none;"></canvas><img src="data:image/png;base64,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" style="display: block;"></div>
+              <p class="mt-3 text-sm text-gray-600">Request ID: <span id="requestId" class="font-mono"></span></p>
+            </div>
+
+            <!-- URLs Display -->
+            <div class="space-y-3">
+              <!-- Authorization Request URL -->
+              <div class="p-3 bg-white rounded border border-gray-300">
+                <p class="text-xs text-gray-500 mb-1">Authorization Request URL:</p>
+                <p id="authRequestUrl" class="text-xs font-mono break-all text-gray-700"></p>
+              </div>
+
+              <!-- Request URI (shown only in Request URI mode) -->
+              <div id="requestUriDisplay" class="p-3 bg-white rounded border border-gray-300">
+                <p class="text-xs text-gray-500 mb-1">Request URI (for wallet to fetch):</p>
+                <p id="requestUri" class="text-xs font-mono break-all text-gray-700"></p>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-4 space-y-2">
+              <!-- Same Device Flow Button -->
+              <button onclick="openInSameDevice()" class="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                Open in Same Device (Wallet)
+              </button>
+
+              <!-- Test Request URI Button (shown only in Request URI mode) -->
+              <button id="testRequestUriBtn" onclick="testRequestUri()" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Test Request URI Endpoint
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation Results -->
+      <div id="validationResults" class="mt-6 hidden">
+        <h3 class="text-lg font-semibold mb-3">Validation Results</h3>
+        <div id="validationContent" class="bg-gray-100 p-4 rounded-lg"></div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let currentSession = null;
+      let qrInstance = null;
+      let activeSessions = {};
+
+      // Tab switching
+      function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+          tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+
+        document.getElementById(tabName + '-tab').classList.add('active');
+        event.target.classList.add('active');
+
+        // Update mock session select if switching to direct test
+        if (tabName === 'direct-test') {
+          updateMockSessionSelect();
+        }
+      }
+
+      // Switch Request Mode
+      function switchRequestMode(mode) {
+        document.querySelectorAll('.request-mode-content').forEach(content => {
+          content.classList.remove('active');
+        });
+
+        document.getElementById('requestUriOptions').classList.add('active');
+      }
+
+      // Update Flow Diagram
+      function updateFlowDiagram(flowType) {
+        if (flowType === 'by_value') {
+          document.getElementById('flowByValue').classList.remove('hidden');
+          document.getElementById('flowRequestUri').classList.add('hidden');
+        } else {
+          document.getElementById('flowByValue').classList.add('hidden');
+          document.getElementById('flowRequestUri').classList.remove('hidden');
+        }
+      }
+
+      // Load DCQL template
+      function loadTemplate(template) {
+        const templates = {
+          identity: {
+            credentials: [{
+              "id": "national_id",
+              "format": "vc+sd-jwt",
+              "meta": {
+                "vct_values": ["https://credentials.gov.kr/identity_credential"]
+              }
+            }]
+          },
+          identity2: {
+            "credentials": [
+              {
+                "id": "national_id",
+                "format": "vc+sd-jwt",
+                "meta": {
+                  "vct_values": [
+                    "https://credentials.gov.kr/identity_credential"
+                  ]
+                },
+                "claims": [
+                  {
+                    "path": ["nationality"]
+                  },
+                  {
+                    "path": ["gender"]
+                  }
+                ]
+              }
+            ]
+          },
+          tec: {
+            "credentials": [
+              {
+                "id": "tec_student_id",
+                "format": "vc",
+                "multiple": false,
+                "meta": {
+                  "issuer_values": [
+                    "did:omn:issuer"
+                  ]
+                }
+              }
+            ]
+          }
+        };
+
+        if (template && templates[template]) {
+          document.getElementById('dcqlQuery').value = JSON.stringify(templates[template], null, 2);
+        }
+      }
+
+      // Format JSON
+      function formatJSON() {
+        try {
+          const input = document.getElementById('dcqlQuery').value;
+          const parsed = JSON.parse(input);
+          document.getElementById('dcqlQuery').value = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+        }
+      }
+
+      // Validate DCQL
+      async function validateDCQL() {
+        try {
+          const dcqlQuery = document.getElementById('dcqlQuery').value;
+          const response = await fetch('/oid4vp/validate-dcql', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: dcqlQuery
+          });
+
+          const result = await response.json();
+
+          const resultsDiv = document.getElementById('validationResults');
+          const contentDiv = document.getElementById('validationContent');
+
+          resultsDiv.classList.remove('hidden');
+
+          if (result.valid) {
+            contentDiv.innerHTML = `
+          <div class="text-green-700">
+            <p class="font-semibold">Valid DCQL Query</p>
+            <p>Credentials: ${result.credentialCount || 0}</p>
+            <p>Credential Sets: ${result.credentialSetCount || 0}</p>
+          </div>
+        `;
+          } else {
+            contentDiv.innerHTML = `
+          <div class="text-red-700">
+            <p class="font-semibold">Invalid DCQL Query</p>
+            <p>${result.message}</p>
+          </div>
+        `;
+          }
+        } catch (e) {
+        }
+      }
+
+      // Same Device Flow
+      function openInSameDevice() {
+        const url = document.getElementById('authRequestUrl').textContent;
+        if (url) {
+          window.open(url, '_blank');
+        }
+      }
+
+      // Test Request URI endpoint
+      async function testRequestUri() {
+        if (!currentSession || !currentSession.request_uri) {
+          return;
+        }
+
+        try {
+          const response = await fetch(currentSession.request_uri);
+          const result = await response.json();
+
+          document.getElementById('requestUriTestResult').innerHTML =
+              `<code class="language-json">${JSON.stringify(result, null, 2)}</code>`;
+          Prism.highlightElement(document.querySelector('#requestUriTestResult code'));
+
+          document.getElementById('requestUriModal').classList.remove('hidden');
+        } catch (e) {
+        }
+      }
+
+      // Initiate verification
+      async function initiateVerification() {
+        try {
+          // Show QR container
+          document.getElementById('qrContainer').classList.remove('hidden');
+
+          const dcqlQuery = document.getElementById('dcqlQuery').value;
+          const requestMode = document.querySelector('input[name="requestMode"]:checked').value;
+          const responseMode = document.querySelector('input[name="responseMode"]:checked').value;
+          const clientMetadata = document.getElementById('clientMetadata').value;
+
+          const params = new URLSearchParams({
+            dcql_query: dcqlQuery,
+            response_mode: responseMode
+          });
+
+          if (clientMetadata.trim()) {
+            params.append('client_metadata', clientMetadata);
+          }
+
+          // Add use_request_uri parameter if in request_uri mode
+          if (requestMode === 'request_uri') {
+            params.append('use_request_uri', 'true');
+          }
+          const response = await fetch('/oid4vp/initiate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: params
+          });
+
+          const result = await response.json();
+
+          if (result.authorization_request_uri) {
+            currentSession = result;
+            // Store in active sessions
+            activeSessions[result.state] = {
+              ...result,
+              timestamp: new Date().toISOString(),
+              dcqlQuery: JSON.parse(dcqlQuery),
+              requestMode: requestMode
+            };
+
+            displayQRCode(result.authorization_request_uri);
+            document.getElementById('requestId').textContent = result.request_id;
+
+            // Display URLs
+            document.getElementById('authRequestUrl').textContent = result.authorization_request_uri;
+
+            // Handle Request URI specific display
+            if (requestMode === 'request_uri' && result.request_uri) {
+              document.getElementById('requestUri').textContent = result.request_uri;
+              document.getElementById('requestUriDisplay').classList.remove('hidden');
+              document.getElementById('testRequestUriBtn').classList.remove('hidden');
+            } else {
+              document.getElementById('requestUriDisplay').classList.add('hidden');
+              document.getElementById('testRequestUriBtn').classList.add('hidden');
+            }
+            if (requestMode === 'request_uri') {
+            } else {
+            }
+
+            updateActiveSessions();
+            updateMockSessionSelect();
+          } else {
+          }
+        } catch (e) {
+        }
+      }
+
+      // Display QR Code
+      function displayQRCode(uri) {
+        const container = document.getElementById('qrContainer');
+        container.classList.remove('hidden');
+
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = '';
+
+        qrInstance = new QRCode(qrDiv, {
+          text: uri,
+          width: 256,
+          height: 256,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+
+      // Update active sessions display
+      function updateActiveSessions() {
+        const container = document.getElementById('activeSessions');
+        container.innerHTML = '';
+
+        Object.entries(activeSessions).forEach(([state, session]) => {
+          const sessionDiv = document.createElement('div');
+          sessionDiv.className = 'bg-gray-100 p-3 rounded';
+          sessionDiv.innerHTML = `
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="font-semibold">State:</span> ${state.substring(0, 8)}...
+            <span class="ml-4 text-sm text-gray-600">${session.timestamp}</span>
+            <span class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${session.requestMode || 'by_value'}</span>
+          </div>
+          <button onclick="removeSession('${state}')" class="text-red-600 hover:text-red-800">
+            Remove
+          </button>
+        </div>
+      `;
+          container.appendChild(sessionDiv);
+        });
+      }
+
+      // Update mock session select
+      function updateMockSessionSelect() {
+        const select = document.getElementById('mockSessionSelect');
+        select.innerHTML = '<option value="">-- Select a session --</option>';
+
+        Object.entries(activeSessions).forEach(([state, session]) => {
+          const option = document.createElement('option');
+          option.value = state;
+          option.textContent = `${state.substring(0, 8)}... (${session.timestamp}) [${session.requestMode || 'by_value'}]`;
+          select.appendChild(option);
+        });
+      }
+
+      // Remove session
+      function removeSession(state) {
+        delete activeSessions[state];
+        updateActiveSessions();
+        updateMockSessionSelect();
+      }
+
+      // Add debug log
+      function addLog(message, type = 'info') {
+        // nothing
+      }
+
+      // Initialize credential format on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        formatJSON(); // Format default JSON
+        loadTemplate('national_id'); // Load TEC template by default
+        switchRequestMode('request_uri'); // Set Request URI as default mode
+      });
+    </script>
+
+</body>
+</html>

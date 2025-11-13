@@ -1,0 +1,53 @@
+server:
+  port: 8082
+
+# OpenID4VP Verifier Configuration
+oid4vp:
+  verifier:
+    base-url: "http://localhost:8082"
+    client-name: "OID4VP Test Verifier"
+    endpoints:
+      response: "/oid4vp/response"
+      request: "/oid4vp/request"
+
+# Spring Boot Configuration
+spring:
+  # Jackson Configuration - null
+  jackson:
+    default-property-inclusion: non_null
+  mvc:
+    favicon:
+      enabled: false
+  web:
+    resources:
+      add-mappings: true
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# DCQL Configuration (only used settings)
+dcql:
+  scope:
+    allow-unmapped-scopes: false
+
+# Logging Configuration
+logging:
+  level:
+    # Hide resource handler warnings
+    org.springframework.web.servlet.resource.ResourceHttpRequestHandler: ERROR
+    # Enable debug for DCQL services
+    com.example.oid4vc.verifier.service.DCQLValidationService: DEBUG
+    com.example.oid4vc.verifier.service.ScopeToDCQLMapper: DEBUG
+    com.example.oid4vc.verifier.service.VPTokenValidator: DEBUG
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false

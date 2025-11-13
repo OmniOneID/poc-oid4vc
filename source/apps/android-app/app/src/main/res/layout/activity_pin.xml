@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    tools:context=".PinActivity">
+
+    <TextView
+        android:id="@+id/pinTitleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please register a PIN"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/pinIndicatorLayout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.3"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <LinearLayout
+        android:id="@+id/pinIndicatorLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/keypad_guideline"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/pinTitleTextView">
+
+        <ImageView
+            android:id="@+id/dot1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:src="@drawable/pin_dot_empty" />
+
+        <ImageView
+            android:id="@+id/dot2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:src="@drawable/pin_dot_empty" />
+
+        <ImageView
+            android:id="@+id/dot3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:src="@drawable/pin_dot_empty" />
+
+        <ImageView
+            android:id="@+id/dot4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            android:src="@drawable/pin_dot_empty" />
+    </LinearLayout>
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/keypad_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.4" />
+
+    <androidx.gridlayout.widget.GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:columnCount="3"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/keypad_guideline">
+
+        <Button
+            android:id="@+id/button1"
+            style="@style/PinKey"
+            android:text="1" />
+        <Button
+            android:id="@+id/button2"
+            style="@style/PinKey"
+            android:text="2" />
+        <Button
+            android:id="@+id/button3"
+            style="@style/PinKey"
+            android:text="3" />
+        <Button
+            android:id="@+id/button4"
+            style="@style/PinKey"
+            android:text="4" />
+        <Button
+            android:id="@+id/button5"
+            style="@style/PinKey"
+            android:text="5" />
+        <Button
+            android:id="@+id/button6"
+            style="@style/PinKey"
+            android:text="6" />
+        <Button
+            android:id="@+id/button7"
+            style="@style/PinKey"
+            android:text="7" />
+        <Button
+            android:id="@+id/button8"
+            style="@style/PinKey"
+            android:text="8" />
+        <Button
+            android:id="@+id/button9"
+            style="@style/PinKey"
+            android:text="9" />
+        <Button
+            android:id="@+id/buttonClear"
+            style="@style/PinKey"
+            android:text="X" />
+        <Button
+            android:id="@+id/button0"
+            style="@style/PinKey"
+            android:text="0" />
+        <Button
+            android:id="@+id/buttonBackspace"
+            style="@style/PinKey"
+            android:text="⌫"
+            />
+    </androidx.gridlayout.widget.GridLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
