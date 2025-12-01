@@ -16,17 +16,15 @@
 
 package org.omnione.did.oid4vc.dcql.core;
 
-import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Collections;
-import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Set;
+import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
 
-//TODO: Multi-depth support must be implemented.
 public class DCQLQueryValidator {
 
   public static ValidationResult validate(DCQLQuery dcqlQuery) {

@@ -16,17 +16,24 @@
 
 package org.omnione.did.sdjwt.core.builder;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import org.omnione.did.sdjwt.datamodel.Disclosure;
 import org.omnione.did.sdjwt.util.HashUtils;
 import org.omnione.did.sdjwt.util.SaltGenerator;
-
-import java.util.*;
 
 public class SDObjectBuilder {
 
   private final String hashAlgorithm;
   private final Map<String, Object> claims;
   private final List<String> sdArray;
+  private final Map<String, SDObjectBuilder> nestedBuilders;
 
   public SDObjectBuilder() {
     this(HashUtils.getDefaultHashAlgorithm());
@@ -40,6 +47,7 @@ public class SDObjectBuilder {
     this.hashAlgorithm = hashAlgorithm;
     this.claims = new LinkedHashMap<>();
     this.sdArray = new ArrayList<>();
+    this.nestedBuilders = new LinkedHashMap<>();
   }
 
   public SDObjectBuilder putClaim(String claimName, Object claimValue) {
@@ -59,6 +67,41 @@ public class SDObjectBuilder {
 
     String digest = disclosure.digest(hashAlgorithm);
     sdArray.add(digest);
+    return this;
+  }
+
+  public SDObjectBuilder putNestedObject(String fieldName, Map<String, Object> nestedClaims,
+      List<Disclosure> nestedDisclosures) {
+    if (fieldName == null || fieldName.trim().isEmpty()) {
+      throw new IllegalArgumentException("Field name cannot be null or empty");
+    }
+    validateClaimName(fieldName);
+    if (nestedClaims == null) {
+      throw new IllegalArgumentException("Nested claims cannot be null");
+    }
+
+    SDObjectBuilder nestedBuilder = new SDObjectBuilder(hashAlgorithm);
+
+    Set<String> disclosureFieldNames = new HashSet<>();
+    if (nestedDisclosures != null) {
+      for (Disclosure disclosure : nestedDisclosures) {
+        if (disclosure.getClaimName() != null) {
+          disclosureFieldNames.add(disclosure.getClaimName());
+        }
+      }
+    }
+
+    for (Map.Entry<String, Object> entry : nestedClaims.entrySet()) {
+      if (!disclosureFieldNames.contains(entry.getKey())) {
+        nestedBuilder.putClaim(entry.getKey(), entry.getValue());
+      }
+    }
+
+    if (nestedDisclosures != null) {
+      nestedDisclosures.forEach(nestedBuilder::putSDClaim);
+    }
+
+    nestedBuilders.put(fieldName, nestedBuilder);
     return this;
   }
 
@@ -93,8 +136,13 @@ public class SDObjectBuilder {
   public Map<String, Object> build(boolean includeHashAlg) {
     Map<String, Object> result = new LinkedHashMap<>(claims);
 
-    if (!sdArray.isEmpty()) {
+    for (Map.Entry<String, SDObjectBuilder> nestedEntry : nestedBuilders.entrySet()) {
+      String fieldName = nestedEntry.getKey();
+      SDObjectBuilder nestedBuilder = nestedEntry.getValue();
+      result.put(fieldName, nestedBuilder.build(includeHashAlg));
+    }
 
+    if (!sdArray.isEmpty()) {
       List<String> shuffledSdArray = new ArrayList<>(sdArray);
       Collections.shuffle(shuffledSdArray);
       result.put("_sd", shuffledSdArray);
@@ -119,7 +167,8 @@ public class SDObjectBuilder {
 
   @Override
   public String toString() {
-    return String.format("SDObjectBuilder{hashAlgorithm='%s', claims=%d, sdClaims=%d}",
-        hashAlgorithm, claims.size(), sdArray.size());
+    return String.format(
+        "SDObjectBuilder{hashAlgorithm='%s', claims=%d, sdClaims=%d, nestedObjects=%d}",
+        hashAlgorithm, claims.size(), sdArray.size(), nestedBuilders.size());
   }
 }

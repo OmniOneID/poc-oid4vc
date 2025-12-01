@@ -16,10 +16,11 @@
 
 package org.omnione.did.oid4vc.oid4vp.core;
 
-import org.omnione.did.sdjwt.datamodel.Disclosure;
-
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.omnione.did.sdjwt.datamodel.Disclosure;
 
 public class SelectiveDisclosureProcessor {
 
@@ -54,8 +55,45 @@ public class SelectiveDisclosureProcessor {
       return true;
     }
 
-    return requestedClaims.stream()
-        .anyMatch(requested -> matchesPattern(claimName, requested));
+    for (String requested : requestedClaims) {
+      if (matchesNestedPath(claimName, requested)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static boolean matchesNestedPath(String claimName, String nestedPath) {
+    String lastClaimName = extractLastClaimName(nestedPath);
+
+    if (lastClaimName != null && claimName.equals(lastClaimName)) {
+      return true;
+    }
+
+    if (matchesPattern(claimName, nestedPath)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private static String extractLastClaimName(String nestedPath) {
+    if (nestedPath == null || nestedPath.isEmpty()) {
+      return null;
+    }
+
+    String cleaned = nestedPath.replaceAll("\\[.*?\\]", "");
+
+    String[] parts = cleaned.split("\\.");
+    for (int i = parts.length - 1; i >= 0; i--) {
+      String part = parts[i].trim();
+      if (!part.isEmpty()) {
+        return part;
+      }
+    }
+
+    return null;
   }
 
   private static boolean matchesPattern(String claimName, String pattern) {

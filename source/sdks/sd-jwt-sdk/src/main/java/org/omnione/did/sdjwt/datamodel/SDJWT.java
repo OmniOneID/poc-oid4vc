@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Objects;
 import org.omnione.did.sdjwt.exception.SDJWTException;
 
-//TODO: Structured SD-JWT must be supported.
 public class SDJWT {
 
   private final String credentialJwt;

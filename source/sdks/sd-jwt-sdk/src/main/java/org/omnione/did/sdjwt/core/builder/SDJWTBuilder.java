@@ -17,16 +17,20 @@
 package org.omnione.did.sdjwt.core.builder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import org.omnione.did.sdjwt.datamodel.Disclosure;
+import org.omnione.did.sdjwt.datamodel.DisclosureFrame;
 import org.omnione.did.sdjwt.datamodel.SDJWT;
 import org.omnione.did.sdjwt.exception.SDJWTException;
 import org.omnione.did.sdjwt.util.HashUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.function.Function;
 
 public class SDJWTBuilder {
 
@@ -34,6 +38,7 @@ public class SDJWTBuilder {
 
   private final Map<String, Object> claims;
   private final List<Disclosure> disclosures;
+  private final Map<String, NestedContext> nestedContexts;
   private String hashAlgorithm;
   private boolean includeHashAlgorithm;
   private int decoyCount;
@@ -41,6 +46,7 @@ public class SDJWTBuilder {
   public SDJWTBuilder() {
     this.claims = new LinkedHashMap<>();
     this.disclosures = new ArrayList<>();
+    this.nestedContexts = new LinkedHashMap<>();
     this.hashAlgorithm = HashUtils.getDefaultHashAlgorithm();
     this.includeHashAlgorithm = false;
     this.decoyCount = 0;
@@ -161,6 +167,100 @@ public class SDJWTBuilder {
     return claim("cnf", cnf);
   }
 
+  public SDJWTBuilder buildWithStructuredFrame(Map<String, Object> subjectClaims,
+      DisclosureFrame disclosureFrame) {
+    if (subjectClaims == null) {
+      throw new IllegalArgumentException("Subject claims cannot be null");
+    }
+    if (disclosureFrame == null) {
+      throw new IllegalArgumentException("Disclosure frame cannot be null");
+    }
+
+    processStructuredClaims(subjectClaims, disclosureFrame);
+    return this;
+  }
+
+  private void processStructuredClaims(Map<String, Object> claimsMap, DisclosureFrame frame) {
+    for (String sdFieldName : frame.getSdFieldNames()) {
+      if (!claimsMap.containsKey(sdFieldName)) {
+        throw new IllegalArgumentException(
+            "Claim '" + sdFieldName
+                + "' referenced in disclosure frame not found in subject claims");
+      }
+      Object value = claimsMap.get(sdFieldName);
+      selectivelyDisclosableClaim(sdFieldName, value);
+    }
+
+    for (Map.Entry<String, DisclosureFrame> nestedEntry : frame.getNestedFrames().entrySet()) {
+      String nestedFieldName = nestedEntry.getKey();
+      DisclosureFrame nestedFrame = nestedEntry.getValue();
+
+      if (!claimsMap.containsKey(nestedFieldName)) {
+        throw new IllegalArgumentException(
+            "Nested claim '" + nestedFieldName + "' referenced in disclosure frame not found");
+      }
+
+      Object nestedValue = claimsMap.get(nestedFieldName);
+      if (!(nestedValue instanceof Map)) {
+        throw new IllegalArgumentException(
+            "Nested claim '" + nestedFieldName + "' must be a map/object");
+      }
+
+      @SuppressWarnings("unchecked")
+      Map<String, Object> nestedClaims = (Map<String, Object>) nestedValue;
+
+      claim(nestedFieldName, nestedClaims);
+
+      List<Disclosure> nestedDisclosures = collectNestedDisclosures(nestedClaims, nestedFrame);
+
+      disclosures.addAll(nestedDisclosures);
+
+      NestedContext nestedContext = new NestedContext(nestedClaims, nestedDisclosures);
+      nestedContexts.put(nestedFieldName, nestedContext);
+    }
+
+    for (Map.Entry<String, Object> entry : claimsMap.entrySet()) {
+      String claimName = entry.getKey();
+      Object claimValue = entry.getValue();
+
+      if (!frame.isSdField(claimName) && !frame.hasNestedFrame(claimName)) {
+        claim(claimName, claimValue);
+      }
+    }
+  }
+
+  private List<Disclosure> collectNestedDisclosures(Map<String, Object> nestedClaims,
+      DisclosureFrame nestedFrame) {
+    List<Disclosure> nestedDisclosures = new ArrayList<>();
+
+    for (String sdFieldName : nestedFrame.getSdFieldNames()) {
+      if (nestedClaims.containsKey(sdFieldName)) {
+        Object value = nestedClaims.get(sdFieldName);
+        Disclosure disclosure = Disclosure.forObjectProperty(sdFieldName, value);
+        nestedDisclosures.add(disclosure);
+      }
+    }
+
+    for (Map.Entry<String, DisclosureFrame> deeperEntry : nestedFrame.getNestedFrames()
+        .entrySet()) {
+      String deeperFieldName = deeperEntry.getKey();
+      DisclosureFrame deeperFrame = deeperEntry.getValue();
+
+      if (nestedClaims.containsKey(deeperFieldName)) {
+        Object deeperValue = nestedClaims.get(deeperFieldName);
+        if (deeperValue instanceof Map) {
+          @SuppressWarnings("unchecked")
+          Map<String, Object> deeperClaims = (Map<String, Object>) deeperValue;
+
+          List<Disclosure> deeperDisclosures = collectNestedDisclosures(deeperClaims, deeperFrame);
+          nestedDisclosures.addAll(deeperDisclosures);
+        }
+      }
+    }
+
+    return nestedDisclosures;
+  }
+
   public SDJWT build(Function<String, String> jwtSigner) {
     if (jwtSigner == null) {
       throw new IllegalArgumentException("JWT signer function cannot be null");
@@ -171,6 +271,12 @@ public class SDJWTBuilder {
 
       claims.forEach(builder::putClaim);
       disclosures.forEach(builder::putSDClaim);
+
+      for (Map.Entry<String, NestedContext> nestedEntry : nestedContexts.entrySet()) {
+        String fieldName = nestedEntry.getKey();
+        NestedContext nestedContext = nestedEntry.getValue();
+        builder.putNestedObject(fieldName, nestedContext.claims, nestedContext.disclosures);
+      }
 
       if (decoyCount > 0) {
         builder.putDecoyDigests(decoyCount);
@@ -212,5 +318,16 @@ public class SDJWTBuilder {
 
   public String getHashAlgorithm() {
     return hashAlgorithm;
+  }
+
+  private static class NestedContext {
+
+    final Map<String, Object> claims;
+    final List<Disclosure> disclosures;
+
+    NestedContext(Map<String, Object> claims, List<Disclosure> disclosures) {
+      this.claims = claims;
+      this.disclosures = disclosures;
+    }
   }
 }

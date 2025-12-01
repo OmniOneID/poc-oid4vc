@@ -17,20 +17,9 @@
 package org.omnione.did.oid4vc.oid4vci.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import org.omnione.did.sdjwt.core.builder.SDJWTBuilder;
-import org.omnione.did.sdjwt.datamodel.SDJWT;
-import org.omnione.did.sdjwt.exception.SDJWTException;
-import org.omnione.did.sdjwt.crypto.JWSSigner;
-import org.omnione.did.sdjwt.crypto.SignedJWT;
-import org.omnione.did.sdjwt.crypto.impl.ECDSASigner;
-import org.omnione.did.sdjwt.crypto.impl.RSASSASigner;
-import org.omnione.did.oid4vc.exception.OID4VCException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.omnione.did.wallet.key.WalletManagerInterface;
-import org.omnione.did.wallet.exception.WalletException;
-
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
@@ -38,6 +27,17 @@ import java.security.interfaces.RSAPrivateKey;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import org.omnione.did.oid4vc.exception.OID4VCException;
+import org.omnione.did.sdjwt.core.builder.SDJWTBuilder;
+import org.omnione.did.sdjwt.crypto.JWSSigner;
+import org.omnione.did.sdjwt.crypto.SignedJWT;
+import org.omnione.did.sdjwt.crypto.impl.ECDSASigner;
+import org.omnione.did.sdjwt.crypto.impl.RSASSASigner;
+import org.omnione.did.sdjwt.datamodel.DisclosureFrame;
+import org.omnione.did.sdjwt.datamodel.SDJWT;
+import org.omnione.did.sdjwt.exception.SDJWTException;
+import org.omnione.did.wallet.exception.WalletException;
+import org.omnione.did.wallet.key.WalletManagerInterface;
 
 public class OID4VCIssuer {
 
@@ -97,6 +97,48 @@ public class OID4VCIssuer {
     SDJWT sdJwt = builder.build(this::signJWT);
 
     return sdJwt.toString();
+  }
+
+  public String issueCredential(String credentialType,
+      Map<String, Object> subjectClaims,
+      DisclosureFrame disclosureFrame,
+      PublicKey holderPublicKey) throws OID4VCException {
+
+    try {
+      disclosureFrame.validate(subjectClaims);
+    } catch (SDJWTException e) {
+      throw new OID4VCException("Invalid disclosure frame for given claims", e);
+    }
+
+    SDJWTBuilder builder = new SDJWTBuilder()
+        .issuer(issuerId)
+        .issuedAtNow()
+        .expiresIn(365, ChronoUnit.DAYS)
+        .verifiableCredentialType(credentialType);
+
+    if (holderPublicKey != null) {
+      Map<String, Object> cnf = createConfirmationClaim(holderPublicKey);
+      builder.confirmation(cnf);
+    }
+
+    builder.buildWithStructuredFrame(subjectClaims, disclosureFrame);
+
+    SDJWT sdJwt = builder.build(this::signJWT);
+
+    return sdJwt.toString();
+  }
+
+  public String issueCredential(String credentialType,
+      Map<String, Object> subjectClaims,
+      Map<String, Object> disclosureFrameMap,
+      PublicKey holderPublicKey) throws OID4VCException {
+
+    try {
+      DisclosureFrame disclosureFrame = DisclosureFrame.fromMap(disclosureFrameMap);
+      return issueCredential(credentialType, subjectClaims, disclosureFrame, holderPublicKey);
+    } catch (SDJWTException e) {
+      throw new OID4VCException("Failed to create disclosure frame from map", e);
+    }
   }
 
   private Map<String, Object> createConfirmationClaim(PublicKey holderPublicKey) {

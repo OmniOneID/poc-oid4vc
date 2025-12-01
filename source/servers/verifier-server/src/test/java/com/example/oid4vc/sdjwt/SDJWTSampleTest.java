@@ -16,23 +16,20 @@
 
 package com.example.oid4vc.sdjwt;
 
-import org.omnione.did.sdjwt.datamodel.Disclosure;
-import org.omnione.did.sdjwt.datamodel.SDJWT;
-import org.omnione.did.oid4vc.dcql.core.DCQLCredentialMatcher;
-import org.omnione.did.oid4vc.dcql.core.DCQLQueryValidator;
-import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
-import org.omnione.did.oid4vc.oid4vci.core.OID4VCIssuer;
-import org.omnione.did.oid4vc.oid4vp.core.OID4VPHandler;
-import org.omnione.did.oid4vc.oid4vp.core.SDJWTVerifier;
-import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Security;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
@@ -40,13 +37,16 @@ import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.math.ec.ECPoint;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import org.omnione.did.oid4vc.dcql.core.DCQLCredentialMatcher;
+import org.omnione.did.oid4vc.dcql.core.DCQLQueryValidator;
+import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
+import org.omnione.did.oid4vc.oid4vci.core.OID4VCIssuer;
+import org.omnione.did.oid4vc.oid4vp.core.OID4VPHandler;
+import org.omnione.did.oid4vc.oid4vp.core.SDJWTVerifier;
+import org.omnione.did.sdjwt.datamodel.Disclosure;
+import org.omnione.did.sdjwt.datamodel.DisclosureFrame;
+import org.omnione.did.sdjwt.datamodel.SDJWT;
+import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
 import org.omnione.did.wallet.key.WalletManagerFactory;
 import org.omnione.did.wallet.key.WalletManagerFactory.WalletManagerType;
 import org.omnione.did.wallet.key.WalletManagerInterface;
@@ -103,8 +103,9 @@ public class SDJWTSampleTest {
 
     // Create issuer
     OID4VCIssuer issuer = new OID4VCIssuer(
-        walletManager,
-        "assert",
+        holderPrivateKey,
+        //walletManager,
+        //"assert",
         "did:omn:issuer"
     );
 
@@ -117,19 +118,99 @@ public class SDJWTSampleTest {
         "nationality", "KR",
         "id_number", "900101-1234567",
         "address", Map.of(
-            "country", "Republic of Korea",
-            "region", "Seoul",
-            "locality", "Gangnam-gu",
-            "street_address", "Teheran-ro 123"
+            "country", "대한민국",
+            "region", "서울특별시",
+            "locality", "강남구",
+            "street_address", "테헤란로 123"
         ),
         "phone_number", "+82-10-1234-5678",
         "email", "raonkim@raoncorp.com"
     );
 
-    // Issue SD-JWT VC
+    // ===== Create DisclosureFrame for Structured SD-JWT =====
+    // Method 1: Using DisclosureFrame API (Programmatic approach)
+    System.out.println("Create DisclosureFrame using API");
+    DisclosureFrame disclosureFrame = new DisclosureFrame();
+
+    // Top-level selective disclosure fields
+    // These fields will have their digests in the top-level _sd array
+    disclosureFrame.addSdFields(Arrays.asList(
+        "given_name",
+        "family_name",
+        "birth_date",
+        "gender",
+        "nationality",
+        "id_number",
+        "phone_number"
+    ));
+
+    // Nested frame for address object
+    // Only "locality" and "street_address" will be selectively disclosed
+    // "country" and "region" will be included as plain values
+    DisclosureFrame addressFrame = new DisclosureFrame();
+    addressFrame.addSdFields(Arrays.asList(
+        "locality",
+        "street_address",
+        "region"
+    ));
+    disclosureFrame.addNestedFrame("address", addressFrame);
+
+    System.out.println("DisclosureFrame structure:");
+    System.out.println("  Top-level SD fields: given_name, family_name, birth_date, id_number, phone_number, email");
+    System.out.println("  Nested frame for 'address': locality, street_address will be disclosed");
+    System.out.println("  Non-disclosed nested fields: country, region (included as plain values)");
+    System.out.println();
+
+    /* ===== Alternative Method: Using JSON string =====
+    System.out.println("Create DisclosureFrame from JSON");
+    String disclosureFrameJson = """
+    {
+      "_sd": [
+        "given_name",
+        "family_name",
+        "birth_date",
+        "id_number",
+        "phone_number",
+        "email"
+      ],
+      "address": {
+        "_sd": [
+          "locality",
+          "street_address"
+        ]
+      }
+    }
+    """;
+    DisclosureFrame disclosureFrame = DisclosureFrame.fromJson(disclosureFrameJson);
+    */
+
+    /* ===== Alternative Method: Using Map =====
+    System.out.println("Create DisclosureFrame from Map");
+    Map<String, Object> disclosureFrameMap = new HashMap<>();
+    disclosureFrameMap.put("_sd", Arrays.asList(
+        "given_name",
+        "family_name",
+        "birth_date",
+        "id_number",
+        "phone_number",
+        "email"
+    ));
+
+    Map<String, Object> addressFrameMap = new HashMap<>();
+    addressFrameMap.put("_sd", Arrays.asList(
+        "locality",
+        "street_address"
+    ));
+    disclosureFrameMap.put("address", addressFrameMap);
+
+    DisclosureFrame disclosureFrame = DisclosureFrame.fromMap(disclosureFrameMap);
+    */
+
+    // Issue SD-JWT VC with DisclosureFrame
     String identityVC = issuer.issueCredential(
         "https://credentials.gov.kr/identity_credential",
         identityInfo,
+        disclosureFrame,
         holderPublicKey
     );
 
@@ -194,6 +275,12 @@ public class SDJWTSampleTest {
         .purpose("Family name verification")
         .build();
 
+    DCQLQuery.ClaimQuery addressClaimQuery = DCQLQuery.ClaimQuery.builder()
+        .id("address_verification")
+        .path(Arrays.asList("address", "locality"))
+        .purpose("Address verification")
+        .build();
+
     // Create Credential Query
     DCQLQuery.CredentialQuery credentialQuery = DCQLQuery.CredentialQuery.builder()
         .id("identity_credential")
@@ -211,8 +298,8 @@ public class SDJWTSampleTest {
 
     System.out.println("DCQL Query creation completed");
     System.out.println("   - Credential ID: " + credentialQuery.getId());
-    System.out.println("   - Required Claims: " + credentialQuery.getClaims().size());
-    System.out.println("   - Meta Fields: " + dcqlMeta.size());
+    System.out.println("   - Required Claims: " + credentialQuery.getClaims().size() + "개");
+    System.out.println("   - Meta Fields: " + dcqlMeta.size() + "개");
 
     // Convert DCQL Query to JSON
     String dcqlJsonString = convertDCQLQueryToJsonString(dcqlQuery);
@@ -242,9 +329,10 @@ public class SDJWTSampleTest {
     Set<String> dcqlRequiredClaims = DCQLCredentialMatcher.extractMatchingClaimNames(dcqlQueryFromStr, parsedVC);
     System.out.println("Extracted Claim names: " + dcqlRequiredClaims);
 
-    String dcqlVpToken = OID4VPHandler.createVPToken(
+    String dcqlVpToken = OID4VPHandler.createVPTokenWithDcqlId(
         identityVC,
         dcqlRequiredClaims,
+            "test-dcql",
         holderPrivateKey,
         "did:omn:issuer",
         "dcql-nonce-456"
@@ -254,10 +342,18 @@ public class SDJWTSampleTest {
     System.out.println("   " + dcqlVpToken);
     System.out.println();
 
+    dcqlVpToken = OID4VPHandler.createVPToken(
+        identityVC,
+        dcqlRequiredClaims,
+        holderPrivateKey,
+        "did:omn:issuer",
+        "dcql-nonce-456"
+    );
+
     // =========== STEP 5: Verify VP token (Check DCQL conditions) ===========
     System.out.println("Verify VP token (Check DCQL conditions)");
 
-    SDJWTVerifier verifier = new SDJWTVerifier(issuerPublicKey, holderPublicKey);
+    SDJWTVerifier verifier = new SDJWTVerifier(holderPublicKey, holderPublicKey);
 
     // DCQL-based VP verification
     SDJWTVerifier.SDJWTClaimsSet dcqlClaims = verifier.verify(
@@ -280,7 +376,7 @@ public class SDJWTSampleTest {
    */
   private String convertDCQLQueryToJsonString(DCQLQuery dcqlQuery) {
     try {
-      com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+      ObjectMapper objectMapper = new ObjectMapper();
       return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(dcqlQuery);
     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       System.out.println("Jackson conversion failed, using default toString: " + e.getMessage());
@@ -318,7 +414,7 @@ public class SDJWTSampleTest {
       KeyFactory keyFactory = KeyFactory.getInstance("EC");
       uncompressPublicKey = keyFactory.generatePublic(pubKeySpec).getEncoded();
       return uncompressPublicKey;
-    } catch (java.security.spec.InvalidKeySpecException | java.security.NoSuchAlgorithmException e) {
+    } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }
   }

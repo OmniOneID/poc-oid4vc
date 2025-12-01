@@ -17,20 +17,18 @@
 package org.omnione.did.sdjwt.datamodel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.omnione.did.sdjwt.exception.SDJWTException;
-import org.omnione.did.sdjwt.util.Base64UrlUtils;
-import org.omnione.did.sdjwt.util.HashUtils;
-import org.omnione.did.sdjwt.util.SaltGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.omnione.did.sdjwt.exception.SDJWTException;
+import org.omnione.did.sdjwt.util.Base64UrlUtils;
+import org.omnione.did.sdjwt.util.HashUtils;
+import org.omnione.did.sdjwt.util.SaltGenerator;
 
-//TODO: Structured SD-JWT must be supported.
 public class Disclosure {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

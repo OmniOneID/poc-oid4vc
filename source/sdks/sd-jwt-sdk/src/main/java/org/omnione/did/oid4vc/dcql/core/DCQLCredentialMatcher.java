@@ -16,20 +16,20 @@
 
 package org.omnione.did.oid4vc.dcql.core;
 
-import lombok.extern.slf4j.Slf4j;
-import org.omnione.did.sdjwt.datamodel.SDJWT;
-import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
-import org.omnione.did.oid4vc.exception.OID4VCException;
-import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
-
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
+import org.omnione.did.oid4vc.exception.OID4VCException;
+import org.omnione.did.sdjwt.datamodel.Disclosure;
+import org.omnione.did.sdjwt.datamodel.SDJWT;
+import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
 
-//TODO: Multi-depth support must be implemented.
 @Slf4j
 public class DCQLCredentialMatcher {
 
@@ -79,12 +79,12 @@ public class DCQLCredentialMatcher {
 
     Set<String> matchingClaims = new HashSet<>();
 
-    Map<String, Object> actualValues = extractClaimValues(sdjwt);
+    Map<String, Object> allClaims = extractAllCredentialClaims(sdjwt);
 
     dcqlQuery.getCredentials().forEach(credential -> {
       if (credential.getClaims() == null) {
-        matchingClaims.addAll(actualValues.keySet());
-        log.info("credential.claims is null, including all claims: {}", actualValues.keySet());
+        matchingClaims.addAll(allClaims.keySet());
+        log.info("credential.claims is null, including all claims: {}", allClaims.keySet());
         return;
       }
 
@@ -94,38 +94,217 @@ public class DCQLCredentialMatcher {
       }
 
       credential.getClaims().forEach(claimQuery -> {
-        if (DCQLPathProcessor.isIndexBasedPath(claimQuery.getPath())) {
-          Integer index = DCQLPathProcessor.extractIndex(claimQuery.getPath());
-          if (index != null && sdjwt.getDisclosures() != null && index >= 0 && index < sdjwt.getDisclosures().size()) {
-            var disclosure = sdjwt.getDisclosures().get(index);
-            String claimName = disclosure.getClaimName();
-            Object claimValue = disclosure.getClaimValue();
+        List<Object> path = claimQuery.getPath();
 
-            if (meetsClaimConditions(claimQuery, claimValue)) {
-              matchingClaims.add(claimName);
-              log.info("Index-based condition satisfied claim added: [{}] {}={}", index, claimName, claimValue);
-            } else {
-              log.info("Index-based condition unsatisfied claim excluded: [{}] {}={}", index, claimName, claimValue);
-            }
-          } else {
-            log.info("Invalid index or disclosures: index={}, disclosures size={}", index,
-                sdjwt.getDisclosures() != null ? sdjwt.getDisclosures().size() : 0);
-          }
-        } else {
-          String claimName = DCQLPathProcessor.pathToClaimName(claimQuery.getPath());
-          if (claimName != null && meetsClaimConditions(claimQuery, actualValues.get(claimName))) {
-            matchingClaims.add(claimName);
-            log.info("Condition satisfied claim added: {}={}", claimName,
-                actualValues.get(claimName));
-          } else {
-            log.info("Condition unsatisfied claim excluded: {}={}", claimName,
-                actualValues.get(claimName));
-          }
+        if (path == null || path.isEmpty()) {
+          log.info("Claim path is empty or null");
+          return;
         }
+
+        processPathAndCollectClaims(allClaims, path, claimQuery, matchingClaims, sdjwt);
       });
     });
 
     return matchingClaims;
+  }
+
+  private static Map<String, Object> extractAllCredentialClaims(SDJWT sdjwt) {
+    Map<String, Object> allClaims = new HashMap<>();
+
+    try {
+      SimpleJWTDecoder.SimpleJWT jwt = SimpleJWTDecoder.parse(sdjwt.getCredentialJwt());
+      Map<String, Object> payload = jwt.getPayloadAsMap();
+
+      payload.entrySet().stream().filter(entry -> !isReservedJWTClaim(entry.getKey()))
+          .forEach(entry -> allClaims.put(entry.getKey(), entry.getValue()));
+
+      log.info("Extracted claims from JWT payload: {}", allClaims.keySet());
+
+    } catch (OID4VCException | IllegalArgumentException e) {
+      log.error("JWT payload extraction failed: {}", e.getMessage(), e);
+    }
+
+    if (sdjwt.getDisclosures() != null && !sdjwt.getDisclosures().isEmpty()) {
+      for (Disclosure disclosure : sdjwt.getDisclosures()) {
+        if (disclosure.getClaimName() != null) {
+          allClaims.put(disclosure.getClaimName(), disclosure.getClaimValue());
+          log.info("Added top-level disclosed claim: {} = {}", disclosure.getClaimName(),
+              disclosure.getClaimValue());
+        }
+      }
+
+      integrateDisclosuresIntoCredential(allClaims, sdjwt);
+    }
+
+    log.info("All extracted claims after integrating disclosures: {}", allClaims.keySet());
+    return allClaims;
+  }
+
+  private static void integrateDisclosuresIntoCredential(Map<String, Object> allClaims,
+      SDJWT sdjwt) {
+    Map<String, Disclosure> digestToDisclosure = new HashMap<>();
+    for (Disclosure disclosure : sdjwt.getDisclosures()) {
+      String digest = disclosure.digest();
+      digestToDisclosure.put(digest, disclosure);
+      log.info("Disclosure digest: {} -> {}.{}", digest, disclosure.getClaimName(),
+          disclosure.getClaimValue());
+    }
+
+    for (Map.Entry<String, Object> entry : new HashMap<>(allClaims).entrySet()) {
+      String claimName = entry.getKey();
+      Object claimValue = entry.getValue();
+
+      if (claimValue instanceof Map) {
+        integrateDisclosuresIntoObject(claimName, (Map<String, Object>) claimValue,
+            digestToDisclosure, allClaims);
+      }
+    }
+  }
+
+  private static void integrateDisclosuresIntoObject(String parentName,
+      Map<String, Object> parentObject, Map<String, Disclosure> digestToDisclosure,
+      Map<String, Object> allClaims) {
+
+    Object sdValue = parentObject.get("_sd");
+    if (sdValue instanceof List) {
+      List<?> sdArray = (List<?>) sdValue;
+
+      for (Object sdItem : sdArray) {
+        if (sdItem instanceof String) {
+          String digest = (String) sdItem;
+
+          Disclosure disclosure = digestToDisclosure.get(digest);
+          if (disclosure != null && disclosure.getClaimName() != null) {
+            String claimName = disclosure.getClaimName();
+            Object claimValue = disclosure.getClaimValue();
+
+            parentObject.put(claimName, claimValue);
+            log.info("Integrated disclosure: {}.{} = {}", parentName, claimName, claimValue);
+
+            if (claimValue instanceof Map) {
+              integrateDisclosuresIntoObject(parentName + "." + claimName,
+                  (Map<String, Object>) claimValue, digestToDisclosure, allClaims);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private static void processPathAndCollectClaims(Map<String, Object> allClaims, List<Object> path,
+      DCQLQuery.ClaimQuery claimQuery, Set<String> matchingClaims, SDJWT sdjwt) {
+
+    if (path.isEmpty() || !(path.get(0) instanceof String)) {
+      log.info("Invalid path: first element must be a string (top-level claim)");
+      return;
+    }
+
+    String topLevelClaim = (String) path.get(0);
+    Object rootValue = allClaims.get(topLevelClaim);
+
+    log.info("Processing path: {}, topLevelClaim: {}, rootValue type: {}", path, topLevelClaim,
+        rootValue != null ? rootValue.getClass().getSimpleName() : "null");
+
+    if (rootValue == null) {
+      log.info("Top-level claim not found: {}", topLevelClaim);
+      return;
+    }
+
+    if (path.size() == 1) {
+      if (meetsClaimConditions(claimQuery, rootValue)) {
+        matchingClaims.add(topLevelClaim);
+        log.info("Single-level path matched: {} = {}", topLevelClaim, rootValue);
+      } else {
+        log.info("Single-level path condition not met: {} = {}", topLevelClaim, rootValue);
+      }
+      return;
+    }
+
+    List<Object> remainingPath = new ArrayList<>(path.subList(1, path.size()));
+    log.info("Multi-depth path detected: {} with remaining path: {}", topLevelClaim, remainingPath);
+    collectMatchingValuesFromPath(rootValue, remainingPath, claimQuery, topLevelClaim,
+        matchingClaims);
+  }
+
+  private static void collectMatchingValuesFromPath(Object current, List<Object> remainingPath,
+      DCQLQuery.ClaimQuery claimQuery, String claimNamePrefix, Set<String> matchingClaims) {
+
+    log.info("collectMatchingValuesFromPath: claimNamePrefix={}, remainingPath={}, currentType={}",
+        claimNamePrefix, remainingPath,
+        current != null ? current.getClass().getSimpleName() : "null");
+
+    if (remainingPath.isEmpty()) {
+      log.info("End of path reached for: {}, value: {}", claimNamePrefix, current);
+      if (meetsClaimConditions(claimQuery, current)) {
+        matchingClaims.add(claimNamePrefix);
+        log.info("Deep path matched: {} = {}", claimNamePrefix, current);
+      }
+      return;
+    }
+
+    Object nextPathElement = remainingPath.get(0);
+    List<Object> nextRemaining = new ArrayList<>(remainingPath.subList(1, remainingPath.size()));
+
+    if (nextPathElement == null) {
+      if (!(current instanceof List)) {
+        log.info("Wildcard path element (null) but current is not a list: {}", current.getClass());
+        return;
+      }
+
+      List<?> currentList = (List<?>) current;
+      for (int i = 0; i < currentList.size(); i++) {
+        Object item = currentList.get(i);
+        String newClaimName = claimNamePrefix + "[" + i + "]";
+        collectMatchingValuesFromPath(item, nextRemaining, claimQuery, newClaimName,
+            matchingClaims);
+      }
+      return;
+    }
+
+    if (nextPathElement instanceof Integer) {
+      if (!(current instanceof List)) {
+        log.info("Integer index but current is not a list: {}", current.getClass());
+        return;
+      }
+
+      int idx = (Integer) nextPathElement;
+      List<?> currentList = (List<?>) current;
+
+      if (idx < 0 || idx >= currentList.size()) {
+        log.info("Index out of bounds: {} (list size: {})", idx, currentList.size());
+        return;
+      }
+
+      Object element = currentList.get(idx);
+      String newClaimName = claimNamePrefix + "[" + idx + "]";
+      collectMatchingValuesFromPath(element, nextRemaining, claimQuery, newClaimName,
+          matchingClaims);
+      return;
+    }
+
+    if (nextPathElement instanceof String) {
+      if (!(current instanceof Map)) {
+        log.info("String key but current is not a map: type={}, value={}",
+            current.getClass().getSimpleName(), current);
+        return;
+      }
+
+      Map<?, ?> currentMap = (Map<?, ?>) current;
+      String key = (String) nextPathElement;
+
+      log.info("Searching for key '{}' in map with keys: {}", key, currentMap.keySet());
+
+      Object nextValue = currentMap.get(key);
+      if (nextValue == null) {
+        log.info("Key not found in map: {} (available keys: {})", key, currentMap.keySet());
+        return;
+      }
+
+      String newClaimName = claimNamePrefix + "." + key;
+      log.info("Found nested value at path '{}': {}", newClaimName, nextValue);
+      collectMatchingValuesFromPath(nextValue, nextRemaining, claimQuery, newClaimName,
+          matchingClaims);
+    }
   }
 
   private static boolean checkVctValues(SDJWT sdjwt, List<String> requiredVcts) {
@@ -153,64 +332,6 @@ public class DCQLCredentialMatcher {
     } catch (OID4VCException | IllegalArgumentException e) {
       log.error("VCT check error: {}", e.getMessage(), e);
       return false;
-    }
-  }
-
-  private static Map<String, Object> extractClaimValues(SDJWT sdjwt) {
-    Map<String, Object> claimValues = new HashMap<>();
-
-    if (sdjwt.getDisclosures() != null) {
-      for (var disclosure : sdjwt.getDisclosures()) {
-        String claimName = disclosure.getClaimName();
-        Object claimValue = disclosure.getClaimValue();
-
-        claimValues.put(claimName, claimValue);
-
-        if (claimValue instanceof Map) {
-          extractNestedClaims(claimName, (Map<String, Object>) claimValue, claimValues);
-        }
-      }
-    }
-
-    try {
-      SimpleJWTDecoder.SimpleJWT jwt = SimpleJWTDecoder.parse(sdjwt.getCredentialJwt());
-      Map<String, Object> payload = jwt.getPayloadAsMap();
-
-      payload.entrySet().stream().filter(entry -> !isReservedJWTClaim(entry.getKey()))
-          .forEach(entry -> {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-
-            claimValues.put(key, value);
-
-            if (value instanceof Map) {
-              extractNestedClaims(key, (Map<String, Object>) value, claimValues);
-            }
-          });
-
-    } catch (OID4VCException | IllegalArgumentException e) {
-      log.error("JWT payload claim extraction failed: {}", e.getMessage(), e);
-    }
-
-    return claimValues;
-  }
-
-  private static void extractNestedClaims(String parentPath, Map<String, Object> nestedMap,
-      Map<String, Object> claimValues) {
-    if (nestedMap == null) {
-      return;
-    }
-
-    for (Map.Entry<String, Object> entry : nestedMap.entrySet()) {
-      String nestedKey = entry.getKey();
-      Object nestedValue = entry.getValue();
-      String fullPath = parentPath + "." + nestedKey;
-
-      claimValues.put(fullPath, nestedValue);
-
-      if (nestedValue instanceof Map) {
-        extractNestedClaims(fullPath, (Map<String, Object>) nestedValue, claimValues);
-      }
     }
   }
 

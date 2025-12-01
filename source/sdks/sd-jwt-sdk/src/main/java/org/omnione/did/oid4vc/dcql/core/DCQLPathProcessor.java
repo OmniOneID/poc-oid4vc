@@ -16,11 +16,11 @@
 
 package org.omnione.did.oid4vc.dcql.core;
 
-import org.omnione.did.oid4vc.exception.OID4VCException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import org.omnione.did.oid4vc.exception.OID4VCException;
 
-//TODO: Multi-depth support must be implemented.
 public class DCQLPathProcessor {
 
   public static boolean isIndexBasedPath(List<Object> path) {
@@ -78,5 +78,77 @@ public class DCQLPathProcessor {
     }
 
     return true;
+  }
+
+  public static Object navigatePath(Object root, List<Object> path) {
+    if (root == null || path == null || path.isEmpty()) {
+      return null;
+    }
+
+    return navigatePathRecursive(root, path, 0);
+  }
+
+  private static Object navigatePathRecursive(Object current, List<Object> path, int index) {
+    if (index >= path.size()) {
+      return current;
+    }
+
+    Object pathElement = path.get(index);
+
+    if (pathElement == null) {
+      if (!(current instanceof List)) {
+        return null;
+      }
+
+      List<Object> results = new ArrayList<>();
+      List<?> currentList = (List<?>) current;
+
+      for (Object item : currentList) {
+        Object result = navigatePathRecursive(item, path, index + 1);
+        if (result != null) {
+          if (result instanceof List) {
+            results.addAll((List<?>) result);
+          } else {
+            results.add(result);
+          }
+        }
+      }
+
+      return results.isEmpty() ? null : results;
+    }
+
+    if (pathElement instanceof Integer) {
+      if (!(current instanceof List)) {
+        return null;
+      }
+
+      int idx = (Integer) pathElement;
+      List<?> currentList = (List<?>) current;
+
+      if (idx < 0 || idx >= currentList.size()) {
+        return null;
+      }
+
+      Object element = currentList.get(idx);
+      return navigatePathRecursive(element, path, index + 1);
+    }
+
+    if (pathElement instanceof String) {
+      if (!(current instanceof Map)) {
+        return null;
+      }
+
+      Map<?, ?> currentMap = (Map<?, ?>) current;
+      String key = (String) pathElement;
+
+      Object nextValue = currentMap.get(key);
+      if (nextValue == null) {
+        return null;
+      }
+
+      return navigatePathRecursive(nextValue, path, index + 1);
+    }
+
+    return null;
   }
 }
