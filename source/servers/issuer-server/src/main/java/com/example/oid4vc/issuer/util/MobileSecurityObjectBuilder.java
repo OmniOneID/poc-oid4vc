@@ -158,15 +158,8 @@ public class MobileSecurityObjectBuilder {
         // EC 공개키에서 좌표 추출
         if (publicKey instanceof ECPublicKey) {
             ECPublicKey ecPub = (ECPublicKey) publicKey;
-            byte[] xCoord = ecPub.getW().getAffineX().toByteArray();
-            byte[] yCoord = ecPub.getW().getAffineY().toByteArray();
-            
-            // 🔧 FIX (ISO/IEC 18013-5 준수): P-256의 경우 좌표를 32 바이트로 Zero-pad
-            // RFC 8152 Section 13.1.1: "x and y are the coordinates of the public key,
-            // represented as big-endian integers. For P-256, each coordinate shall be
-            // exactly 32 octets"
-            xCoord = padCoordinate(xCoord, 32);  // P-256 = 32 bytes
-            yCoord = padCoordinate(yCoord, 32);  // P-256 = 32 bytes
+            byte[] xCoord = bigIntegerToFixedLengthBytes(ecPub.getW().getAffineX(), 32);
+            byte[] yCoord = bigIntegerToFixedLengthBytes(ecPub.getW().getAffineY(), 32);
             
             // x, y 좌표 (음수 CBOR 레이블)
             keyMap.put(-2, xCoord);  // x coordinate
@@ -175,6 +168,31 @@ public class MobileSecurityObjectBuilder {
         
         // Object를 String으로 캐스트하여 반환
         return (Map<String, Object>) (Map<?, ?>) keyMap;
+    }
+    
+    /**
+     * BigInteger를 고정 길이 바이트 배열로 변환
+     * 
+     * BigInteger.toByteArray()는 부호 비트를 고려하여 예상과 다른 길이를 반환할 수 있습니다.
+     * 이 메서드는 항상 지정된 길이의 바이트 배열을 반환합니다.
+     * 
+     * @param value BigInteger 값
+     * @param length 목표 바이트 길이
+     * @return 고정 길이 바이트 배열 (Zero-padded if needed, 또는 truncated if too large)
+     */
+    private static byte[] bigIntegerToFixedLengthBytes(java.math.BigInteger value, int length) {
+        byte[] input = value.toByteArray();
+        byte[] output = new byte[length];
+        
+        if (input.length <= length) {
+            // Zero-pad: 원본을 끝에 복사
+            System.arraycopy(input, 0, output, length - input.length, input.length);
+        } else {
+            // Truncate: 뒤쪽 바이트만 가져오기 (선행 0x00 제거)
+            System.arraycopy(input, input.length - length, output, 0, length);
+        }
+        
+        return output;
     }
     
     /**

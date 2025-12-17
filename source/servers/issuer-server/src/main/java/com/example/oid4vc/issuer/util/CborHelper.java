@@ -36,4 +36,18 @@ public class CborHelper {
     public static <T> T decode(byte[] bytes, Class<T> clazz) throws Exception {
         return CBOR_MAPPER.readValue(bytes, clazz);
     }
+    
+    /**
+     * CBOR 바이트를 JSON 문자열로 변환 (Pretty-printed)
+     * 
+     * 콘솔 출력이나 로깅 용도로 사용
+     */
+    public static String toJsonString(byte[] cborBytes) throws Exception {
+        // CBOR을 Map으로 디코딩
+        Object decoded = CBOR_MAPPER.readValue(cborBytes, Object.class);
+        
+        // JSON Mapper로 Pretty-print
+        ObjectMapper jsonMapper = new ObjectMapper();
+        return jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(decoded);
+    }
 }

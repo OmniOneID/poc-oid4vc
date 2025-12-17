@@ -1,10 +1,13 @@
 package com.example.oid4vc.issuer.issuer;
 
 import com.example.oid4vc.issuer.util.CborHelper;
+import com.example.oid4vc.issuer.util.InMemoryCertificateChainLoader;
+import com.example.oid4vc.issuer.util.TestCertificateGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
+import java.security.KeyPair;
 import java.util.Base64;
 import java.util.Map;
 
@@ -20,8 +23,16 @@ public class MdocIssuerTest {
     private MdocIssuer mdocIssuer;
     
     @BeforeEach
-    void setUp() {
-        mdocIssuer = new MdocIssuer();
+    void setUp() throws Exception {
+        // 1. 테스트용 KeyPair 생성
+        KeyPair testKeyPair = TestCertificateGenerator.generateTestDSKeyPair();
+        
+        // 2. CertificateChainLoader 생성
+        InMemoryCertificateChainLoader certChainLoader = 
+            new InMemoryCertificateChainLoader(testKeyPair);
+        
+        // 3. MdocIssuer 생성
+        mdocIssuer = new MdocIssuer(certChainLoader);
     }
     
     @Test
@@ -51,9 +62,19 @@ public class MdocIssuerTest {
         assertNotNull(mdlBytes, "CBOR 바이트는 null이 아니어야 함");
         assertTrue(mdlBytes.length > 0, "mDL 크기는 0보다 커야 함");
         
+        // 📋 mDL을 JSON으로 출력
+        String jsonPretty = CborHelper.toJsonString(mdlBytes);
+        System.out.println("\n" + "=".repeat(80));
+        System.out.println("📋 발급된 mDL (JSON 형식)");
+        System.out.println("=".repeat(80));
+        System.out.println(jsonPretty);
+        System.out.println("=".repeat(80));
+        
         System.out.println("✅ mDL 발급 성공");
         System.out.println("   mDL 크기: " + mdlBytes.length + " bytes");
         System.out.println("   Base64 길이: " + mdlBase64.length() + " chars");
+        System.out.println("   Base64 값:");
+        System.out.println("   " + mdlBase64);
     }
     
     @Test

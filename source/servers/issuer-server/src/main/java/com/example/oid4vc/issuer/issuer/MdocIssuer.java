@@ -45,6 +45,10 @@ import java.util.*;
  * - Section 9.1.2: Issuer Data Authentication (IA 책임)
  * - Section 9.1.3: mdoc Authentication (Device 책임)
  * - Section 9.1.3.4: "The mdoc shall generate this structure"
+ * 
+ * x5chain 포함:
+ * - COSE_Sign1의 unprotected header에 인증서 체인 포함
+ * - Section 9.1.2.4 참고
  */
 @Component("org.iso.18013.5.1.mDL")
 public class MdocIssuer implements CredentialIssuer {
@@ -54,26 +58,31 @@ public class MdocIssuer implements CredentialIssuer {
     private final PrivateKey issuerPrivateKey;
     private final PublicKey issuerPublicKey;
     private final PublicKey devicePublicKey;
+    private final CertificateChainLoader certChainLoader;
     
-    public MdocIssuer() {
+    public MdocIssuer(CertificateChainLoader certChainLoader) {
         try {
             // BouncyCastle 제공자 등록
             Security.addProvider(new BouncyCastleProvider());
             
-            // TODO: Properties에서 키 경로 로드
-            String ISSUER_PRIVATE_KEY = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT";
-            String ISSUER_PUBLIC_KEY = "Ay/5wNs8D1oX+FDRYgnJUmZ/Ovnff+/73G8LD53+m1tk";
+            this.certChainLoader = certChainLoader;
             
-            this.issuerPrivateKey = getPrivateKeyObject(Base64.decode(ISSUER_PRIVATE_KEY));
-            this.issuerPublicKey = getPublicKeyObject(
-                unCompressPublicKey(Base64.decode(ISSUER_PUBLIC_KEY))
-            );
+            // 1️⃣ 테스트 환경: CertificateChainLoader에서 KeyPair 추출
+            KeyPair testKeyPair = certChainLoader.getKeyPair();
+            this.issuerPrivateKey = testKeyPair.getPrivate();
+            this.issuerPublicKey = testKeyPair.getPublic();
             
             // Device의 공개키는 IA가 관리
             // (개인키는 Device만 관리, 표준 요구사항)
             this.devicePublicKey = this.issuerPublicKey;  // 임시 (실제는 다른 키)
             
-            logger.info("MdocIssuer initialized successfully");
+            logger.info("==========================================");
+            logger.info("✅ MdocIssuer initialized successfully");
+            logger.info("   Mode: Development (Test KeyPair)");
+            logger.info("   Private Key: Ready for signing");
+            logger.info("   Public Key: Included in x5chain certificate");
+            logger.info("==========================================");
+            
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize MdocIssuer", e);
         }
@@ -140,15 +149,23 @@ public class MdocIssuer implements CredentialIssuer {
             );
             logger.debug("Built Mobile Security Object (MSO)");
             
-            // 5️⃣ MSO를 COSE Sign1로 서명 (IA의 개인키 사용)
+            // 5️⃣ x5chain 로드 (Section 9.1.2.4)
+            List<byte[]> x5chain = certChainLoader.loadX5Chain();
+            logger.debug("Loaded x5chain with {} certificate(s)", x5chain.size());
+            
+            // 6️⃣ MSO를 COSE Sign1로 서명 (x5chain 포함, IA의 개인키 사용)
             // Section 9.1.2.4: "issuing authority infrastructure then digitally signs 
             // the MSO using a private key that is kept secret by [the IA]"
             byte[] msoBytes = CborHelper.encode(mso);
-            byte[] issuerAuthCose = CoseHelper.coseSign1Sign(msoBytes, issuerPrivateKey);
-            logger.debug("Generated IssuerAuth (COSE Sign1) with size: {} bytes", 
+            byte[] issuerAuthCose = CoseHelper.coseSign1Sign(
+                msoBytes, 
+                issuerPrivateKey,
+                x5chain  // ✅ x5chain 포함!
+            );
+            logger.debug("Generated IssuerAuth (COSE Sign1) with x5chain: {} bytes", 
                 issuerAuthCose.length);
             
-            // 6️⃣ IssuerSigned만 포함된 Document 생성
+            // 7️⃣ IssuerSigned만 포함된 Document 생성
             Map<String, Object> document = MdocDocumentBuilder.buildDocument(
                 issuerSignedItems,
                 issuerAuthCose
@@ -159,12 +176,13 @@ public class MdocIssuer implements CredentialIssuer {
             // IA 책임 구간 종료
             // ============================================
             
-            // 7️⃣ CBOR 인코딩 및 Base64 변환
+            // 8️⃣ CBOR 인코딩 및 Base64 변환
             byte[] mdocBytes = CborHelper.encode(document);
             String result = Base64.toBase64String(mdocBytes);
             
             logger.info("Successfully issued mDL (size: {} bytes)", mdocBytes.length);
             logger.info("✅ Document contains IssuerSigned (IA responsibility)");
+            logger.info("✅ COSE_Sign1 includes x5chain (DS Certificate)");
             logger.info("⏳ Device will add DeviceSigned (Device responsibility)");
             logger.info("📋 See ISO/IEC 18013-5:2021 Section 9.1.3.4");
             
