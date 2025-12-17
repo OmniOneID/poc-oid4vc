@@ -67,6 +67,13 @@ dependencies {
 	// QR Image
 	implementation 'com.google.zxing:javase:3.5.1'
 
+	// mDL 구현을 위한 의존성
+	// CBOR 처리 (Jackson)
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.2'
+	
+	// 암호화 (BouncyCastle) - EC 키 처리 및 서명
+	implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+
 }
 
 dependencyManagement {
