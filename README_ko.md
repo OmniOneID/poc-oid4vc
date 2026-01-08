@@ -48,6 +48,13 @@ poc-oid4vc
 | **`docs`** | 프로젝트 문서를 포함합니다. |
 | ┖ `api` | 각 서버 및 SDK에 대한 API 문서입니다. |
 
+## 지원 버전
+| 구분       | 버전 정보 | 링크 |
+|------------|-----------|------|
+| OID4VCI    | OpenID for Verifiable Credential Issuance 1.0 | [스펙 문서](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) |
+| OID4VP     | OpenID for Verifiable Presentations 1.0 | [스펙 문서](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) |
+| SD-JWT     | RFC 9901        | [스펙 문서](https://datatracker.ietf.org/doc/rfc9901/) |
+
 ## 기능 목록
 * **OID4VCI**
 

@@ -48,6 +48,13 @@ Description of each folder:
 | **`docs`** | Contains project documentation. |
 | ┖ `api` | API documentation for each server and SDK. |
 
+## Supported Versions
+| Standard   | Version | Link |
+|------------|---------|------|
+| OID4VCI    | OpenID for Verifiable Credential Issuance 1.0 | [Specification](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) |
+| OID4VP     | OpenID for Verifiable Presentations 1.0 | [Specification](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) |
+| SD-JWT     | RFC 9901 | [Specification](https://datatracker.ietf.org/doc/rfc9901/) |
+
 ## Feature List
 * **OID4VCI**
 
