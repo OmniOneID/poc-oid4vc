@@ -264,32 +264,6 @@ struct VerifyView: View {
                     
                     state = .completed(message: finalResponse)
                     
-                    //                    let sdJwtString = credentials.credential
-                    //                    let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
-                    //                    let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
-                    //                    dcqlId = "national_id"  // Hardcoded, should parse dcql and insert id
-                    //
-                    //                    vpToken = try createVpToken(
-                    //                        from: sdJwtString,
-                    //                        nonce: authRequest.nonce,
-                    //                        aud: authRequest.clientId,
-                    //                        signer: signer
-                    //                    )
-                    //
-                    //                    let vpJsonObject: [String: [String]] = [dcqlId: [vpToken]]
-                    //                    let vpJsonData = try JSONSerialization.data(withJSONObject: vpJsonObject, options: [])
-                    //                    guard let finalVpJsonString = String(data: vpJsonData, encoding: .utf8) else {
-                    //                        throw "Failed to create final VP JSON string"
-                    //                    }
-                    //                    vpTokenToSend = finalVpJsonString
-                    //
-                    //                    state = .submittingVp
-                    //                    let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
-                    //                                                                         vpToken: vpTokenToSend,
-                    //                                                                         state: authRequest.state)
-                    //
-                    //                    state = .completed(message: finalResponse)
-                    
                 }  else if format.contains("TEC") || format.contains("UCR") {
                     guard let credentials = walletData.credentialResponse.credentials.first else {
                         vcState = .error(message: "No saved VC found.")
