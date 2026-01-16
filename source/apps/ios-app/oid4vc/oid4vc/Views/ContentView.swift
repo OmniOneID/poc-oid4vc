@@ -90,6 +90,19 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
             
+            Button {
+                let source = "WyJsTTMyYnBoUVpuRWNqM1AwLW9Ybi1nIiwiYWRkcmVzcyIseyJyZWdpb24iOiLshJzsmrjtirnrs4Tsi5wiLCJjb3VudHJ5Ijoi64yA7ZWc66-86rWtIiwic3RyZWV0X2FkZHJlc3MiOiLthYztl6TrnoDroZwgMTIzIiwibG9jYWxpdHkiOiLqsJXrgqjqtawifV0"
+                let disclosure = Disclosure.parse(raw: source)!
+                let made = disclosure.getDisclosure()
+                let result = (source == made)
+                
+                print("result \(result)")
+                print("\(made)")
+            } label: {
+                Text("Test")
+            }
+
+            
             Spacer()
             
             #if targetEnvironment(simulator)

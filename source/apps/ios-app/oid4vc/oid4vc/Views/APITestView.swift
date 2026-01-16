@@ -19,11 +19,11 @@ import SwiftUI
 struct APITestView: View {
     private let apiService = APIService()
     
-//    @State private var issuerUrl: String = "http://192.168.3.130:8096/"
-//    @State private var tokenUrl: String = "http://192.168.3.130:18096/"
+    @State private var issuerUrl: String = "http://192.168.3.130:8096/"
+    @State private var tokenUrl: String = "http://192.168.3.130:18096/"
     
-    @State private var issuerUrl: String = "http://10.48.17.124:8080"
-    @State private var tokenUrl: String = "http://10.48.17.124:8081"
+//    @State private var issuerUrl: String = "http://10.48.17.124:8080"
+//    @State private var tokenUrl: String = "http://10.48.17.124:8081"
     
     @State private var preAuthCodeForTest: String = ""
     @State private var txCodeForTest: String = ""

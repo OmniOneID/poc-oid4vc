@@ -24,10 +24,19 @@ struct AuthRequest: Codable {
     let state: String
     let clientId: String
     
+    let responseType: String
+    let responseMode: String
+    let dcqlQuery: String
+//    let clientMetadata: [String: AnyCodable]
+    
     enum CodingKeys: String, CodingKey {
         case responseUri = "response_uri"
         case nonce, state
         case clientId = "client_id"
+        case responseType = "response_type"
+        case responseMode = "response_mode"
+        case dcqlQuery = "dcql_query"
+//        case clientMetadata = "client_metadata"
     }
 }
 
@@ -229,47 +238,57 @@ struct VerifyView: View {
                 state = .fetchingRequest
                 guard let requestUri = getRequestUri() else { throw "Invalid verification URI." }
                 let authRequestData = try await apiService.getAuthorizationRequest(url: requestUri)
-                let authRequest = try JSONDecoder().decode(AuthRequest.self, from: authRequestData)
-
+                let authRequest : AuthRequest = try JSONDecoder().decode(AuthRequest.self, from: authRequestData)
+                
                 let walletData = try loadVcFile()
-
+                
                 state = .creatingVp
-
+                
                 let vpToken: String
-                let vpTokenToSend: String
                 let format = walletData.format
                 let dcqlId: String // dcql id as a key
-
+                
                 if format.contains("NationalID") || format.contains("mDL") {
                     guard let credentials = walletData.credentialResponse.credentials.first else {
                         vcState = .error(message: "No saved VC found.")
                         return
                     }
-                    let sdJwtString = credentials.credential
-                    let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
-                    let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
-                    dcqlId = "national_id"  // Hardcoded, should parse dcql and insert id
                     
-                    vpToken = try createVpToken(
-                        from: sdJwtString,
-                        nonce: authRequest.nonce,
-                        aud: authRequest.clientId,
-                        signer: signer
-                    )
-
-                    let vpJsonObject: [String: [String]] = [dcqlId: [vpToken]]
-                    let vpJsonData = try JSONSerialization.data(withJSONObject: vpJsonObject, options: [])
-                    guard let finalVpJsonString = String(data: vpJsonData, encoding: .utf8) else {
-                        throw "Failed to create final VP JSON string"
-                    }
-                    vpTokenToSend = finalVpJsonString
+                    vpToken = try createVpTokenSdJwt(authRequest: authRequest,
+                                                     credential: credentials.credential)
                     
                     state = .submittingVp
                     let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
-                                                                         vpToken: vpTokenToSend,
+                                                                         vpToken: vpToken,
                                                                          state: authRequest.state)
-
+                    
                     state = .completed(message: finalResponse)
+                    
+                    //                    let sdJwtString = credentials.credential
+                    //                    let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
+                    //                    let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
+                    //                    dcqlId = "national_id"  // Hardcoded, should parse dcql and insert id
+                    //
+                    //                    vpToken = try createVpToken(
+                    //                        from: sdJwtString,
+                    //                        nonce: authRequest.nonce,
+                    //                        aud: authRequest.clientId,
+                    //                        signer: signer
+                    //                    )
+                    //
+                    //                    let vpJsonObject: [String: [String]] = [dcqlId: [vpToken]]
+                    //                    let vpJsonData = try JSONSerialization.data(withJSONObject: vpJsonObject, options: [])
+                    //                    guard let finalVpJsonString = String(data: vpJsonData, encoding: .utf8) else {
+                    //                        throw "Failed to create final VP JSON string"
+                    //                    }
+                    //                    vpTokenToSend = finalVpJsonString
+                    //
+                    //                    state = .submittingVp
+                    //                    let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
+                    //                                                                         vpToken: vpTokenToSend,
+                    //                                                                         state: authRequest.state)
+                    //
+                    //                    state = .completed(message: finalResponse)
                     
                 }  else if format.contains("TEC") || format.contains("UCR") {
                     guard let credentials = walletData.credentialResponse.credentials.first else {
@@ -279,38 +298,68 @@ struct VerifyView: View {
                     let vcData = credentials.credential
                     let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
                     let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
-
+                    
                     vpToken = try createUnsignedVpToken(
                         from: vcData,
                         nonce: authRequest.nonce,
                         aud: authRequest.clientId,
                         signer: signer
                     )
-
+                    
                     state = .submittingVp
                     let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
                                                                          vpToken: vpToken,
                                                                          state: authRequest.state)
-
+                    
                     state = .completed(message: finalResponse)
                 } else {
                     throw "Unsupported VC format: \(format)"
                 }
-                                
-
-//                state = .submittingVp
-//                let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
-//                                                                     vpToken: vpToken,
-//                                                                     state: authRequest.state)
-//
-//                state = .completed(message: finalResponse)
-
-                } catch {
-                    state = .failed(error: "\(error)")
-                }
+            } catch {
+                state = .failed(error: "\(error)")
+            }
         }
     }
     
+    private func createVpTokenSdJwt(authRequest : AuthRequest, credential: String) throws -> String {
+        
+        let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
+        let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
+                
+        
+        let dcqlQuery : DCQLQuery = try .init(from: authRequest.dcqlQuery)
+        let validationResult = DCQLQueryValidator.validate(dcqlQuery)
+        print("DCQL Query validation result: \(validationResult.isValid())")
+        
+        
+        let parsedVC : SDJWT = SDJWT.parse(raw: credential)
+        
+        let isMatching = DCQLCredentialMatcher.matchesMetadata(sdjwt: parsedVC,
+                                                               metadata: dcqlQuery.credentials?.first?.meta)
+        
+        if !isMatching
+        {
+            throw "No matching VC"
+        }
+        
+        let dcqlRequiredClaims = DCQLCredentialMatcher.extractMatchingClaimNames(dcqlQuery: dcqlQuery,
+                                                                                 sdjwt: parsedVC)
+        
+        let vpToken = try createVpToken(
+            from: credential,
+            requiredClaims: dcqlRequiredClaims,
+            nonce: authRequest.nonce,
+            aud: authRequest.clientId,
+            signer: signer
+        )
+        
+        let vpJsonObject: [String: [String]] = ["national_id" : [vpToken]]
+        let vpJsonData = try JSONSerialization.data(withJSONObject: vpJsonObject, options: [])
+        guard let finalVpJsonString = String(data: vpJsonData, encoding: .utf8) else {
+            throw "Failed to create final VP JSON string"
+        }
+        return finalVpJsonString
+    }
     
     private func createUnsignedVpToken(from vcBase64String: String, nonce: String, aud: String, signer: Signer) throws -> String {
 
@@ -362,8 +411,12 @@ struct VerifyView: View {
     ///   - aud: Verifier's client_id (audience)
     ///   - signer: Signer object to be used for signing
     /// - Returns: The final VP Token string to be submitted (VC~VP)
-    private func createVpToken(from sdJwt: String, nonce: String, aud: String, signer: Signer) throws -> String {
+    private func createVpToken(from sdJwt: String,requiredClaims: Set<String>, nonce: String, aud: String, signer: Signer) throws -> String {
 
+        let jwt = SDJWT.parse(raw: sdJwt)
+        
+        let selectiveDisclosure = jwt.disclosures.filter { requiredClaims.contains($0.claimName!) }
+        
         let header: [String: Any] = [
             "alg": signer.algorithm,
             "typ": "kb+jwt", // Key Binding JWT type
@@ -396,7 +449,12 @@ struct VerifyView: View {
         
         let keyBindingJwt = "\(signingInput).\(signatureBase64Url)"
         
-        return "\(sdJwt)\(keyBindingJwt)"
+//        return "\(sdJwt)\(keyBindingJwt)"
+        let keyBindedJWT = SDJWT.init(credentialJwt: jwt.credentialJwt,
+                                      disclosures: selectiveDisclosure,
+                                      keyBindingJwt: keyBindingJwt)
+//        jwt.keyBindingJwt = keyBindingJwt
+        return keyBindedJWT.toString()
     }
     
     
@@ -433,3 +491,4 @@ extension Data {
             .replacingOccurrences(of: "=", with: "")
     }
 }
+
