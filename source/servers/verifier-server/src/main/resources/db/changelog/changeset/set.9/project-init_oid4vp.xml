@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <changeSet id="init-oid4vp" author="shlee1223">
+    <createTable tableName="oid4vp">
+      <column name="id" type="BIGINT" autoIncrement="true">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="type" type="VARCHAR(50)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="config" type="TEXT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false"/>
+      </column>
+      <column name="updated_at" type="TIMESTAMP">
+        <constraints nullable="true"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="insert-default-pure-oid4vp-config" author="shlee1223">
+    <insert tableName="oid4vp">
+      <column name="type" value="OID4VP"/>
+      <column name="config"><![CDATA[{
+  "baseUrl": "http://192.168.3.130:8088",
+  "clientName": "OID4VP Verifier",
+  "invocationScheme": "openid4vp://",
+  "clientId": {
+    "scheme": "decentralized_identifier",
+    "value": "did:omn:verifier"
+  },
+  "session": {
+    "sessionTtl": 300000
+  },
+  "endpoints": {
+    "response": "/oid4vp/response",
+    "request": "/oid4vp/request"
+  },
+  "clientMetadata": {
+    "vpFormatsSupported": {
+      "opendid_vc": {
+        "proof_type_values": ["Secp256r1Signature2018"]
+      },
+      "vc+sd-jwt": {
+        "sd-jwt_alg_values": ["ES256"],
+        "kb-jwt_alg_values": ["ES256"]
+      },
+      "dc+sd-jwt": {
+        "sd-jwt_alg_values": ["ES256"],
+        "kb-jwt_alg_values": ["ES256"]
+      }
+    }
+  },
+  "crypto": {
+    "vpTokenEncryptionKey": "opAOdwHlm+TS4nFPAAVWKYxeRT0yrjfbScPf50tYp6I="
+  }
+}]]></column>
+    </insert>
+  </changeSet>
+
+  <changeSet id="add-unique-constraint-oid4vp-type" author="shlee1223">
+    <addUniqueConstraint tableName="oid4vp" columnNames="type" constraintName="uk_oid4vp_type"/>
+  </changeSet>
+
+</databaseChangeLog>

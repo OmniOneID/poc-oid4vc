@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OID4VP Configuration Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <style>
+    .json-editor {
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .config-card {
+      transition: all 0.2s ease;
+    }
+    .config-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .modal {
+      display: none;
+    }
+    .modal.active {
+      display: flex;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+  <!-- Header -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">OID4VP Configuration Manager</h1>
+        <p class="text-gray-600">Manage OID4VP verifier configurations</p>
+      </div>
+      <div class="flex space-x-3">
+        <a href="/oid4vp/test" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          ← Back to Test Console
+        </a>
+        <a href="/oid4vp/config/scope" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          DCQL Scope Mapping
+        </a>
+        <button onclick="openCreateModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          + New Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration List -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Configurations</h2>
+      <button onclick="loadConfigs()" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div id="configList" class="space-y-4">
+      <!-- Configs will be loaded here -->
+      <div class="text-center text-gray-500 py-8">Loading configurations...</div>
+    </div>
+  </div>
+
+<!-- Create/Edit Modal -->
+<div id="configModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
+    <div class="p-6 border-b border-gray-200">
+      <div class="flex justify-between items-center">
+        <h3 id="modalTitle" class="text-xl font-semibold text-gray-800">New Configuration</h3>
+        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+      <input type="hidden" id="editConfigId">
+
+      <!-- Type Field -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Type *</label>
+        <input type="text" id="configType" placeholder="e.g., OID4VP"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        <p class="text-xs text-gray-500 mt-1">Unique identifier for this configuration</p>
+      </div>
+
+      <!-- Config JSON Field -->
+      <div class="mb-4">
+        <div class="flex justify-between items-center mb-2">
+          <label class="block text-sm font-medium text-gray-700">Configuration JSON *</label>
+          <div class="space-x-2">
+            <button onclick="formatConfigJson()" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+              Format
+            </button>
+            <button onclick="validateConfigJson()" class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+              Validate
+            </button>
+          </div>
+        </div>
+        <textarea id="configJson" rows="20"
+                  class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter configuration JSON..."></textarea>
+      </div>
+
+      <!-- Validation Result -->
+      <div id="validationResult" class="hidden mb-4 p-3 rounded-lg"></div>
+    </div>
+
+    <div class="p-6 border-t border-gray-200 bg-gray-50">
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          Cancel
+        </button>
+        <button onclick="saveConfig()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Save Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+    <h3 class="text-xl font-semibold text-gray-800 mb-4">Delete Configuration</h3>
+    <p class="text-gray-600 mb-6">Are you sure you want to delete this configuration? This action cannot be undone.</p>
+    <input type="hidden" id="deleteConfigId">
+    <div class="flex justify-end space-x-3">
+      <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+        Cancel
+      </button>
+      <button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Load configs on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    loadConfigs();
+    Prism.highlightAll();
+  });
+
+  // Load all configurations
+  async function loadConfigs() {
+    try {
+      const response = await fetch('/oid4vp/config/api');
+      const configs = await response.json();
+
+      const container = document.getElementById('configList');
+
+      if (configs.length === 0) {
+        container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <p>No configurations found.</p>
+                        <button onclick="openCreateModal()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Create your first configuration
+                        </button>
+                    </div>
+                `;
+        return;
+      }
+
+      container.innerHTML = configs.map(config => `
+                <div class="config-card border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium">
+                                    ${escapeHtml(config.type)}
+                                </span>
+                                <span class="text-gray-500 text-sm">ID: ${config.id}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 space-y-1">
+                                <p><strong>Base URL:</strong> ${escapeHtml(config.config?.baseUrl || 'N/A')}</p>
+                                <p><strong>Client Name:</strong> ${escapeHtml(config.config?.clientName || 'N/A')}</p>
+                                <p><strong>Client ID:</strong> ${escapeHtml(config.config?.clientId?.scheme || '')}:${escapeHtml(config.config?.clientId?.value || 'N/A')}</p>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-400">
+                                Created: ${config.createdAt || 'N/A'} | Updated: ${config.updatedAt || 'N/A'}
+                            </div>
+                        </div>
+                        <div class="flex space-x-2 ml-4">
+                            <button onclick="viewConfig(${config.id})" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                View
+                            </button>
+                            <button onclick="editConfig(${config.id})" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                                Edit
+                            </button>
+                            <button onclick="openDeleteModal(${config.id})" class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+    } catch (e) {
+      console.error('Failed to load configs:', e);
+      document.getElementById('configList').innerHTML = `
+                <div class="text-center text-red-500 py-8">
+                    Failed to load configurations. Please try again.
+                </div>
+            `;
+    }
+  }
+
+  // Open create modal
+  function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'New Configuration';
+    document.getElementById('editConfigId').value = '';
+    document.getElementById('configType').value = '';
+    document.getElementById('configJson').value = '';
+    document.getElementById('validationResult').classList.add('hidden');
+    document.getElementById('configModal').classList.add('active');
+  }
+
+  // View config (read-only)
+  async function viewConfig(id) {
+    try {
+      const response = await fetch(`/oid4vp/config/api/${id}`);
+      const config = await response.json();
+
+      document.getElementById('modalTitle').textContent = `View Configuration: ${config.type}`;
+      document.getElementById('editConfigId').value = '';
+      document.getElementById('configType').value = config.type;
+      document.getElementById('configJson').value = JSON.stringify(config.config, null, 2);
+      document.getElementById('validationResult').classList.add('hidden');
+      document.getElementById('configModal').classList.add('active');
+    } catch (e) {
+      console.error('Failed to view config:', e);
+      alert('Failed to load configuration');
+    }
+  }
+
+  // Edit config
+  async function editConfig(id) {
+    try {
+      const response = await fetch(`/oid4vp/config/api/${id}`);
+      const config = await response.json();
+
+      document.getElementById('modalTitle').textContent = `Edit Configuration: ${config.type}`;
+      document.getElementById('editConfigId').value = id;
+      document.getElementById('configType').value = config.type;
+      document.getElementById('configJson').value = JSON.stringify(config.config, null, 2);
+      document.getElementById('validationResult').classList.add('hidden');
+      document.getElementById('configModal').classList.add('active');
+    } catch (e) {
+      console.error('Failed to edit config:', e);
+      alert('Failed to load configuration');
+    }
+  }
+
+  // Close modal
+  function closeModal() {
+    document.getElementById('configModal').classList.remove('active');
+  }
+
+  // Open delete modal
+  function openDeleteModal(id) {
+    document.getElementById('deleteConfigId').value = id;
+    document.getElementById('deleteModal').classList.add('active');
+  }
+
+  // Close delete modal
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+  }
+
+  // Confirm delete
+  async function confirmDelete() {
+    const id = document.getElementById('deleteConfigId').value;
+
+    try {
+      const response = await fetch(`/oid4vp/config/api/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        closeDeleteModal();
+        loadConfigs();
+      } else {
+        const error = await response.json();
+        alert('Failed to delete: ' + (error.error_description || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error('Failed to delete config:', e);
+      alert('Failed to delete configuration');
+    }
+  }
+
+  // Save config (create or update)
+  async function saveConfig() {
+    const id = document.getElementById('editConfigId').value;
+    const type = document.getElementById('configType').value.trim();
+    const configJson = document.getElementById('configJson').value.trim();
+
+    if (!type) {
+      alert('Type is required');
+      return;
+    }
+
+    if (!configJson) {
+      alert('Configuration JSON is required');
+      return;
+    }
+
+    // Validate JSON
+    let config;
+    try {
+      config = JSON.parse(configJson);
+    } catch (e) {
+      alert('Invalid JSON format: ' + e.message);
+      return;
+    }
+
+    try {
+      const url = id ? `/oid4vp/config/api/${id}` : '/oid4vp/config/api';
+      const method = id ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: type,
+          config: config
+        })
+      });
+
+      if (response.ok) {
+        closeModal();
+        loadConfigs();
+      } else {
+        const error = await response.json();
+        alert('Failed to save: ' + (error.error_description || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error('Failed to save config:', e);
+      alert('Failed to save configuration');
+    }
+  }
+
+  // Format JSON
+  function formatConfigJson() {
+    try {
+      const input = document.getElementById('configJson').value;
+      const parsed = JSON.parse(input);
+      document.getElementById('configJson').value = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      alert('Invalid JSON: ' + e.message);
+    }
+  }
+
+  // Validate JSON
+  async function validateConfigJson() {
+    const configJson = document.getElementById('configJson').value.trim();
+
+    if (!configJson) {
+      showValidationResult(false, 'Configuration JSON is required');
+      return;
+    }
+
+    try {
+      const response = await fetch('/oid4vp/config/api/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          config: configJson
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        let message = 'Configuration is valid!';
+        if (result.warnings && result.warnings.length > 0) {
+          message += '\n\nWarnings:\n- ' + result.warnings.join('\n- ');
+        }
+        showValidationResult(true, message);
+      } else {
+        showValidationResult(false, result.error || 'Invalid configuration');
+      }
+    } catch (e) {
+      showValidationResult(false, 'Validation failed: ' + e.message);
+    }
+  }
+
+  // Show validation result
+  function showValidationResult(valid, message) {
+    const resultDiv = document.getElementById('validationResult');
+    resultDiv.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+
+    if (valid) {
+      resultDiv.classList.add('bg-green-100', 'text-green-800');
+    } else {
+      resultDiv.classList.add('bg-red-100', 'text-red-800');
+    }
+
+    resultDiv.textContent = message;
+  }
+
+  // Escape HTML
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>

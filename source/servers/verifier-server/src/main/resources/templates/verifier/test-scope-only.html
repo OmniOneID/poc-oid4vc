@@ -1,0 +1,406 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Open DID OID4VP Verifier</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { -webkit-tap-highlight-color: transparent; }
+  body { overscroll-behavior: none; }
+  .collapsible-header { cursor: pointer; user-select: none; }
+  .collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+  .collapsible-content.open { max-height: 2000px; transition: max-height 0.5s ease-in; }
+  .chevron { transition: transform 0.3s ease; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<div class="px-4 py-5 max-w-lg mx-auto">
+  <!-- Initiation Section (hidden when showing result) -->
+  <div id="initiationSection">
+
+  <!-- Header -->
+  <div class="bg-white rounded-xl shadow-sm p-5 mb-4">
+    <h1 class="text-xl font-bold text-gray-800">Open DID OID4VP Verifier</h1>
+    <p class="text-sm text-gray-500 mt-1">Scope-based Verification</p>
+  </div>
+
+  <!-- Request Options -->
+  <div class="bg-white rounded-xl shadow-sm p-5 mb-4">
+    <!-- Request Mode -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Request Mode</label>
+      <div class="space-y-2">
+        <label class="flex items-center p-3 rounded-lg border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+          <input type="radio" name="requestMode" value="by_value" onchange="switchRequestMode('by_value')" class="mr-3 text-blue-600 w-4 h-4">
+          <span class="text-sm">URL with encoded parameters</span>
+        </label>
+        <label class="flex items-center p-3 rounded-lg border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+          <input type="radio" name="requestMode" value="request_uri" onchange="switchRequestMode('request_uri')" checked class="mr-3 text-blue-600 w-4 h-4">
+          <span class="text-sm">Request URI</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Response Mode (for Request URI) -->
+    <div id="responseModeSection" class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Response Mode</label>
+      <div class="flex gap-3">
+        <label class="flex-1 flex items-center justify-center p-3 rounded-lg border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+          <input type="radio" name="responseMode" value="query" class="mr-2 text-blue-600 w-4 h-4">
+          <span class="text-sm">query</span>
+        </label>
+        <label class="flex-1 flex items-center justify-center p-3 rounded-lg border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+          <input type="radio" name="responseMode" value="direct_post" checked class="mr-2 text-blue-600 w-4 h-4">
+          <span class="text-sm">direct_post</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Scope Selection (required, default selected) -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Scope</label>
+      <select id="scopeSelect" class="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm bg-white">
+        <option value="opendid_vc_test" selected>opendid_vc_test</option>
+        <option value="sdjwt_test">sdjwt_test</option>
+        <option value="eudi_pid_test">eudi_pid_test</option>
+      </select>
+    </div>
+
+    <!-- Custom Scope -->
+    <div class="mb-5">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Custom Scope (Optional)</label>
+      <input type="text" id="customScope" class="w-full px-3 py-3 border border-gray-300 rounded-lg text-sm" placeholder="Overrides above if specified">
+    </div>
+
+    <!-- Initiate Button -->
+    <button onclick="initiateVerification()" id="initiateBtn" class="w-full bg-green-600 text-white px-4 py-4 rounded-xl font-semibold text-base active:bg-green-700 transition-colors">
+      Initiate Verification Session
+    </button>
+  </div>
+
+  </div><!-- end initiationSection -->
+
+  <!-- Verification Result (shown when redirected back with response_code) -->
+  <div id="vpResultContainer" class="hidden">
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-3">
+      <div id="vpResultLoading" class="text-center py-4">
+        <div class="inline-block w-6 h-6 border-3 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p class="text-xs text-gray-500 mt-2">Loading...</p>
+      </div>
+      <div id="vpResultSuccess" class="hidden">
+        <div class="text-center mb-3 pb-3 border-b border-gray-100">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-2">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h2 class="text-base font-bold text-gray-800">Verification Successful</h2>
+          <p class="text-xs text-gray-500">VP Token has been verified</p>
+        </div>
+        <div id="vpResultData" class="space-y-2"></div>
+      </div>
+      <div id="vpResultError" class="hidden text-center py-4">
+        <div class="inline-flex items-center justify-center w-10 h-10 bg-red-100 rounded-full mb-2">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </div>
+        <h2 class="text-base font-bold text-gray-800">Verification Failed</h2>
+        <p id="vpResultErrorMsg" class="text-xs text-red-500 mt-1"></p>
+      </div>
+    </div>
+    <button onclick="resetPage()" class="w-full bg-gray-600 text-white px-4 py-3 rounded-xl font-semibold text-sm active:bg-gray-700 transition-colors">
+      Start New Verification
+    </button>
+  </div>
+
+  <!-- Results (hidden until session created) -->
+  <div id="resultContainer" class="hidden">
+    <!-- Same Device Button (prominent) -->
+    <div class="mb-4">
+      <button onclick="openInSameDevice()" class="w-full bg-purple-600 text-white px-4 py-4 rounded-xl font-semibold text-base active:bg-purple-700 transition-colors shadow-sm">
+        Open in Same Device (Wallet)
+      </button>
+    </div>
+
+    <!-- Collapsible Details -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="collapsible-header flex items-center justify-between p-5" onclick="toggleDetails()">
+        <span class="text-sm font-semibold text-gray-700">QR Code &amp; Details</span>
+        <span id="detailsChevron" class="chevron text-gray-400">&#9660;</span>
+      </div>
+      <div id="detailsContent" class="collapsible-content">
+        <div class="px-5 pb-5 space-y-4">
+          <!-- QR Code -->
+          <div class="bg-gray-50 p-4 rounded-lg text-center">
+            <div id="qrcode" class="inline-block"></div>
+            <p class="mt-2 text-xs text-gray-500">Request ID: <span id="requestId" class="font-mono"></span></p>
+          </div>
+
+          <!-- Authorization Request URL -->
+          <div class="p-3 bg-gray-50 rounded-lg">
+            <p class="text-xs font-medium text-gray-500 mb-1">Authorization Request URL:</p>
+            <p id="authRequestUrl" class="text-xs font-mono break-all text-gray-700 leading-relaxed"></p>
+          </div>
+
+          <!-- Request URI -->
+          <div id="requestUriDisplay" class="p-3 bg-gray-50 rounded-lg hidden">
+            <p class="text-xs font-medium text-gray-500 mb-1">Request URI (for wallet to fetch):</p>
+            <p id="requestUri" class="text-xs font-mono break-all text-gray-700 leading-relaxed"></p>
+          </div>
+
+          <!-- Test Request URI Button -->
+          <button id="testRequestUriBtn" onclick="testRequestUri()" class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium active:bg-blue-700 transition-colors hidden">
+            Test Request URI Endpoint
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Request URI Test Result Modal -->
+<div id="requestUriModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onclick="closeModal(event)">
+  <div class="bg-white w-full max-w-lg rounded-t-2xl p-5 max-h-[70vh] overflow-auto" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center mb-3">
+      <h4 class="font-semibold text-sm">Request URI Response</h4>
+      <button onclick="document.getElementById('requestUriModal').classList.add('hidden')" class="text-gray-400 text-xl leading-none">&times;</button>
+    </div>
+    <pre id="requestUriTestResult" class="text-xs bg-gray-50 p-3 rounded-lg overflow-auto"></pre>
+  </div>
+</div>
+
+<script>
+  let currentSession = null;
+  let qrInstance = null;
+
+  function switchRequestMode(mode) {
+    const section = document.getElementById('responseModeSection');
+    if (mode === 'request_uri') {
+      section.classList.remove('hidden');
+    } else {
+      section.classList.add('hidden');
+    }
+  }
+
+  function toggleDetails() {
+    const content = document.getElementById('detailsContent');
+    const chevron = document.getElementById('detailsChevron');
+    content.classList.toggle('open');
+    chevron.classList.toggle('open');
+  }
+
+  function closeModal(e) {
+    if (e.target === e.currentTarget) {
+      document.getElementById('requestUriModal').classList.add('hidden');
+    }
+  }
+
+  function openInSameDevice() {
+    const url = document.getElementById('authRequestUrl').textContent;
+    if (url) {
+      window.location.href = url;
+    }
+  }
+
+  async function testRequestUri() {
+    if (!currentSession || !currentSession.request_uri) return;
+    try {
+      const response = await fetch(currentSession.request_uri);
+      const result = await response.json();
+      document.getElementById('requestUriTestResult').textContent = JSON.stringify(result, null, 2);
+      document.getElementById('requestUriModal').classList.remove('hidden');
+    } catch (e) {
+      console.error('Test Request URI failed:', e);
+    }
+  }
+
+  async function initiateVerification() {
+    const btn = document.getElementById('initiateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Initiating...';
+
+    try {
+      const requestMode = document.querySelector('input[name="requestMode"]:checked').value;
+      const responseMode = document.querySelector('input[name="responseMode"]:checked')?.value || 'direct_post';
+
+      const customScope = document.getElementById('customScope').value.trim();
+      const selectedScope = document.getElementById('scopeSelect').value;
+      const scope = customScope || selectedScope;
+
+      const clientMetadata = {
+        callback_url: window.location.origin + '/oid4vp/test/scope_only'
+      };
+
+      const params = new URLSearchParams({
+        dcql_query: '{}',
+        response_mode: responseMode,
+        scope: scope,
+        client_metadata: JSON.stringify(clientMetadata)
+      });
+
+      if (requestMode === 'request_uri') {
+        params.append('use_request_uri', 'true');
+      } else {
+        params.append('use_request_uri', 'false');
+      }
+
+      const response = await fetch('/oid4vp/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      });
+
+      const result = await response.json();
+
+      if (result.authorization_request_uri) {
+        currentSession = result;
+
+        // Show result container
+        document.getElementById('resultContainer').classList.remove('hidden');
+
+        // Display QR
+        const qrDiv = document.getElementById('qrcode');
+        qrDiv.innerHTML = '';
+        qrInstance = new QRCode(qrDiv, {
+          text: result.authorization_request_uri,
+          width: 200,
+          height: 200,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.L
+        });
+
+        document.getElementById('requestId').textContent = result.request_id;
+        document.getElementById('authRequestUrl').textContent = result.authorization_request_uri;
+
+        if (requestMode === 'request_uri' && result.request_uri) {
+          document.getElementById('requestUri').textContent = result.request_uri;
+          document.getElementById('requestUriDisplay').classList.remove('hidden');
+          document.getElementById('testRequestUriBtn').classList.remove('hidden');
+        } else {
+          document.getElementById('requestUriDisplay').classList.add('hidden');
+          document.getElementById('testRequestUriBtn').classList.add('hidden');
+        }
+
+        // Scroll to result
+        document.getElementById('resultContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (e) {
+      console.error('Initiation failed:', e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Initiate Verification Session';
+    }
+  }
+
+  function resetPage() {
+    window.location.href = window.location.origin + window.location.pathname;
+  }
+
+  function renderVpData(data) {
+    const container = document.getElementById('vpResultData');
+    const vpToken = data.vpToken;
+
+    // Render each credential entry
+    Object.entries(vpToken).forEach(([credId, tokens]) => {
+      const tokenList = Array.isArray(tokens) ? tokens : [tokens];
+      tokenList.forEach((token, idx) => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg p-3';
+
+        let html = '<p class="text-xs font-semibold text-gray-600 mb-1">' + credId + '</p>';
+
+        if (typeof token === 'string') {
+          // SD-JWT: compact serialization string
+          const parts = token.split('~');
+          const payloadB64 = token.split('.')[1];
+          try {
+            const payload = JSON.parse(atob(payloadB64.replace(/-/g,'+').replace(/_/g,'/')));
+            html += '<div class="space-y-1">';
+            if (payload.vct) {
+              html += '<div class="flex justify-between"><span class="text-xs text-gray-500">Type</span><span class="text-xs font-mono text-gray-700">' + payload.vct + '</span></div>';
+            }
+            if (payload.iss) {
+              html += '<div class="flex justify-between"><span class="text-xs text-gray-500">Issuer</span><span class="text-xs font-mono text-gray-700 break-all">' + payload.iss + '</span></div>';
+            }
+            if (payload.iat) {
+              html += '<div class="flex justify-between"><span class="text-xs text-gray-500">Issued At</span><span class="text-xs font-mono text-gray-700">' + new Date(payload.iat * 1000).toLocaleString() + '</span></div>';
+            }
+            // Disclosed claims from SD-JWT disclosures
+            const disclosures = parts.slice(1).filter(p => p.length > 0);
+            if (disclosures.length > 0) {
+              html += '<div class="mt-2 pt-2 border-t border-gray-200"><p class="text-xs font-semibold text-gray-600 mb-1">Disclosed Claims (' + disclosures.length + ')</p>';
+              disclosures.forEach(d => {
+                try {
+                  const decoded = JSON.parse(atob(d.replace(/-/g,'+').replace(/_/g,'/')));
+                  if (Array.isArray(decoded) && decoded.length >= 3) {
+                    const val = (typeof decoded[2] === 'object') ? JSON.stringify(decoded[2]) : decoded[2];
+                    html += '<div class="flex justify-between py-1"><span class="text-xs text-gray-500">' + decoded[1] + '</span><span class="text-xs font-mono text-gray-700 break-all">' + val + '</span></div>';
+                  }
+                } catch(e) {}
+              });
+              html += '</div>';
+            }
+            html += '</div>';
+          } catch(e) {
+            html += '<p class="text-xs font-mono break-all text-gray-600">' + token.substring(0, 200) + '...</p>';
+          }
+        } else {
+          // JSON format
+          html += '<pre class="text-xs font-mono overflow-auto max-h-60">' + JSON.stringify(token, null, 2) + '</pre>';
+        }
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      });
+    });
+
+    // Transaction info
+    const infoCard = document.createElement('div');
+    infoCard.className = 'bg-blue-50 rounded-lg p-3';
+    infoCard.innerHTML = '<div class="space-y-1">'
+      + '<div class="flex justify-between"><span class="text-xs text-gray-500">Transaction ID</span><span class="text-xs font-mono text-gray-700">' + data.transactionId + '</span></div>'
+      + '<div class="flex justify-between"><span class="text-xs text-gray-500">Status</span><span class="text-xs font-mono text-green-700">' + data.status + '</span></div>'
+      + '</div>';
+    container.appendChild(infoCard);
+  }
+
+  async function loadVpResult(responseCode) {
+    document.getElementById('initiationSection').classList.add('hidden');
+    document.getElementById('vpResultContainer').classList.remove('hidden');
+
+    try {
+      const response = await fetch('/sp/eudi/vp-info/' + responseCode);
+      const data = await response.json();
+
+      document.getElementById('vpResultLoading').classList.add('hidden');
+
+      if (data.result) {
+        renderVpData(data);
+        document.getElementById('vpResultSuccess').classList.remove('hidden');
+      } else {
+        document.getElementById('vpResultErrorMsg').textContent = data.message || 'Unknown error';
+        document.getElementById('vpResultError').classList.remove('hidden');
+      }
+    } catch (e) {
+      document.getElementById('vpResultLoading').classList.add('hidden');
+      document.getElementById('vpResultErrorMsg').textContent = e.message;
+      document.getElementById('vpResultError').classList.remove('hidden');
+    }
+  }
+
+  // On page load: check for response_code
+  document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const responseCode = params.get('response_code');
+    if (responseCode) {
+      loadVpResult(responseCode);
+    }
+  });
+</script>
+
+</body>
+</html>

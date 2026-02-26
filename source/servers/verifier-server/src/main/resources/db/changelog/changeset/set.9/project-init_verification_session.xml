@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+
+  <changeSet id="init-verification_session" author="shlee">
+    <createTable tableName="verification_session">
+      <column name="transaction_id" type="varchar(64)">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="state" type="varchar(64)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="nonce" type="varchar(64)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="dcql_query" type="text">
+        <constraints nullable="true"/>
+      </column>
+      <column name="vp_token" type="text">
+        <constraints nullable="true"/>
+      </column>
+      <column name="response_mode" type="varchar(32)">
+        <constraints nullable="true"/>
+      </column>
+      <column name="request_id" type="varchar(64)">
+        <constraints nullable="true"/>
+      </column>
+      <column name="status" type="varchar(32)" defaultValue="CREATED">
+        <constraints nullable="false"/>
+      </column>
+      <column name="client_metadata" type="text">
+        <constraints nullable="true"/>
+      </column>
+      <column name="request_uri_fetched_at" type="bigint">
+        <constraints nullable="true"/>
+      </column>
+      <column name="created_at" type="bigint">
+        <constraints nullable="false"/>
+      </column>
+      <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="true"/>
+      </column>
+      <column name="expires_at" type="bigint">
+        <constraints nullable="true"/>
+      </column>
+    </createTable>
+
+    <createIndex tableName="verification_session" indexName="idx_vs_state">
+      <column name="state"/>
+    </createIndex>
+
+    <createIndex tableName="verification_session" indexName="idx_vs_request_id">
+      <column name="request_id"/>
+    </createIndex>
+
+    <createIndex tableName="verification_session" indexName="idx_vs_status">
+      <column name="status"/>
+    </createIndex>
+
+    <createIndex tableName="verification_session" indexName="idx_vs_created_at">
+      <column name="created_at"/>
+    </createIndex>
+
+    <createIndex tableName="verification_session" indexName="idx_vs_expires_at">
+      <column name="expires_at"/>
+    </createIndex>
+  </changeSet>
+
+</databaseChangeLog>

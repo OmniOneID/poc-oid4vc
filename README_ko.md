@@ -9,51 +9,108 @@ OID4VC PoC 저장소에 오신 것을 환영합니다.
 *   DID 기반의 VC(Verifiable Credential) 생태계 구축 가능성 검토
 *   Spring Boot 기반 서버와 네이티브 모바일 앱(Android/iOS) 연동 테스트
 
+## 🇪🇺🤝 EUDI Wallet 상호운용 시연 영상
+
+https://github.com/user-attachments/assets/be33f5b5-8114-4e47-aa73-e065e246085f
+
+본 프로젝트는 [EUDI Wallet](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui)과의 자체적인 상호운용 테스트를 성공적으로 완료하였습니다.
+Open DID의 Issuer 및 Verifier 서버가 EUDI Wallet과 OID4VCI/OID4VP 표준 기반으로 정상적으로 연동됨을 확인하였습니다.
+
+- **테스트 기준 월렛 버전**: [EUDI Wallet 2026.02.35-Demo](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2026.02.35-Demo_Build%3D35) ([커밋](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/commit/bb008698fe48fcd3f7224d516aca0748fb1566f3))
+
+위 시연 영상의 주요 수행 내용은 다음과 같습니다.
+
+| 구분 | 방식 | 설명 |
+|:-----|:-----|:-----|
+| Credential | SD-JWT VC | PID(Person Identification Data) 형태로 발급 |
+| Issuance | Pre-Authorized Code Flow | 사전 인가 코드 기반의 VC 발급 수행 |
+| Verification | direct_post | VP Token을 direct_post 방식으로 제출하여 검증 수행 |
+
+### 시퀀스 다이어그램 기반 구성도
+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'mainBkg': '#ffffff',
+    'noteBkgColor': '#fff9e6',
+    'noteTextColor': '#333333',
+    'noteBorderColor': '#cccccc',
+    'actorBkg': '#e8eef4',
+    'actorBorder': '#7a8ea0',
+    'actorTextColor': '#2c3e50',
+    'signalColor': '#444444',
+    'signalTextColor': '#333333',
+    'sequenceNumberColor': '#ffffff',
+    'labelBoxBkgColor': '#ffffff',
+    'labelTextColor': '#333333'
+  }
+}}%%
+sequenceDiagram
+    participant Issuer as Open DID Issuer 🟠
+    participant Wallet as EUDI Wallet 🇪🇺
+    participant Verifier as Open DID Verifier 🟠
+
+    rect rgb(230, 245, 255)
+        Note over Issuer, Wallet: OID4VCI 기반 Credential 발급
+        Issuer->>Wallet: Credential Offer (pre-authorized code)
+        Wallet->>Issuer: Token Request
+        Issuer-->>Wallet: Access Token
+        Wallet->>Issuer: Credential Request
+        Issuer-->>Wallet: SD-JWT VC (PID) 발급
+    end
+
+    rect rgb(245, 255, 230)
+        Note over Wallet, Verifier: OID4VP 기반 Credential 검증
+        Verifier->>Wallet: Authorization Request
+        Wallet->>Verifier: Fetch Request Object (JAR)
+        Verifier-->>Wallet: Signed Request Object (DCQL)
+        Wallet->>Verifier: Authorization Response (VP Token)
+        Verifier->>Verifier: VP Token 검증 (SD-JWT)
+    end
+```
+
 ## 폴더 구조
 
 프로젝트 디렉터리 내 주요 폴더와 문서에 대한 개요입니다.
 
 ```
 poc-oid4vc
-├── apps
-│   ├── android-app
-│   └── ios-app
-├── docs
-│   └── api
-│       ├── authorization-server
+├── source
+│   ├── apps
+│   │   ├── android-app
+│   │   └── ios-app
+│   └── servers
 │       ├── issuer-server
-│       ├── sd-jwt-sdk
 │       └── verifier-server
-├── sdks
-│   └── sd-jwt-sdk
-└── servers
-    ├── authorization-server
-    ├── issuer-server
-    └── verifier-server
+└── docs
+    ├── api
+    │   ├── issuer-server
+    │   └── verifier-server
+    └── installation
 ```
 
 각 폴더에 대한 설명은 다음과 같습니다.
 
 | 이름 | 설명 |
 | :--- | :--- |
-| **`servers`** | OID4VC 흐름을 위한 서버 구현체를 포함합니다. |
-| ┖ `authorization-server` | OAuth 2.0 및 OIDC 기반의 인증/인가를 관리합니다. |
+| **`source/servers`** | OID4VC 흐름을 위한 서버 구현체를 포함합니다. |
 | ┖ `issuer-server` | OID4VCI 표준에 따라 VC(Verifiable Credential)를 발급합니다. |
 | ┖ `verifier-server` | OID4VP 표준에 따라 VC를 검증합니다. |
-| **`apps`** | 샘플 모바일 지갑 애플리케이션을 포함합니다. |
+| **`source/apps`** | 샘플 모바일 지갑 애플리케이션을 포함합니다. |
 | ┖ `android-app` | VC를 저장하고 제출하는 샘플 안드로이드 지갑입니다. |
 | ┖ `ios-app` | VC를 저장하고 제출하는 샘플 iOS 지갑입니다. |
-| **`sdks`** | 핵심 기능을 위한 SDK를 포함합니다. |
-| ┖ `sd-jwt-sdk` | SD-JWT VC의 생성, 서명, 검증을 위한 SDK입니다. |
 | **`docs`** | 프로젝트 문서를 포함합니다. |
-| ┖ `api` | 각 서버 및 SDK에 대한 API 문서입니다. |
+| ┖ `api` | 각 서버에 대한 SDK 연동 가이드 및 API 문서입니다. |
+| ┖ `installation` | 설치 및 구동 가이드입니다. |
 
 ## 지원 버전
+
 | 구분       | 버전 정보 | 링크 |
 |------------|-----------|------|
 | OID4VCI    | OpenID for Verifiable Credential Issuance 1.0 | [스펙 문서](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) |
 | OID4VP     | OpenID for Verifiable Presentations 1.0 | [스펙 문서](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) |
-| SD-JWT     | RFC 9901        | [스펙 문서](https://datatracker.ietf.org/doc/rfc9901/) |
 
 ## 기능 목록
 * **OID4VCI**
@@ -63,6 +120,7 @@ poc-oid4vc
 |Authorization & Flows| Authorization Code Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Pre-Authorized Code Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 |Credential Formats| SD-JWT VC |  ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
+|| Open DID VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD) | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 || mDoc Format | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 |Endpoints| Token Endpoint | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
@@ -87,12 +145,13 @@ poc-oid4vc
 |Authorization & Flows| Same-Device Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Cross-Device Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 |Credential Formats| SD-JWT VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
+|| Open DID VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD)  | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 || mDoc Format | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 |Authorization Request| Verifiable Presentations Authorization Requests | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Scoped Authorization Requests | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Self-Issued OpenID Provider Authorization Requests | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
-|| JWT Secured Authorization Request(JAR) | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
+|| JWT Secured Authorization Request(JAR) | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 |Authorization Response| direct_post | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || query | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || fragment | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
@@ -115,10 +174,8 @@ OID4VC를 시작하기 위한 절차는 아래 설치 및 구동 가이드를 �
 
 각 하위 프로젝트의 정보는 해당 프로젝트 디렉터리의 `README.md` 파일을 참고하세요.
 
-*   [인가 서버 README](source/servers/authorization-server/README_ko.md)
 *   [발급 서버 README](source/servers/issuer-server/README_ko.md)
 *   [검증 서버 README](source/servers/verifier-server/README_ko.md)
-*   [SD-JWT SDK README](source/sdks/sd-jwt-sdk/README_ko.md)
 *   [안드로이드 앱 README](source/apps/android-app/README_ko.md)
 *   [iOS 앱 README](source/apps/ios-app/README_ko.md)
 
@@ -126,10 +183,8 @@ OID4VC를 시작하기 위한 절차는 아래 설치 및 구동 가이드를 �
 
 각 구성 요소에 대한 API 문서는 `docs/api` 디렉터리에서 찾을 수 있습니다.
 
-*   [인가 서버 API](docs/api/authorization-server/authorization_server_API_ko.md)
 *   [발급 서버 API](docs/api/issuer-server/issuer_server_API_ko.md)
 *   [검증 서버 API](docs/api/verifier-server/verifier_server_API_ko.md)
-*   [SD-JWT SDK API](docs/api/sd-jwt-sdk/sd-jwt-sdk_API_ko.md)
 
 ## 기여
 

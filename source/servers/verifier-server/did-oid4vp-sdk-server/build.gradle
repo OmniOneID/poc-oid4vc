@@ -1,0 +1,80 @@
+plugins {
+    id 'java-library'
+    id 'org.springframework.boot' version '3.2.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'org.omnione.did'
+version = '3.0.0'
+
+allprojects {
+    repositories {
+        mavenCentral()
+        google()
+        maven { url "https://repo.danubetech.com/repository/maven-public/" }
+        maven { url "https://maven.scijava.org/content/repositories/public/" }
+        maven { url "https://jitpack.io" }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath.findAll { it.name.endsWith('jar') }.collect { zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/LICENSE*', 'META-INF/NOTICE*'
+    exclude 'org/springframework/**'
+    exclude 'org/apache/**'
+    exclude 'org/slf4j/**'
+    exclude 'ch/qos/logback/**'
+
+    archiveClassifier.set('')
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+dependencies {
+    // Spring Boot Core
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // JPA (compileOnly - runtime dependency provided by parent project)
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // Cryptography
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.80'
+    implementation 'com.nimbusds:nimbus-jose-jwt:9.37.4'
+
+    // JSON
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // SDK
+    api project(':did-oid4vc-formatter-sdk-server')
+
+    // Local SDK libraries
+    api fileTree(dir: "libs", includes: ["*"])
+}

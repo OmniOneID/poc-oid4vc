@@ -41,20 +41,29 @@ poc-oid4vc
 │   ├── apps/                          # Test mobile apps
 │   │   ├── android-app/               # Android wallet app
 │   │   └── ios-app/                   # iOS wallet app
-│   ├── servers/                       # Backend servers
-│   │   ├── issuer-server/             # Issuer server
-│   │   ├── authorization-server/      # Authorization server
-│   │   └── verifier-server/           # Verifier server
-│   └── sdks/                          # SDK libraries
-│       └── sd-jwt-sdk/                # SD-JWT SDK
+│   └── servers/                       # Backend servers
+│       ├── issuer-server/             # Issuer server (includes Authorization)
+│       └── verifier-server/           # Verifier server
 ├── docs/                              # Documentation folder
+│   └── api/
+│       ├── issuer-server/             # Issuer SDK integration guide and API docs
+│       └── verifier-server/           # Verifier SDK integration guide and API docs
 ```
 
 ---
 
 ## 4. Backend Server Running
 
-The OID4VC PoC project consists of 3 backend servers. Each server is implemented based on Spring Boot.
+The OID4VC PoC project consists of 2 backend servers. Each server is implemented based on Spring Boot and includes SDKs as submodules.
+
+| Server | Role | Included SDKs |
+| :--- | :--- | :--- |
+| **Issuer Server** | VC issuance and OAuth 2.0 authorization per OID4VCI standard | `did-oid4vci-sdk-server`, `did-oid4vc-authorization-sdk-server`, `did-oid4vc-formatter-sdk-server` |
+| **Verifier Server** | VP verification per OID4VP standard | `did-oid4vp-sdk-server`, `did-oid4vc-formatter-sdk-server` |
+
+> **Note**: For detailed configuration of each server (application.yml, metadata, DB setup, SDK integration, etc.), refer to the **SDK Integration Guides** below.
+> - Issuer Server: [OID4VCI SDK Integration Guide](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE.md)
+> - Verifier Server: [OID4VP SDK Integration Guide](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE.md)
 
 ### 4.1. Common Configuration
 
@@ -66,59 +75,19 @@ cd source/servers
 
 ### 4.2. Running Issuer Server
 
-**Role**: Issues VC (Verifiable Credential) according to the OID4VCI standard.
+**Role**: Issues VC (Verifiable Credential) according to the OID4VCI standard and manages OAuth 2.0 based authentication/authorization.
 
 #### 4.2.1. Running Using IDE (Recommended)
 
 1. Open the `source/servers/issuer-server` folder as a project in an IDE such as IntelliJ IDEA or Eclipse.
 2. The IDE's Gradle build system will automatically download the dependencies.
-3. Verify the profile settings in application.yml.
-```groovy
-spring:
-  profiles:
-    active: local //Currently reads the application-local.yml configuration.
-```
-4. Since the endpoints used in the app reference the contents of issuer_meta_univ.json, verify the metadata path defined in application-local.yml and change it to the current server IP.
-
-*application-local.yml*
-```groovy
-  metadata-file-path: src/main/resources/issuer_meta_univ_emul.json
-  // Currently references issuer_meta_univ_emul.json.
-  // When adding a new metadata file or changing the path, update accordingly.
-```
-
-*issuer_meta_univ_emul.json*
-```groovy
-  "credential_issuer": "http://10.0.2.2:8080",
-  "authorization_server": ["http://10.0.2.2:8081"],
-  "credential_endpoint": "http://10.0.2.2:8080/credential",
-  "nonce_endpoint": "http://10.0.2.2/nonce",
-  "deferred_credential_endpoint": "http://10.0.2.2/deferred_credential",
-  "notification_endpoint": "http://10.0.2.2/notification",
-  ...
-  // Change the IP addresses of the above properties to the current server IP.
-```
-
-5. Change the following properties in application-local.yml to the current server IP and authorization server IP.
-
-*application-local.yml*
-```groovy
-issuer:
-  base-url: http://10.0.2.2:8080
-  // Change to the current server IP.
-  .
-  .
-clients:
-  auth-server:
-    url: http://localhost:8081
-  // Change to the current authorization server IP.
-```
-
-6. Set up the Run Configuration as follows:
-   - Main Class: `com.example.issuer.IssuerApplication`
+3. Verify the profile settings and detailed configuration in `application.yml`.
+   - For detailed configuration, refer to [OID4VCI SDK Integration Guide](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE.md).
+4. Set up the Run Configuration as follows:
+   - Main Class: `com.example.did.oid4vc.issuer.IssuerApplication`
    - Working directory: `source/servers/issuer-server`
-7. Click the Run button to start the server.
-8. Verify normal operation by confirming the message "Started IssuerApplication in ... seconds" in the console.
+5. Click the Run button to start the server.
+6. Verify normal operation by confirming the message "Started IssuerApplication in ... seconds" in the console.
 
 #### 4.2.2. Running via Console Command
 
@@ -132,7 +101,7 @@ chmod 755 ./gradlew
 ./gradlew clean build
 
 # Run the JAR file
-java -jar build/libs/issuer-server-0.0.1-SNAPSHOT.jar
+java -jar build/libs/issuer-server-1.0.0.jar
 ```
 
 **Default Port**: `8080`
@@ -155,95 +124,23 @@ You can see the initial test page as shown below.
 
 <img src="./images/issuer-initial.png" width="500"/>
 
-### 4.3. Running Authorization Server
-
-**Role**: Manages authentication and authorization according to the OID4VCI standard based on OAuth 2.0.
-
-#### 4.3.1. Running Using IDE (Recommended)
-
-1. Open the `source/servers/authorization-server` folder as a project in a separate IDE window or tab.
-2. The IDE's Gradle build system will automatically download the dependencies.
-3. Change the following properties in application.yml to the current server IP and Issuer server IP.
-
-*application.yml*
-```groovy
-authorization-server:
-  issuer-url: http://10.48.17.124:8081
-  // Change to the current server IP.
-.
-.
-clients:
-  issuer-server:
-    url: http://10.48.17.124:8080
-   // Change to the current Issuer server IP.
-  redirect-url: http://10.48.17.124:8081/auth/callback
-  // Change to the current server IP.
-```
-4. Set up the Run Configuration as follows:
-   - Main Class: `com.example.authorization.AuthorizationApplication`
-   - Working directory: `source/servers/authorization-server`
-5. Click the Run button to start the server.
-6. Verify normal operation by confirming the message "Started AuthorizationApplication in ... seconds" in the console.
-
-#### 4.3.2. Running via Console Command
-
-```bash
-cd authorization-server
-
-# Grant execution permission to Gradle Wrapper
-chmod 755 ./gradlew
-
-# Build the project
-./gradlew clean build
-
-# Run the JAR file
-java -jar build/libs/authorization-server-0.0.1-SNAPSHOT.jar
-```
-
-**Default Port**: `8081`
-
-#### 4.3.3. Access via Browser
-
-Once the Authorization Server is running normally, access the following address in your browser.
-
-```
-http://<current_IP>:8081
-```
-
-For example, if running in a local environment:
-
-```
-http://localhost:8081
-```
-
-You can see the initial test page as shown below.
-
-<img src="./images/authorization-initial.png" width="500"/>
-
-### 4.4. Running Verifier Server
+### 4.3. Running Verifier Server
 
 **Role**: Verifies VP (Verifiable Presentation) according to the OID4VP standard.
 
-#### 4.4.1. Running Using IDE (Recommended)
+#### 4.3.1. Running Using IDE (Recommended)
 
 1. Open the `source/servers/verifier-server` folder as a project in a separate IDE window or tab.
 2. The IDE's Gradle build system will automatically download the dependencies.
-3. Change the following property in application-local.yml to the current server IP.
-
-*application-local.yml*
-```groovy
-oid4vp:
-  verifier:
-    base-url: "http://10.0.2.2:8082"
-  // Change to the current server IP.
-```
+3. Verify the profile settings and detailed configuration in `application.yml`.
+   - For detailed configuration, refer to [OID4VP SDK Integration Guide](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE.md).
 4. Set up the Run Configuration as follows:
-   - Main Class: `com.example.verifier.VerifierApplication`
+   - Main Class: `com.example.did.oid4vc.verifier.VerifierApplication`
    - Working directory: `source/servers/verifier-server`
 5. Click the Run button to start the server.
 6. Verify normal operation by confirming the message "Started VerifierApplication in ... seconds" in the console.
 
-#### 4.4.2. Running via Console Command
+#### 4.3.2. Running via Console Command
 
 ```bash
 cd verifier-server
@@ -255,23 +152,23 @@ chmod 755 ./gradlew
 ./gradlew clean build
 
 # Run the JAR file
-java -jar build/libs/verifier-server-0.0.1-SNAPSHOT.jar
+java -jar build/libs/verifier-example-server-3.0.0.jar
 ```
 
-**Default Port**: `8082`
+**Default Port**: `8081`
 
-#### 4.4.3. Access via Browser
+#### 4.3.3. Access via Browser
 
 Once the Verifier Server is running normally, access the following address in your browser.
 
 ```
-http://<current_IP>:8082/oid4vp/test
+http://<current_IP>:8081/oid4vp/test
 ```
 
 For example, if running in a local environment:
 
 ```
-http://localhost:8082/oid4vp/test
+http://localhost:8081/oid4vp/test
 ```
 
 You can see the initial test page as shown below.
@@ -309,7 +206,6 @@ To connect the Android app to the backend server for API testing:
 
 Generally configure as follows:
    - Issuer Server: `http://10.0.2.2:8080`
-   - Authorization Server: `http://10.0.2.2:8081`
 
 > **Tip**: To access localhost on the host machine from an emulator, use `10.0.2.2`.
 
@@ -342,7 +238,6 @@ To connect the iOS app to the backend server for API testing:
 
 Generally configure as follows:
    - Issuer Server: `http://localhost:8080`
-   - Authorization Server: `http://localhost:8081`
 
 > **Tip**: From the iOS simulator, you can directly use `localhost` or `127.0.0.1` to access the host machine's localhost.
 
@@ -420,9 +315,9 @@ Based on the `Cross Device` Flow, you can perform OID4VP testing following the p
 1. Access the following address in your browser.
 
 ```groovy
-http://<current_IP>:8082/oid4vp/test
+http://<current_IP>:8081/oid4vp/test
 
-// For example, if running in a local environment: http://localhost:8082/oid4vp/test
+// For example, if running in a local environment: http://localhost:8081/oid4vp/test
 ```
 
 2. The initial test page will be displayed. To generate an `Authorization Request`, click `Initiate Verification Session`.
@@ -451,24 +346,34 @@ http://<current_IP>:8082/oid4vp/test
 
 ## 7. Detailed Documentation References
 
-The basic installation and running of the OID4VC PoC project is now complete.
-For detailed handling, please refer to the documentation in each repository below.
-
 The basic installation and running of the OID4VC project is complete. For detailed configuration and operation of each component, refer to the following documentation.
 
-### 7.1. Backend Server Documentation
+### 7.1. SDK Integration Guides
+
+| Server | Guide | Description |
+| :--- | :--- | :--- |
+| **Issuer Server** | [OID4VCI SDK Integration Guide](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE.md) | build.gradle, application.yml, metadata, DB setup, Provider, etc. |
+| **Verifier Server** | [OID4VP SDK Integration Guide](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE.md) | build.gradle, application.yml, storage mode settings, Repository, Controller, etc. |
+
+### 7.2. Backend Server Documentation
 
 | Server | Description | Documentation |
 | :--- | :--- | :--- |
-| **Issuer Server** | VC issuance server according to OID4VCI standard | [README](../../source/servers/issuer-server/README_ko.md) |
-| **Authorization Server** | OAuth 2.0 based authentication/authorization server | [README](../../source/servers/authorization-server/README_ko.md) |
-| **Verifier Server** | VP verification server according to OID4VP standard | [README](../../source/servers/verifier-server/README_ko.md) |
+| **Issuer Server** | VC issuance server per OID4VCI standard (includes Authorization) | [README](../../source/servers/issuer-server/README.md) |
+| **Verifier Server** | VP verification server per OID4VP standard | [README](../../source/servers/verifier-server/README.md) |
 
-### 7.2. Test App Documentation
+### 7.3. API Documentation
+
+| Server | Documentation | Error Codes |
+| :--- | :--- | :--- |
+| **Issuer Server** | [Server API](../api/issuer-server/OID4VCI_SDK-SERVER_API.md) | [OID4VCI SDK Errors](../api/issuer-server/OID4VCISDKError.md), [Formatter SDK Errors](../api/issuer-server/FormatterSDKError.md) |
+| **Verifier Server** | [Server API](../api/verifier-server/OID4VP_SDK-SERVER_API.md) | [OID4VP SDK Errors](../api/verifier-server/OID4VPSDKError.md), [Formatter SDK Errors](../api/verifier-server/FormatterSDKError.md) |
+
+### 7.4. Test App Documentation
 
 | App | Description | Documentation |
 | :--- | :--- | :--- |
-| **Android App** | Android-based OID4VC sample application | [README](../../source/apps/android-app/README_ko.md) |
-| **iOS App** | iOS-based OID4VC sample application | [README](../../source/apps/ios-app/README_ko.md) |
+| **Android App** | Android-based OID4VC sample application | [README](../../source/apps/android-app/README.md) |
+| **iOS App** | iOS-based OID4VC sample application | [README](../../source/apps/ios-app/README.md) |
 
 ---

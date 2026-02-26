@@ -36,8 +36,8 @@ authorization-server
 
 자세한 내용은 다음 문서를 참조하십시오.
 
-- [Authorization Server API 참조](../../../docs/api/authorization-server/authorization_server_API_ko.md)
-  Authorization Server API의 참조 구현에 대한 가이드입니다.
+- [Issuer Server API 참조](../../../../docs/api/issuer-server/OID4VCI_SDK-SERVER_API_ko.md)
+  Issuer Server API(Authorization 포함)의 참조 구현에 대한 가이드입니다.
 
 
 ## 기여

@@ -1,1 +1,3 @@
-rootProject.name = 'verifier'
+rootProject.name = 'verifier-example-server'
+include 'did-oid4vp-sdk-server'
+include 'did-oid4vc-formatter-sdk-server'

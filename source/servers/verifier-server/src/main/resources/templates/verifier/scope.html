@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DCQL Scope Mapping Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <style>
+    .json-editor {
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .scope-card {
+      transition: all 0.2s ease;
+    }
+    .scope-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .modal {
+      display: none;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 24px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .toggle-slider {
+      background-color: #10b981;
+    }
+    input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+  <!-- Header -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">DCQL Scope Mapping Manager</h1>
+        <p class="text-gray-600">Manage scope to DCQL query mappings for OID4VP verification</p>
+      </div>
+      <div class="flex space-x-3">
+        <a href="/oid4vp/test" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          ← Back to Test Console
+        </a>
+        <a href="/oid4vp/config" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          OID4VP Config
+        </a>
+        <button onclick="openCreateModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          + New Scope Mapping
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scope Mapping List -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Scope Mappings</h2>
+      <button onclick="loadScopes()" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div id="scopeList" class="space-y-4">
+      <!-- Scopes will be loaded here -->
+      <div class="text-center text-gray-500 py-8">Loading scope mappings...</div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div id="scopeModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden mx-4">
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+          <h3 id="modalTitle" class="text-xl font-semibold text-gray-800">New Scope Mapping</h3>
+          <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+        <input type="hidden" id="editScopeId">
+
+        <!-- Scope Field -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Scope *</label>
+          <input type="text" id="scopeName" placeholder="e.g., national_id, driver_license"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+          <p class="text-xs text-gray-500 mt-1">Unique scope identifier used in authorization requests</p>
+        </div>
+
+        <!-- Description Field -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <input type="text" id="scopeDescription" placeholder="e.g., National ID credential query"
+                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- DCQL Query JSON Field -->
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-gray-700">DCQL Query JSON *</label>
+            <div class="space-x-2">
+              <button onclick="formatDcqlJson()" class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                Format
+              </button>
+              <button onclick="validateDcqlJson()" class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+                Validate
+              </button>
+            </div>
+          </div>
+          <textarea id="dcqlQueryJson" rows="16"
+                    class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder='{"credentials": [{"id": "...", "format": "dc+sd-jwt", ...}]}'></textarea>
+          <div id="jsonValidation" class="mt-2 text-sm"></div>
+        </div>
+
+        <!-- Enabled Toggle (only for edit mode) -->
+        <div id="enabledToggleSection" class="mb-4 hidden">
+          <label class="flex items-center space-x-3">
+            <span class="text-sm font-medium text-gray-700">Enabled</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="scopeEnabled" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </label>
+        </div>
+      </div>
+
+      <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+        <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          Cancel
+        </button>
+        <button onclick="saveScope()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+      <h3 class="text-xl font-semibold text-gray-800 mb-4">Delete Scope Mapping</h3>
+      <p class="text-gray-600 mb-6">Are you sure you want to delete scope "<span id="deleteScopeName" class="font-semibold"></span>"? This action cannot be undone.</p>
+      <input type="hidden" id="deleteScopeId">
+      <div class="flex justify-end space-x-3">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          Cancel
+        </button>
+        <button onclick="confirmDelete()" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/oid4vp/config/api/scope';
+
+  // Load all scopes on page load
+  document.addEventListener('DOMContentLoaded', loadScopes);
+
+  async function loadScopes() {
+    const scopeList = document.getElementById('scopeList');
+    scopeList.innerHTML = '<div class="text-center text-gray-500 py-8">Loading...</div>';
+
+    try {
+      const response = await fetch(API_BASE);
+      const scopes = await response.json();
+
+      if (scopes.length === 0) {
+        scopeList.innerHTML = `
+          <div class="text-center text-gray-500 py-8">
+            <p>No scope mappings found.</p>
+            <button onclick="openCreateModal()" class="mt-2 text-blue-600 hover:underline">Create your first scope mapping</button>
+          </div>
+        `;
+        return;
+      }
+
+      scopeList.innerHTML = scopes.map(scope => createScopeCard(scope)).join('');
+      setTimeout(highlightCode, 100);
+    } catch (error) {
+      scopeList.innerHTML = `<div class="text-center text-red-500 py-8">Failed to load scopes: ${error.message}</div>`;
+    }
+  }
+
+  function createScopeCard(scope) {
+    const dcqlPreview = JSON.stringify(scope.dcqlQuery, null, 2);
+    const enabledBadge = scope.enabled
+        ? '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Enabled</span>'
+        : '<span class="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">Disabled</span>';
+
+    return `
+      <div class="scope-card border border-gray-200 rounded-lg p-4">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex items-center space-x-3">
+            <h3 class="text-lg font-semibold text-gray-800">${escapeHtml(scope.scope)}</h3>
+            ${enabledBadge}
+            <span class="text-xs text-gray-400">ID: ${scope.id}</span>
+          </div>
+          <div class="flex space-x-2">
+            <button onclick="toggleEnabled(${scope.id})" class="px-3 py-1 text-sm ${scope.enabled ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-green-100 text-green-700 hover:bg-green-200'} rounded">
+              ${scope.enabled ? 'Disable' : 'Enable'}
+            </button>
+            <button onclick="editScope(${scope.id})" class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+              Edit
+            </button>
+            <button onclick="openDeleteModal(${scope.id}, '${escapeHtml(scope.scope)}')" class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200">
+              Delete
+            </button>
+          </div>
+        </div>
+        ${scope.description ? `<p class="text-sm text-gray-600 mb-3">${escapeHtml(scope.description)}</p>` : ''}
+        <div class="bg-gray-50 rounded p-3 overflow-x-auto">
+          <pre class="text-xs"><code class="language-json">${escapeHtml(dcqlPreview.substring(0, 500))}${dcqlPreview.length > 500 ? '...' : ''}</code></pre>
+        </div>
+        <div class="mt-2 text-xs text-gray-400">
+          Created: ${scope.createdAt || 'N/A'} | Updated: ${scope.updatedAt || 'N/A'}
+        </div>
+      </div>
+    `;
+  }
+
+  function openCreateModal() {
+    document.getElementById('modalTitle').textContent = 'New Scope Mapping';
+    document.getElementById('editScopeId').value = '';
+    document.getElementById('scopeName').value = '';
+    document.getElementById('scopeDescription').value = '';
+    document.getElementById('dcqlQueryJson').value = '';
+    document.getElementById('jsonValidation').innerHTML = '';
+    document.getElementById('enabledToggleSection').classList.add('hidden');
+    document.getElementById('scopeModal').classList.add('active');
+  }
+
+  async function editScope(id) {
+    try {
+      const response = await fetch(`${API_BASE}/${id}`);
+      if (!response.ok) throw new Error('Scope not found');
+      const scope = await response.json();
+
+      document.getElementById('modalTitle').textContent = 'Edit Scope Mapping';
+      document.getElementById('editScopeId').value = scope.id;
+      document.getElementById('scopeName').value = scope.scope;
+      document.getElementById('scopeDescription').value = scope.description || '';
+      document.getElementById('dcqlQueryJson').value = JSON.stringify(scope.dcqlQuery, null, 2);
+      document.getElementById('scopeEnabled').checked = scope.enabled;
+      document.getElementById('jsonValidation').innerHTML = '';
+      document.getElementById('enabledToggleSection').classList.remove('hidden');
+      document.getElementById('scopeModal').classList.add('active');
+    } catch (error) {
+      alert('Failed to load scope: ' + error.message);
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('scopeModal').classList.remove('active');
+  }
+
+  async function saveScope() {
+    const id = document.getElementById('editScopeId').value;
+    const scope = document.getElementById('scopeName').value.trim();
+    const description = document.getElementById('scopeDescription').value.trim();
+    const dcqlQueryJson = document.getElementById('dcqlQueryJson').value.trim();
+
+    if (!scope) {
+      alert('Scope is required');
+      return;
+    }
+
+    if (!dcqlQueryJson) {
+      alert('DCQL Query JSON is required');
+      return;
+    }
+
+    let dcqlQuery;
+    try {
+      dcqlQuery = JSON.parse(dcqlQueryJson);
+    } catch (e) {
+      alert('Invalid JSON format: ' + e.message);
+      return;
+    }
+
+    const data = { scope, dcqlQuery, description };
+
+    if (id) {
+      data.enabled = document.getElementById('scopeEnabled').checked;
+    }
+
+    try {
+      const url = id ? `${API_BASE}/${id}` : API_BASE;
+      const method = id ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error_description || result.error || 'Failed to save');
+      }
+
+      closeModal();
+      loadScopes();
+    } catch (error) {
+      alert('Failed to save scope: ' + error.message);
+    }
+  }
+
+  async function toggleEnabled(id) {
+    try {
+      const response = await fetch(`${API_BASE}/${id}/toggle`, { method: 'PUT' });
+      if (!response.ok) throw new Error('Failed to toggle');
+      loadScopes();
+    } catch (error) {
+      alert('Failed to toggle enabled status: ' + error.message);
+    }
+  }
+
+  function openDeleteModal(id, scope) {
+    document.getElementById('deleteScopeId').value = id;
+    document.getElementById('deleteScopeName').textContent = scope;
+    document.getElementById('deleteModal').classList.add('active');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('active');
+  }
+
+  async function confirmDelete() {
+    const id = document.getElementById('deleteScopeId').value;
+
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete');
+      closeDeleteModal();
+      loadScopes();
+    } catch (error) {
+      alert('Failed to delete scope: ' + error.message);
+    }
+  }
+
+  function formatDcqlJson() {
+    const textarea = document.getElementById('dcqlQueryJson');
+    try {
+      const parsed = JSON.parse(textarea.value);
+      textarea.value = JSON.stringify(parsed, null, 2);
+      showValidation(true, 'JSON formatted successfully');
+    } catch (e) {
+      showValidation(false, 'Invalid JSON: ' + e.message);
+    }
+  }
+
+  async function validateDcqlJson() {
+    const dcqlQueryJson = document.getElementById('dcqlQueryJson').value.trim();
+
+    if (!dcqlQueryJson) {
+      showValidation(false, 'DCQL Query JSON is required');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dcqlQuery: dcqlQueryJson })
+      });
+
+      const result = await response.json();
+
+      if (result.valid) {
+        let message = '✓ Valid DCQL Query';
+        if (result.warnings && result.warnings.length > 0) {
+          message += ' (Warnings: ' + result.warnings.join(', ') + ')';
+        }
+        showValidation(true, message);
+      } else {
+        showValidation(false, '✗ Invalid: ' + result.error);
+      }
+    } catch (error) {
+      showValidation(false, 'Validation failed: ' + error.message);
+    }
+  }
+
+  function showValidation(isValid, message) {
+    const el = document.getElementById('jsonValidation');
+    el.className = `mt-2 text-sm ${isValid ? 'text-green-600' : 'text-red-600'}`;
+    el.textContent = message;
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function highlightCode() {
+    if (typeof Prism !== 'undefined') {
+      Prism.highlightAll();
+    }
+  }
+</script>
+</body>
+</html>

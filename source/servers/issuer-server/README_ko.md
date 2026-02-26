@@ -55,6 +55,10 @@ Gradle을 통해 관리되는 주요 종속성입니다:
 
 - [Issuer Server API 참조](../../../docs/api/issuer-server/issuer_server_API_ko.md)
   Issuer Server API의 참조 구현에 대한 가이드입니다.
+- [OID4VCI SDK 통합 가이드](../../../docs/api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE_ko.md)
+- [OID4VCI SDK API 참조](../../../docs/api/issuer-server/OID4VCI_SDK-SERVER_API_ko.md)
+- [OID4VCI SDK 에러 코드](../../../docs/api/issuer-server/OID4VCISDKError.md)
+- [Formatter SDK 에러 코드](../../../docs/api/issuer-server/FormatterSDKError.md)
 
 ## 기여
 

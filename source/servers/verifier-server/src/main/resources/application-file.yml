@@ -1,0 +1,52 @@
+# OID4VP Repository Configuration
+# type: jpa (default) - uses database storage
+# type: file - uses file-based storage (reads from JSON files)
+oid4vp:
+  repository:
+    type: file
+    file:
+      config-path: classpath:oid4vp/oid4vp-config.json
+      scope-mapping-path: classpath:oid4vp/dcql-scope-mappings.json
+
+spring:
+  jackson:
+    default-property-inclusion: non_null
+  # Database configuration (only used when oid4vp.repository.type=jpa)
+  # When type=file, uncomment autoconfigure.exclude to disable JPA/Liquibase
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+  # liquibase:
+  #   change-log: classpath:/db/changelog/master.xml
+  #   enabled: true
+  # datasource:
+  #   driver-class-name: org.postgresql.Driver
+  #   url: jdbc:postgresql://localhost:5430/verifier
+  #   username: omn
+  #   password: omn
+  # jpa:
+  #   open-in-view: true
+  #   show-sql: true
+  #   hibernate:
+  #     ddl-auto: validate
+  #     naming:
+  #       physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+  #   properties:
+  #     hibernate:
+  #       format_sql: false
+
+logging:
+  level:
+    root: DEBUG
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false

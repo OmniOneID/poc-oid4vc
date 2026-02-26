@@ -61,7 +61,7 @@ This Verifier service supports the following functionalities:
 #### Request Example (Using DCQL)
 
 ```shell
-curl -X POST "http://${Host}:8080/oid4vp/initiate" \
+curl -X POST "http://${Host}:8081/oid4vp/initiate" \
 -H "Content-Type: application/x-www-form-urlencoded" \
 -d 'dcql_query={"credentials":[{"id":"StudentID"}]}&response_mode=direct_post&use_request_uri=false'
 ```
@@ -69,7 +69,7 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
 #### Request Example (Using Scope)
 
 ```shell
-curl -X POST "http://${Host}:8080/oid4vp/initiate" \
+curl -X POST "http://${Host}:8081/oid4vp/initiate" \
 -H "Content-Type: application/x-www-form-urlencoded" \
 -d 'scope=StudentID&response_mode=direct_post&use_request_uri=true'
 ```
@@ -78,7 +78,7 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
 
 ```json
 {
-  "authorization_request_uri": "openid4vp://?response_type=vp_token&client_id=redirect_uri%3Ahttp%3A%2F%2Flocalhost%3A8080%2Foid4vp%2Fcallback&response_mode=direct_post&nonce=550e8400-e29b-41d4-a716-446655440000&state=a1b2c3d4e5f6g7h8&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Foid4vp%2Fcallback&dcql_query=%7B%22credentials%22%3A%5B%7B%22id%22%3A%22StudentID%22%7D%5D%7D&client_metadata=%7B%22client_name%22%3A%22OID4VP%20Verifier%22%7D",
+  "authorization_request_uri": "openid4vp://?response_type=vp_token&client_id=redirect_uri%3Ahttp%3A%2F%2Flocalhost%3A8081%2Foid4vp%2Fcallback&response_mode=direct_post&nonce=550e8400-e29b-41d4-a716-446655440000&state=a1b2c3d4e5f6g7h8&redirect_uri=http%3A%2F%2Flocalhost%3A8081%2Foid4vp%2Fcallback&dcql_query=%7B%22credentials%22%3A%5B%7B%22id%22%3A%22StudentID%22%7D%5D%7D&client_metadata=%7B%22client_name%22%3A%22OID4VP%20Verifier%22%7D",
   "method": "by_value",
   "request_id": "550e8400-e29b-41d4-a716-446655440001",
   "state": "a1b2c3d4e5f6g7h8",
@@ -88,10 +88,10 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
   "credential_count": 1,
   "query_source": "direct",
   "use_request_uri": false,
-  "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+  "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
   "client_metadata": {
     "client_name": "OID4VP Verifier",
-    "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+    "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
     "response_types_supported": [
       "vp_token"
     ],
@@ -108,8 +108,8 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
 
 ```json
 {
-  "authorization_request_uri": "openid4vp://?request_uri=http%3A%2F%2Flocalhost%3A8080%2Foid4vp%2Frequest%2F550e8400-e29b-41d4-a716-446655440001&client_id=redirect_uri%3Ahttp%3A%2F%2Flocalhost%3A8080%2Foid4vp%2Fcallback",
-  "request_uri": "http://localhost:8080/oid4vp/request/550e8400-e29b-41d4-a716-446655440001",
+  "authorization_request_uri": "openid4vp://?request_uri=http%3A%2F%2Flocalhost%3A8081%2Foid4vp%2Frequest%2F550e8400-e29b-41d4-a716-446655440001&client_id=redirect_uri%3Ahttp%3A%2F%2Flocalhost%3A8081%2Foid4vp%2Fcallback",
+  "request_uri": "http://localhost:8081/oid4vp/request/550e8400-e29b-41d4-a716-446655440001",
   "method": "by_reference",
   "request_id": "550e8400-e29b-41d4-a716-446655440001",
   "state": "a1b2c3d4e5f6g7h8",
@@ -121,10 +121,10 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
   "use_request_uri": true,
   "scope": "StudentID",
   "mapped_dcql": "{\"credentials\":[{\"id\":\"StudentID\"}]}",
-  "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+  "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
   "client_metadata": {
     "client_name": "OID4VP Verifier",
-    "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+    "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
     "response_types_supported": [
       "vp_token"
     ],
@@ -148,7 +148,7 @@ curl -X POST "http://${Host}:8080/oid4vp/initiate" \
 #### Request Example
 
 ```shell
-curl -X GET "http://${Host}:8080/oid4vp/request/550e8400-e29b-41d4-a716-446655440001"
+curl -X GET "http://${Host}:8081/oid4vp/request/550e8400-e29b-41d4-a716-446655440001"
 ```
 
 #### Response Example
@@ -156,15 +156,15 @@ curl -X GET "http://${Host}:8080/oid4vp/request/550e8400-e29b-41d4-a716-44665544
 ```json
 {
   "response_type": "vp_token",
-  "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+  "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
   "response_mode": "direct_post",
   "nonce": "550e8400-e29b-41d4-a716-446655440000",
   "state": "a1b2c3d4e5f6g7h8",
-  "response_uri": "http://localhost:8080/oid4vp/response",
+  "response_uri": "http://localhost:8081/oid4vp/response",
   "dcql_query": "{\"credentials\":[{\"id\":\"StudentID\"}]}",
   "client_metadata": {
     "client_name": "OID4VP Verifier",
-    "client_id": "redirect_uri:http://localhost:8080/oid4vp/callback",
+    "client_id": "redirect_uri:http://localhost:8081/oid4vp/callback",
     "response_types_supported": [
       "vp_token"
     ],
@@ -188,7 +188,7 @@ curl -X GET "http://${Host}:8080/oid4vp/request/550e8400-e29b-41d4-a716-44665544
 #### Request Example (Direct Post - POST)
 
 ```shell
-curl -X POST "http://${Host}:8080/oid4vp/response" \
+curl -X POST "http://${Host}:8081/oid4vp/response" \
 -H "Content-Type: application/x-www-form-urlencoded" \
 -d 'vp_token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...&state=a1b2c3d4e5f6g7h8'
 ```
@@ -196,7 +196,7 @@ curl -X POST "http://${Host}:8080/oid4vp/response" \
 #### Request Example (Query Mode - GET)
 
 ```shell
-curl -X GET "http://${Host}:8080/oid4vp/response?vp_token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...&state=a1b2c3d4e5f6g7h8"
+curl -X GET "http://${Host}:8081/oid4vp/response?vp_token=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...&state=a1b2c3d4e5f6g7h8"
 ```
 
 #### Response Example (Success)
@@ -254,7 +254,7 @@ Pass the DCQL query JSON object as the request body.
 #### Request Example
 
 ```shell
-curl -X POST "http://${Host}:8080/oid4vp/validate-dcql" \
+curl -X POST "http://${Host}:8081/oid4vp/validate-dcql" \
 -H "Content-Type: application/json" \
 -d '{
   "credentials": [

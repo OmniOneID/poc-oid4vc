@@ -36,8 +36,8 @@ Libraries used in this project are open-source dependencies managed via the [bui
 
 Refer to the following documents for more detailed information:
 
-- [Authorization Server API Reference](../../../docs/api/authorization-server/authorization_server_API.md)
-  Guide for the reference implementation of the Authorization Server's API.
+- [Issuer Server API Reference](../../../../docs/api/issuer-server/OID4VCI_SDK-SERVER_API.md)
+  Guide for the reference implementation of the Issuer Server's API (includes Authorization).
 
 
 ## Contributing

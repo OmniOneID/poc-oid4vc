@@ -41,20 +41,29 @@ poc-oid4vc
 │   ├── apps/                          # 테스트용 모바일 앱
 │   │   ├── android-app/               # Android 지갑 앱
 │   │   └── ios-app/                   # iOS 지갑 앱
-│   ├── servers/                       # 백엔드 서버
-│   │   ├── issuer-server/             # Issuer 서버
-│   │   ├── authorization-server/      # Authorization 서버
-│   │   └── verifier-server/           # Verifier 서버
-│   └── sdks/                          # SDK 라이브러리
-│       └── sd-jwt-sdk/                # SD-JWT SDK
+│   └── servers/                       # 백엔드 서버
+│       ├── issuer-server/             # Issuer 서버 (Authorization 포함)
+│       └── verifier-server/           # Verifier 서버
 ├── docs/                              # 문서 폴더
+│   └── api/
+│       ├── issuer-server/             # Issuer SDK 연동 가이드 및 API 문서
+│       └── verifier-server/           # Verifier SDK 연동 가이드 및 API 문서
 ```
 
 ---
 
 ## 4. 백엔드 서버 구동
 
-OID4VC PoC 프로젝트는 3개의 백엔드 서버로 구성되어 있습니다. 각 서버는 Spring Boot 기반으로 구현되어 있습니다.
+OID4VC PoC 프로젝트는 2개의 백엔드 서버로 구성되어 있습니다. 각 서버는 Spring Boot 기반으로 구현되어 있으며, SDK를 서브모듈로 포함합니다.
+
+| 서버 | 역할 | 포함 SDK |
+| :--- | :--- | :--- |
+| **Issuer Server** | OID4VCI 표준에 따른 VC 발급 및 OAuth 2.0 인가 | `did-oid4vci-sdk-server`, `did-oid4vc-authorization-sdk-server`, `did-oid4vc-formatter-sdk-server` |
+| **Verifier Server** | OID4VP 표준에 따른 VP 검증 | `did-oid4vp-sdk-server`, `did-oid4vc-formatter-sdk-server` |
+
+> **참고**: 각 서버의 상세 설정(application.yml, 메타데이터, DB 구성, SDK 연동 등)은 아래 **SDK 연동 가이드**를 참조하세요.
+> - Issuer Server: [OID4VCI SDK 적용 가이드](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE_ko.md)
+> - Verifier Server: [OID4VP SDK 연동 가이드](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE_ko.md)
 
 ### 4.1. 공통 구성 요소
 
@@ -66,59 +75,19 @@ cd source/servers
 
 ### 4.2. Issuer Server 구동
 
-**역할**: OID4VCI 표준에 따라 VC(Verifiable Credential)를 발급합니다.
+**역할**: OID4VCI 표준에 따라 VC(Verifiable Credential)를 발급하고, OAuth 2.0 기반의 인증/인가를 관리합니다.
 
 #### 4.2.1. IDE를 사용하여 구동 (권장)
 
 1. IntelliJ IDEA 또는 Eclipse 등의 IDE에서 `source/servers/issuer-server` 폴더를 프로젝트로 엽니다.
 2. IDE의 Gradle 빌드 시스템이 자동으로 의존성을 다운로드합니다.
-3. application.yml에 profile 설정을 확인합니다.
-```groovy
-spring:
-  profiles:
-    active: local //현재는 application-local.yml 설정을 읽어옵니다.
-```
-4. 앱에서 사용하는 endpoint는 issuer_meta_univ.json의 내용을 참조하므로 application-local.yml에 정의되어있는 메타데이터 경로를 확인하여 현재 서버 ip로 변경합니다.
-
-*application-local.yml*
-```groovy
-  metadata-file-path: src/main/resources/issuer_meta_univ_emul.json
-  // 현재는 issuer_meta_univ_emul.json을 참조합니다.
-  // 새 메타데이터 파일을 추가하거나 경로 변경 시 맞게 수정합니다.
-```
-
-*issuer_meta_univ_emul.json*
-```groovy
-  "credential_issuer": "http://10.0.2.2:8080",
-  "authorization_server": ["http://10.0.2.2:8081"],
-  "credential_endpoint": "http://10.0.2.2:8080/credential",
-  "nonce_endpoint": "http://10.0.2.2/nonce",
-  "deferred_credential_endpoint": "http://10.0.2.2/deferred_credential",
-  "notification_endpoint": "http://10.0.2.2/notification",
-  ...
-  // 위의 속성들의 IP를 현재 서버 IP로 변경합니다.
-```
-
-5. application-local.yml에서 아래 속성들을 현재 서버의 IP 및 인가 서버의 IP로 변경합니다.
-
-*application-local.yml*
-```groovy
-issuer:
-  base-url: http://10.0.2.2:8080
-  // 현재 서버 IP로 변경합니다.
-  .
-  .
-clients:
-  auth-server:
-    url: http://localhost:8081
-  // 현재 인가 서버 IP로 변경합니다.
-```
-
-6. 실행 구성(Run Configuration)을 다음과 같이 설정합니다:
-   - Main Class: `com.example.issuer.IssuerApplication`
+3. `application.yml`의 프로파일 설정 및 상세 구성을 확인합니다.
+   - 상세 설정 방법은 [OID4VCI SDK 적용 가이드](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE_ko.md)를 참조하세요.
+4. 실행 구성(Run Configuration)을 다음과 같이 설정합니다:
+   - Main Class: `com.example.did.oid4vc.issuer.IssuerApplication`
    - Working directory: `source/servers/issuer-server`
-7. 실행 버튼을 클릭하여 서버를 시작합니다.
-8. 콘솔에서 "Started IssuerApplication in ... seconds" 메시지를 확인하면 정상 구동입니다.
+5. 실행 버튼을 클릭하여 서버를 시작합니다.
+6. 콘솔에서 "Started IssuerApplication in ... seconds" 메시지를 확인하면 정상 구동입니다.
 
 #### 4.2.2. 콘솔 명령어로 구동
 
@@ -132,7 +101,7 @@ chmod 755 ./gradlew
 ./gradlew clean build
 
 # JAR 파일 실행
-java -jar build/libs/issuer-server-0.0.1-SNAPSHOT.jar
+java -jar build/libs/issuer-server-1.0.0.jar
 ```
 
 **기본 포트**: `8080`
@@ -145,7 +114,7 @@ Issuer Server가 정상적으로 구동되면, 브라우저에서 아래 주소�
 http://<현재_IP>:8080/oid4vci/test
 ```
 
-예를 들어, 로컬 환경에서 실행 중이라면:  
+예를 들어, 로컬 환경에서 실행 중이라면:
 
 ```
 http://localhost:8080/oid4vci/test
@@ -155,95 +124,23 @@ http://localhost:8080/oid4vci/test
 
 <img src="./images/issuer-initial.png" width="500"/>
 
-### 4.3. Authorization Server 구동
-
-**역할**: OAuth 2.0 기반의 OID4VCI 표준에 따른 인증 및 인가를 관리합니다.
-
-#### 4.3.1. IDE를 사용하여 구동 (권장)
-
-1. 별도의 IDE 창 또는 창 탭에서 `source/servers/authorization-server` 폴더를 프로젝트로 엽니다.
-2. IDE의 Gradle 빌드 시스템이 자동으로 의존성을 다운로드합니다.
-3. application.yml에서 아래 속성들을 현재 서버의 IP 및 현재 Issuer 서버의 IP로 변경합니다.
-
-*application.yml*
-```groovy
-authorization-server:
-  issuer-url: http://10.48.17.124:8081
-  // 현재 서버의 IP로 변경합니다.
-.
-.
-clients:
-  issuer-server:
-    url: http://10.48.17.124:8080
-   // 현재 Issuer 서버의 IP로 변경합니다.
-  redirect-url: http://10.48.17.124:8081/auth/callback
-  // 현재 서버의 IP로 변경합니다.
-```
-4. 실행 구성(Run Configuration)을 다음과 같이 설정합니다:
-   - Main Class: `com.example.authorization.AuthorizationApplication`
-   - Working directory: `source/servers/authorization-server`
-5. 실행 버튼을 클릭하여 서버를 시작합니다.
-6. 콘솔에서 "Started AuthorizationApplication in ... seconds" 메시지를 확인하면 정상 구동입니다.
-
-#### 4.3.2. 콘솔 명령어로 구동
-
-```bash
-cd authorization-server
-
-# Gradle Wrapper 실행 권한 부여
-chmod 755 ./gradlew
-
-# 프로젝트 빌드
-./gradlew clean build
-
-# JAR 파일 실행
-java -jar build/libs/authorization-server-0.0.1-SNAPSHOT.jar
-```
-
-**기본 포트**: `8081`
-
-#### 4.3.3. 브라우저에서 접속
-
-Authorization Server가 정상적으로 구동되면, 브라우저에서 아래 주소로 접속합니다.
-
-```
-http://<현재_IP>:8081
-```
-
-예를 들어, 로컬 환경에서 실행 중이라면:  
-
-```
-http://localhost:8081
-```
-
-아래와 같이 초기 테스트 페이지를 확인할 수 있습니다.
-
-<img src="./images/authorization-initial.png" width="500"/>
-
-### 4.4. Verifier Server 구동
+### 4.3. Verifier Server 구동
 
 **역할**: OID4VP 표준에 따라 VP(Verifiable Presentation)를 검증합니다.
 
-#### 4.4.1. IDE를 사용하여 구동 (권장)
+#### 4.3.1. IDE를 사용하여 구동 (권장)
 
 1. 별도의 IDE 창 또는 창 탭에서 `source/servers/verifier-server` 폴더를 프로젝트로 엽니다.
 2. IDE의 Gradle 빌드 시스템이 자동으로 의존성을 다운로드합니다.
-3. application-local.yml에서 아래 속성을 현재 서버의 IP로 변경합니다.
-
-*application-local.yml*
-```groovy
-oid4vp:
-  verifier:
-    base-url: "http://10.0.2.2:8082"
-  // 현재 서버의 IP로 변경합니다.
-```
+3. `application.yml`의 프로파일 설정 및 상세 구성을 확인합니다.
+   - 상세 설정 방법은 [OID4VP SDK 연동 가이드](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE_ko.md)를 참조하세요.
 4. 실행 구성(Run Configuration)을 다음과 같이 설정합니다:
-   - Main Class: `com.example.verifier.VerifierApplication`
+   - Main Class: `com.example.did.oid4vc.verifier.VerifierApplication`
    - Working directory: `source/servers/verifier-server`
 5. 실행 버튼을 클릭하여 서버를 시작합니다.
 6. 콘솔에서 "Started VerifierApplication in ... seconds" 메시지를 확인하면 정상 구동입니다.
 
-#### 4.4.2. 콘솔 명령어로 구동
+#### 4.3.2. 콘솔 명령어로 구동
 
 ```bash
 cd verifier-server
@@ -255,23 +152,23 @@ chmod 755 ./gradlew
 ./gradlew clean build
 
 # JAR 파일 실행
-java -jar build/libs/verifier-server-0.0.1-SNAPSHOT.jar
+java -jar build/libs/verifier-example-server-3.0.0.jar
 ```
 
-**기본 포트**: `8082`
+**기본 포트**: `8081`
 
-#### 4.4.3. 브라우저에서 접속
+#### 4.3.3. 브라우저에서 접속
 
 Verifier Server가 정상적으로 구동되면, 브라우저에서 아래 주소로 접속합니다.
 
 ```
-http://<현재_IP>:8082/oid4vp/test
+http://<현재_IP>:8081/oid4vp/test
 ```
 
-예를 들어, 로컬 환경에서 실행 중이라면:  
+예를 들어, 로컬 환경에서 실행 중이라면:
 
 ```
-http://localhost:8082/oid4vp/test
+http://localhost:8081/oid4vp/test
 ```
 
 아래와 같이 초기 테스트 페이지를 확인할 수 있습니다.
@@ -309,7 +206,6 @@ Android 앱에서 API 테스트를 위해 백엔드 서버에 연결하려면:
 
 일반적으로 다음과 같이 설정합니다:
    - Issuer Server: `http://10.0.2.2:8080`
-   - Authorization Server: `http://10.0.2.2:8081`
 
 > **팁**: 에뮬레이터에서 호스트 머신의 localhost에 접근하려면 `10.0.2.2`를 사용합니다.
 
@@ -342,7 +238,6 @@ iOS 앱에서 API 테스트를 위해 백엔드 서버에 연결하려면:
 
 일반적으로 다음과 같이 설정합니다:
    - Issuer Server: `http://localhost:8080`
-   - Authorization Server: `http://localhost:8081`
 
 > **팁**: iOS 시뮬레이터에서 호스트 머신의 localhost에 접근하려면 `localhost` 또는 `127.0.0.1`을 직접 사용할 수 있습니다.
 
@@ -420,9 +315,9 @@ OID4VP는 크게 `Same Device`와 `Cross Device` Flow를 통해 동작됩니다.
 1. 브라우저에서 아래 주소로 접속합니다.
 
 ```groovy
-http://<현재_IP>:8082/oid4vp/test
+http://<현재_IP>:8081/oid4vp/test
 
-// 예를 들어 로컬 환경에서 실행 중이라면 http://localhost:8082/oid4vp/test
+// 예를 들어 로컬 환경에서 실행 중이라면 http://localhost:8081/oid4vp/test
 ```
 
 2. 아래와 같이 초기 테스트 페이지가 출력되며, `Authorization Request` 생성을 위해 `Initiate Verification Session`을 누릅니다.
@@ -451,20 +346,30 @@ http://<현재_IP>:8082/oid4vp/test
 
 ## 7. 상세 문서 참조
 
-OID4VC PoC 프로젝트에 대한 기본적인 설치 및 구동이 모두 완료되었습니다.
-이후 세부적인 핸들링은 아래 각 레포지토리의 문서를 참조해서 진행해주세요.
-
 OID4VC 프로젝트의 기본 설치 및 구동이 완료되었습니다. 각 컴포넌트에 대한 상세한 설정과 운영을 위해 다음 문서들을 참조하세요.
 
-### 7.1. 백엔드 서버 문서
+### 7.1. SDK 연동 가이드
+
+| 서버 | 가이드 | 설명 |
+| :--- | :--- | :--- |
+| **Issuer Server** | [OID4VCI SDK 적용 가이드](../api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE_ko.md) | build.gradle, application.yml, 메타데이터, DB 구성, Provider 등 상세 설정 |
+| **Verifier Server** | [OID4VP SDK 연동 가이드](../api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE_ko.md) | build.gradle, application.yml, 저장소 모드 설정, Repository, Controller 등 상세 설정 |
+
+### 7.2. 백엔드 서버 문서
 
 | 서버 | 설명 | 문서 |
 | :--- | :--- | :--- |
-| **Issuer Server** | OID4VCI 표준에 따른 VC 발급 서버 | [README](../../source/servers/issuer-server/README_ko.md) |
-| **Authorization Server** | OAuth 2.0 기반 인증/인가 서버 | [README](../../source/servers/authorization-server/README_ko.md) |
+| **Issuer Server** | OID4VCI 표준에 따른 VC 발급 서버 (Authorization 포함) | [README](../../source/servers/issuer-server/README_ko.md) |
 | **Verifier Server** | OID4VP 표준에 따른 VP 검증 서버 | [README](../../source/servers/verifier-server/README_ko.md) |
 
-### 7.2. 테스트 앱 문서
+### 7.3. API 문서
+
+| 서버 | 문서 | 에러 코드 |
+| :--- | :--- | :--- |
+| **Issuer Server** | [서버 API](../api/issuer-server/OID4VCI_SDK-SERVER_API_ko.md) | [OID4VCI SDK 에러](../api/issuer-server/OID4VCISDKError.md), [Formatter SDK 에러](../api/issuer-server/FormatterSDKError.md) |
+| **Verifier Server** | [서버 API](../api/verifier-server/OID4VP_SDK-SERVER_API_ko.md) | [OID4VP SDK 에러](../api/verifier-server/OID4VPSDKError.md), [Formatter SDK 에러](../api/verifier-server/FormatterSDKError.md) |
+
+### 7.4. 테스트 앱 문서
 
 | 앱 | 설명 | 문서 |
 | :--- | :--- | :--- |

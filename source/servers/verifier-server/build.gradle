@@ -4,10 +4,9 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.example.oid4vc'
-version = '0.0.1-SNAPSHOT'
-description = 'OID4VC Issuer'
-
+group = 'com.example.did'
+version = '3.0.0'
+description = 'Verifier Example Server'
 
 allprojects {
     repositories {
@@ -17,8 +16,15 @@ allprojects {
         maven { url "https://maven.scijava.org/content/repositories/public/" }
         maven { url "https://jitpack.io" }
     }
-}
 
+    configurations.all {
+        resolutionStrategy {
+            force 'org.bouncycastle:bcpkix-jdk18on:1.80'
+            force 'org.bouncycastle:bcprov-jdk18on:1.80'
+            force 'org.bouncycastle:bcutil-jdk18on:1.80'
+        }
+    }
+}
 
 java {
     toolchain {
@@ -29,6 +35,11 @@ java {
 jar {
     enabled = false
 }
+
+bootJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -44,23 +55,33 @@ springBoot {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    // SDK
+    implementation project(':did-oid4vp-sdk-server')
+    implementation project(':did-oid4vc-formatter-sdk-server')
+
+    // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-web-services'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-    implementation 'org.bouncycastle:bcpkix-jdk18on:1.80'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'com.google.zxing:javase:3.5.1'
+    // Database (moved from SDK)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.liquibase:liquibase-core'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // API Documentation (moved from SDK)
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
-    //implementation 'com.github.DevOmniOneID:sdjwt:0.9.9.5'
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Local SDK libraries
     implementation fileTree(dir: "libs", includes: ["*"])
 }
 

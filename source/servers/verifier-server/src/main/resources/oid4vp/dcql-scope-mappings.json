@@ -1,0 +1,20 @@
+[
+  {
+    "scope": "sdjwt_test",
+    "description": "National ID credential query",
+    "enabled": true,
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"national_id\",\"format\":\"dc+sd-jwt\",\"meta\":{\"vct_values\":[\"https://credentials.gov.kr/identity_credential\"]}}]}"
+  },
+  {
+    "scope": "opendid_vc_test",
+    "description": "Mobile Driver License credential query",
+    "enabled": true,
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"student_id\",\"format\":\"opendid_vc\",\"meta\":{\"credential_schema_id_values\":[\"http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema\"]}}]}"
+  },
+  {
+    "scope": "eudi_pid_test",
+    "description": "EUDI PID credential query",
+    "enabled": true,
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"query_0\",\"format\":\"dc+sd-jwt\",\"meta\":{\"vct_values\":[\"urn:eudi:pid:1\"]}}]}"
+  }
+]

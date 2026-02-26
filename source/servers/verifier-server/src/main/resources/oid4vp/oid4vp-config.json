@@ -1,0 +1,34 @@
+{
+  "baseUrl": "http://10.48.17.127:8081",
+  "clientName": "OID4VP Verifier",
+  "invocationScheme": "openid4vp://",
+  "clientId": {
+    "scheme": "decentralized_identifier",
+    "value": "did:omn:verifier"
+  },
+  "session": {
+    "sessionTtl": 300000
+  },
+  "endpoints": {
+    "response": "/oid4vp/response",
+    "request": "/oid4vp/request"
+  },
+  "clientMetadata": {
+    "vpFormatsSupported": {
+      "opendid_vc": {
+        "proof_type_values": ["Secp256r1Signature2018"]
+      },
+      "vc+sd-jwt": {
+        "sd-jwt_alg_values": ["ES256"],
+        "kb-jwt_alg_values": ["ES256"]
+      },
+      "dc+sd-jwt": {
+        "sd-jwt_alg_values": ["ES256"],
+        "kb-jwt_alg_values": ["ES256"]
+      }
+    }
+  },
+  "crypto": {
+    "vpTokenEncryptionKey": "opAOdwHlm+TS4nFPAAVWKYxeRT0yrjfbScPf50tYp6I="
+  }
+}

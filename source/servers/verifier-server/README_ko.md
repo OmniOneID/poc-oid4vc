@@ -8,41 +8,43 @@ Verifier Server 소스 코드 리포지토리에 오신 것을 환영합니다. 
 
 ```
 verifier-server
-├── gradle
-├── libs
-    └── did-crypto-sdk-server-2.0.0.jar
-    └── did-wallet-sdk-server-2.0.0.jar
-    └── sd-jwt-sdk-1.0.0.jar
-├── src
-└── build.gradle
+├── did-oid4vp-sdk-server              # OID4VP SDK (핵심 로직)
+├── did-oid4vc-formatter-sdk-server    # OID4VC Formatter SDK
+├── libs                               # 공통 라이브러리
+├── src                                # 검증자 예제 애플리케이션 소스 코드
+│   ├── main
+│   │   ├── java                       # Java 소스 코드 (com.example.did.oid4vc.verifier)
+│   │   └── resources                  # 설정 파일 (application.yml, DB 스크립트 등)
+├── build.gradle                       # 프로젝트 빌드 설정
 └── README.md
 ```
 
-<br/>
+## 디렉토리 상세 설명
 
-아래는 디렉토리의 각 폴더 및 파일에 대한 설명입니다.
-
-| 이름                    | 설명                                            |
-| ----------------------- | ----------------------------------------------- |
-| verifier-server           | Verifier Server 소스 코드 및 빌드 파일            |
-| ┖ gradle                | Gradle 빌드 구성 및 스크립트                    |
-| ┖ libs                  | 외부 라이브러리 및 종속성                       |
-| ┖ src                   | 메인 소스 코드 디렉토리                         |
-| ┖ build.gradle          | Gradle 빌드 구성 파일                           |
-| ┖ README.md             | 소스 코드에 대한 개요 및 지침                   |
-
+| 이름 | 설명 |
+|------|-------------|
+| `did-oid4vp-sdk-server` | 핵심 OID4VP SDK 로직을 포함하는 서브 프로젝트 |
+| `did-oid4vc-formatter-sdk-server` | OID4VC Formatter SDK 서브 프로젝트 |
+| `libs` | 서명에 사용되는 `did-wallet-sdk-server-2.0.0.jar`, `did-crypto-sdk-server-2.0.0.jar` 포함 |
+| `src/main/resources` | 애플리케이션 프로퍼티 및 UI 템플릿 포함 |
 
 ## 라이브러리
 
-이 프로젝트에서 사용되는 라이브러리는 두 가지 주요 범주로 구성됩니다.
+### 1. Open DID 라이브러리
+SDK 및 애플리케이션에서 사용하는 핵심 라이브러리입니다:
+- `did-wallet-sdk-server-2.0.0.jar` (`libs/` 폴더)
+- `did-crypto-sdk-server-2.0.0.jar` (`libs/` 폴더)
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar` (`did-oid4vp-sdk-server/libs/` 폴더)
+- `opendid-vc-sdk-1.0.0.jar` (`did-oid4vp-sdk-server/libs/` 폴더)
 
-1. **Open DID 라이브러리**: 이 라이브러리들은 Open DID 프로젝트에 의해 개발되었으며 [libs 폴더](libs)에서 사용할 수 있습니다. 여기에는 다음이 포함됩니다.
-
-    - `did-crypto-sdk-server-2.0.0.jar`
-    - `did-wallet-sdk-server-2.0.0.jar`
-
-2. **타사 라이브러리**: 이 라이브러리들은 [build.gradle](build.gradle) 파일을 통해 관리되는 오픈 소스 종속성입니다. 타사 라이브러리 및 해당 라이선스의 자세한 목록은 루트 디렉토리의 `dependencies-license.md` 파일을 참조하십시오.
-
+### 2. 외부 라이브러리
+Gradle을 통해 관리되는 주요 종속성입니다:
+- Spring Boot 3.2.4
+- Spring Data JPA & PostgreSQL
+- Liquibase (DB 스키마 관리)
+- OpenFeign (HTTP 클라이언트)
+- Bouncy Castle (암호화)
+- Nimbus JOSE+JWT
 
 ## 문서
 
@@ -50,6 +52,10 @@ verifier-server
 
 - [Verifier Server API 참조](../../../docs/api/verifier-server/verifier_server_API_ko.md)
   Verifier Server API의 참조 구현에 대한 가이드입니다.
+- [OID4VP SDK 통합 가이드](../../../docs/api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE_ko.md)
+- [OID4VP SDK API 참조](../../../docs/api/verifier-server/OID4VP_SDK-SERVER_API_ko.md)
+- [OID4VP SDK 에러 코드](../../../docs/api/verifier-server/OID4VPSDKError.md)
+- [Formatter SDK 에러 코드](../../../docs/api/verifier-server/FormatterSDKError.md)
 
 ## 기여
 

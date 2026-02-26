@@ -3,11 +3,18 @@
 <div class="container mx-auto px-4 py-8 max-w-7xl">
   <!-- Header -->
   <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-2">OID4VP Verifier Test Console</h1>
-    <p class="text-gray-600">OpenID for Verifiable Presentations 1.0 - Advanced Testing Interface</p>
-    <div class="mt-4 flex flex-wrap gap-2">
-      <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">DCQL Support</span>
-      <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Request URI</span>
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">OID4VP Verifier Test Console</h1>
+        <p class="text-gray-600">OpenID for Verifiable Presentations 1.0 - Advanced Testing Interface</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">DCQL Support</span>
+          <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Request URI</span>
+        </div>
+      </div>
+      <a href="/oid4vp/config" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+        OID4VP Config
+      </a>
     </div>
   </div>
 
@@ -33,9 +40,8 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
             <select onchange="loadTemplate(this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-md">
               <option value="">-- Select Template --</option>
-              <option value="identity" selected>National ID (SD-JWT) - All Claims</option>
-              <option value="identity2">National ID (SD-JWT)</option>
-              <option value="tec">TEC Student ID Credential (Custom VC)</option>
+              <option value="identity" selected>National ID (OpenDID VC) - All Claims</option>
+              <option value="identity2">National ID (SD-JWT) - All Claims</option>
               <!--
               <option value="education">Education Credential</option>
               <option value="driver">Driver License (mDL)</option>
@@ -46,19 +52,7 @@
           <!-- DCQL Editor -->
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">DCQL Query JSON</label>
-            <textarea id="dcqlQuery" rows="15" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="{&quot;credentials&quot;: [...]}">{
-  "credentials": [
-    {
-      "id": "national_id",
-      "format": "vc+sd-jwt",
-      "meta": {
-        "vct_values": [
-          "https://credentials.gov.kr/identity_credential"
-        ]
-      }
-    }
-  ]
-}</textarea>
+            <textarea id="dcqlQuery" rows="15" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="{&quot;credentials&quot;: [...]}"></textarea>
           </div>
 
           <!-- Validation -->
@@ -105,22 +99,43 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Response Mode (for fetched request)</label>
               <div class="space-y-2">
                 <label class="flex items-center">
-                  <input type="radio" name="responseMode" value="direct_post" checked="checked" class="mr-2 text-blue-600">
-                  <span>direct_post</span>
-                  <span>ㅤ</span>
-                  <input type="radio" name="responseMode" value="query" checked="" class="mr-2 text-blue-600">
+                  <input type="radio" name="responseMode" value="query" checked="checked" class="mr-2 text-blue-600">
                   <span>query</span>
+                  <span style="padding-left: 5px;"></span>
+                  <input type="radio" name="responseMode" value="direct_post" checked="" class="mr-2 text-blue-600">
+                  <span>direct_post</span>
                 </label>
               </div>
             </div>
           </div>
 
+          <!-- Scope Selection -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Scope (Optional)</label>
+            <select id="scopeSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <option value="">-- No Scope (use DCQL only) --</option>
+              <option value="sdjwt_test">sdjwt_test</option>
+              <option value="opendid_vc_test">opendid_vc_test</option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">Select a predefined scope or leave empty to use DCQL query only</p>
+          </div>
+
+          <!-- Custom Scope Input -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Custom Scope (Optional)</label>
+            <input type="text" id="customScope" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g., custom_test">
+            <p class="text-xs text-gray-500 mt-1">If specified, this overrides the select box above</p>
+          </div>
+
           <!-- Client Metadata -->
-          <div class="mb-4" style="display: none;">
+          <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Client Metadata (Optional)
             </label>
-            <textarea id="clientMetadata" rows="4" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="{&quot;client_name&quot;: &quot;Test Verifier&quot;}"></textarea>
+            <textarea id="clientMetadata" rows="4" class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md">{
+  "tos_uri": "https://example.com/tos"
+}</textarea>
+            <p class="text-xs text-gray-500 mt-1">JSON format. Displayed to user in wallet during consent</p>
           </div>
 
           <!-- Initiate Button -->
@@ -225,47 +240,21 @@
         const templates = {
           identity: {
             credentials: [{
-              "id": "national_id",
-              "format": "vc+sd-jwt",
+              "id": "student_id",
+              "format": "opendid_vc",
               "meta": {
-                "vct_values": ["https://credentials.gov.kr/identity_credential"]
+                "credential_schema_id_values": ["http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema"]
               }
             }]
           },
           identity2: {
-            "credentials": [
-              {
-                "id": "national_id",
-                "format": "vc+sd-jwt",
-                "meta": {
-                  "vct_values": [
-                    "https://credentials.gov.kr/identity_credential"
-                  ]
-                },
-                "claims": [
-                  {
-                    "path": ["nationality"]
-                  },
-                  {
-                    "path": ["gender"]
-                  }
-                ]
+            credentials: [{
+              "id": "national_id",
+              "format": "dc+sd-jwt",
+              "meta": {
+                "vct_values": ["https://credentials.gov.kr/identity_credential"]
               }
-            ]
-          },
-          tec: {
-            "credentials": [
-              {
-                "id": "tec_student_id",
-                "format": "vc",
-                "multiple": false,
-                "meta": {
-                  "issuer_values": [
-                    "did:omn:issuer"
-                  ]
-                }
-              }
-            ]
+            }]
           }
         };
 
@@ -359,18 +348,30 @@
           const responseMode = document.querySelector('input[name="responseMode"]:checked').value;
           const clientMetadata = document.getElementById('clientMetadata').value;
 
+          // Get scope - custom scope takes priority over select box
+          const customScope = document.getElementById('customScope').value.trim();
+          const selectedScope = document.getElementById('scopeSelect').value;
+          const scope = customScope || selectedScope;
+
           const params = new URLSearchParams({
             dcql_query: dcqlQuery,
             response_mode: responseMode
           });
 
+          // Add scope if specified
+          if (scope) {
+            params.append('scope', scope);
+          }
+
           if (clientMetadata.trim()) {
             params.append('client_metadata', clientMetadata);
           }
 
-          // Add use_request_uri parameter if in request_uri mode
+          // Add use_request_uri parameter based on request mode
           if (requestMode === 'request_uri') {
             params.append('use_request_uri', 'true');
+          } else {
+            params.append('use_request_uri', 'false');
           }
           const response = await fetch('/oid4vp/initiate', {
             method: 'POST',
@@ -486,9 +487,8 @@
 
       // Initialize credential format on page load
       document.addEventListener('DOMContentLoaded', function() {
-        formatJSON(); // Format default JSON
-        loadTemplate('national_id'); // Load TEC template by default
-        switchRequestMode('request_uri'); // Set Request URI as default mode
+        loadTemplate('identity');  // 'identity' template load
+        switchRequestMode('request_uri');
       });
     </script>
 

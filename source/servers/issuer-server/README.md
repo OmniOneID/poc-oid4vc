@@ -55,6 +55,10 @@ Refer to the following documents for more detailed information:
 
 - [Issuer Server API Reference](../../../docs/api/issuer-server/issuer_server_API.md)
   Guide for the reference implementation of the Issuer Server's API.
+- [OID4VCI SDK Integration Guide](../../../docs/api/issuer-server/OID4VCI_SDK-INTEGRATION_GUIDE.md)
+- [OID4VCI SDK API Reference](../../../docs/api/issuer-server/OID4VCI_SDK-SERVER_API.md)
+- [OID4VCI SDK Error Codes](../../../docs/api/issuer-server/OID4VCISDKError.md)
+- [Formatter SDK Error Codes](../../../docs/api/issuer-server/FormatterSDKError.md)
 
 ## Contributing
 

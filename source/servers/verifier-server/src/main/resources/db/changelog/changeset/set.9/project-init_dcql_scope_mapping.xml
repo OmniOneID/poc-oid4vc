@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <changeSet id="init-dcql-scope-mapping" author="shlee1223">
+    <createTable tableName="dcql_scope_mapping">
+      <column name="id" type="BIGINT" autoIncrement="true">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="scope" type="VARCHAR(100)">
+        <constraints nullable="false" unique="true"/>
+      </column>
+      <column name="dcql_query" type="TEXT">
+        <constraints nullable="false"/>
+      </column>
+      <column name="description" type="VARCHAR(255)">
+        <constraints nullable="true"/>
+      </column>
+      <column name="enabled" type="BOOLEAN" defaultValueBoolean="true">
+        <constraints nullable="false"/>
+      </column>
+      <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+        <constraints nullable="false"/>
+      </column>
+      <column name="updated_at" type="TIMESTAMP">
+        <constraints nullable="true"/>
+      </column>
+    </createTable>
+  </changeSet>
+
+  <changeSet id="insert-default-dcql-scope-mapping" author="shlee1223">
+    <insert tableName="dcql_scope_mapping">
+      <column name="scope" value="sdjwt_test"/>
+      <column name="dcql_query"><![CDATA[{
+  "credentials": [
+    {
+      "id": "national_id",
+      "format": "dc+sd-jwt",
+      "meta": {
+        "vct_values": ["https://credentials.gov.kr/identity_credential"]
+      }
+    }
+  ]
+}]]></column>
+      <column name="description" value="National ID credential query"/>
+      <column name="enabled" valueBoolean="true"/>
+    </insert>
+    <insert tableName="dcql_scope_mapping">
+      <column name="scope" value="opendid_vc_test"/>
+      <column name="dcql_query"><![CDATA[{
+  "credentials": [
+    {
+      "id": "student_id",
+      "format": "opendid_vc",
+      "meta": {
+        "credential_schema_id_values": ["http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema"]
+      }
+    }
+  ]
+}]]></column>
+      <column name="description" value="Mobile Driver License credential query"/>
+      <column name="enabled" valueBoolean="true"/>
+    </insert>
+    <insert tableName="dcql_scope_mapping">
+      <column name="scope" value="eudi_pid_test"/>
+      <column name="dcql_query"><![CDATA[{
+  "credentials": [
+    {
+      "id": "query_0",
+      "format": "dc+sd-jwt",
+      "meta": {
+        "vct_values": ["urn:eudi:pid:1"]
+      }
+    }
+  ]
+}]]></column>
+      <column name="description" value="EUDI PID credential query"/>
+      <column name="enabled" valueBoolean="true"/>
+    </insert>
+  </changeSet>
+
+</databaseChangeLog>

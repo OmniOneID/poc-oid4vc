@@ -1,61 +1,68 @@
 # Verifier Server Source Code
 
-Welcome to the Verifier Server source code repository. This directory contains the core source code and build configuration for the Verifier Server.
+Welcome to the Verifier Server source code repository. This directory contains the core source code and build configurations for the Verifier Server.
 
 ## Directory Structure
 
-Here is an overview of the directory structure:
+Here's an overview of the directory structure.
+
 ```
 verifier-server
-├── gradle
-├── libs
-    └── did-crypto-sdk-server-2.0.0.jar
-    └── did-wallet-sdk-server-2.0.0.jar
-    └── sd-jwt-sdk-1.0.0.jar
-├── src
-└── build.gradle
+├── did-oid4vp-sdk-server              # OID4VP SDK (Core Logic)
+├── did-oid4vc-formatter-sdk-server    # OID4VC Formatter SDK
+├── libs                               # Shared libraries
+├── src                                # Verifier Example Application source code
+│   ├── main
+│   │   ├── java                       # Java source code (com.example.did.oid4vc.verifier)
+│   │   └── resources                  # Configuration files (application.yml, DB scripts)
+├── build.gradle                       # Project build configuration
 └── README.md
 ```
 
-<br/>
+## Directory Details
 
-Below is a description of each folder and file in the directory.
-
-| Name                    | Description                                            |
-| ----------------------- | ------------------------------------------------------- |
-| verifier-server         | Verifier Server source code and build files            |
-| ┖ gradle                | Gradle build configuration and scripts                 |
-| ┖ libs                  | External libraries and dependencies                    |
-| ┖ src                   | Main source code directory                             |
-| ┖ build.gradle          | Gradle build configuration file                        |
-| ┖ README.md             | Overview and guidelines for the source code            |
-
+| Name | Description |
+|------|-------------|
+| `did-oid4vp-sdk-server` | Subproject containing the core OID4VP SDK logic |
+| `did-oid4vc-formatter-sdk-server` | Subproject for OID4VC Formatter SDK |
+| `libs` | Contains `did-wallet-sdk-server-2.0.0.jar`, `did-crypto-sdk-server-2.0.0.jar` used for signing |
+| `src/main/resources` | Contains application properties and UI templates |
 
 ## Libraries
 
-The libraries used in this project are organized into two main categories:
+### 1. Open DID Libraries
+These core libraries are used by the SDKs and the application:
+- `did-wallet-sdk-server-2.0.0.jar` (in `libs/`)
+- `did-crypto-sdk-server-2.0.0.jar` (in `libs/`)
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar` (in `did-oid4vp-sdk-server/libs/`)
+- `opendid-vc-sdk-1.0.0.jar` (in `did-oid4vp-sdk-server/libs/`)
 
-1. **Open DID Libraries**: These libraries are developed by the Open DID project and are available in the [libs folder](libs). These include:
-
-    - `did-crypto-sdk-server-2.0.0.jar`
-    - `did-wallet-sdk-server-2.0.0.jar`
-
-2. **Third-Party Libraries**: These are open source dependencies managed through the [build.gradle](build.gradle) file. For a detailed list of third-party libraries and their licenses, refer to the `dependencies-license.md` file in the root directory.
-
+### 2. Third-Party Libraries
+Key dependencies managed via Gradle:
+- Spring Boot 3.2.4
+- Spring Data JPA & PostgreSQL
+- Liquibase (DB Schema Management)
+- OpenFeign (HTTP Client)
+- Bouncy Castle (Cryptography)
+- Nimbus JOSE+JWT
 
 ## Documentation
 
-For more information, please refer to the following documentation:
+Refer to the following documents for more detailed information:
 
 - [Verifier Server API Reference](../../../docs/api/verifier-server/verifier_server_API.md)
-  A guide to the reference implementation of the Verifier Server API.
+  Guide for the reference implementation of the Verifier Server's API.
+- [OID4VP SDK Integration Guide](../../../docs/api/verifier-server/OID4VP_SDK-INTEGRATION_GUIDE.md)
+- [OID4VP SDK API Reference](../../../docs/api/verifier-server/OID4VP_SDK-SERVER_API.md)
+- [OID4VP SDK Error Codes](../../../docs/api/verifier-server/OID4VPSDKError.md)
+- [Formatter SDK Error Codes](../../../docs/api/verifier-server/FormatterSDKError.md)
 
 ## Contributing
 
-For details about our code of conduct and the procedure for submitting pull requests, please read `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` in the root directory.
+Please read `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` in the root directory for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## License
 This project is licensed under the Apache License 2.0.
 
 ## Contact
-If you have any questions or need support, please contact the `maintainers` in the root directory.
+For questions or support, please contact `maintainers` in the root directory.
