@@ -1,34 +1,23 @@
 server:
   port: 8080
 
-issuer:
-  base-url: http://10.0.2.2:8080
-  metadata-file-path: src/main/resources/issuer_meta_univ_emul.json
-  credential-configurations:
-    UniversityDegree:
-      format: jwt_vc
-      doctype: UniversityDegree
-    VerifiableIdSD:
-      format: vc+sd-jwt
-      doctype: VerifiableId
-    VerifiableIdLDP:
-      format: ldp-vc
-      doctype: VerifiableId
-    mDoc:
-      format: mso-mdoc
-      doctype: org.iso.18013.5.1.mDL
-    StudentID:
-      format: vc
-      doctype: VerifiableCredential
-
-clients:
-  auth-server:
-    url: http://localhost:8081
-
-# Access Token을 발급한 인가서버의 JWKS 엔드포인트 주소
 spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${clients.auth-server.url}/oauth2/jwks
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+
+  config:
+    import:
+#      - "classpath:application-database-local.yml"
+      - "classpath:application-authorization-server-local.yml"
+      - "classpath:application-issuer-sdk-local.yml"
+
+logging:
+  level:
+    root: INFO
+    org.omnione.did: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2.server.authorization: TRACE

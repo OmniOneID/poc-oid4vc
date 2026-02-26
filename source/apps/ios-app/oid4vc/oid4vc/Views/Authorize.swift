@@ -39,7 +39,6 @@ enum AuthorizationError: Error, LocalizedError {
     }
 }
 
-// Added to views to match the shape with Android
 struct Authorize {
     
     /// Starts ASWebAuthenticationSession to request Authorization Code

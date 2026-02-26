@@ -20,29 +20,19 @@ import com.google.gson.annotations.SerializedName;
 
 public class CredentialRequest {
 
-    @SerializedName("format")
-    private String format;
-    @SerializedName("doc_type")
-    private String docType;
+    @SerializedName("credential_configuration_id")
+    private String credentialConfigurationId;
     @SerializedName("credential_identifier")
     private Object credentialIdentifier;
-    @SerializedName("proof")
-    private Proof proof;
+    @SerializedName("proofs")
+    private Proofs proofs;
 
-    public String getFormat() {
-        return format;
+    public String getCredentialConfigurationId() {
+        return credentialConfigurationId;
     }
 
-    public void setFormat(String format) {
-        this.format = format;
-    }
-
-    public String getDocType() {
-        return docType;
-    }
-
-    public void setDocType(String doc_type) {
-        this.docType = doc_type;
+    public void setCredentialConfigurationId(String credentialConfigurationId) {
+        this.credentialConfigurationId = credentialConfigurationId;
     }
 
     public Object getCredentialIdentifier() {
@@ -53,12 +43,12 @@ public class CredentialRequest {
         this.credentialIdentifier = credentialIdentifier;
     }
 
-    public Proof getProof() {
-        return proof;
+    public Proofs getProofs() {
+        return proofs;
     }
 
-    public void setProof(Proof proof) {
-        this.proof = proof;
+    public void setProofs(Proofs proofs) {
+        this.proofs = proofs;
     }
 
 }

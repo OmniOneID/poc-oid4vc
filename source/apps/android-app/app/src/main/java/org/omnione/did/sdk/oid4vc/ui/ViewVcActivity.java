@@ -152,7 +152,7 @@ public class ViewVcActivity extends AppCompatActivity {
             Object credentialData = walletData.getCredential();
 
             // Branch based on format value
-            if (format.equals("NationalID") || format.equals("mDL")) {
+            if (format.equals("NationalID") || format.equals("mDL") || format.equals("NationalIDCert")) {
                 if (credentialData instanceof String) {
                     displayJwtVc((String) credentialData);
                 } else {

@@ -252,10 +252,20 @@ public enum DCQLCredentialMatcher {
         guard let requiredVcts = requiredVcts, !requiredVcts.isEmpty else { return true }
         do {
             let jwt = try SimpleJWTDecoder.parse(sdjwt.credentialJwt)
-            guard let vct = jwt.payload["vct"] else { return false }
+            guard let vct = jwt.payload["vct"] else { 
+                print("❌ 'vct' claim missing in JWT payload")
+                return false 
+            }
             let actual = String(describing: vct)
-            return requiredVcts.contains(actual)
+            print("--- checkVctValues ---")
+            print("Required VCTs: \(requiredVcts)")
+            print("Actual VCT: \(actual)")
+            let isContained = requiredVcts.contains(actual)
+            print("Match result: \(isContained)")
+            print("-----------------------")
+            return isContained
         } catch {
+            print("❌ SimpleJWTDecoder failed: \(error)")
             return false
         }
     }

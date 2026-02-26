@@ -1,0 +1,35 @@
+# 로컬 개발 환경용 설정 (IDE)
+issuer:
+  server-ip: photospheric-nondyspeptically-donny.ngrok-free.dev
+  server-port: 8082
+  base-url: https://${issuer.server-ip}
+  data-dir: .
+  metadata-file-path: metadata/issuer_meta_univ_ngrok.json
+  root-ca-file-name: rootCA.crt
+  wallet-file-name: forten.wallet
+  sdk:
+    credential-configurations:
+      StudentID:
+        format: open-did-vc
+        identifiers:
+          - TEC
+          - UCR
+      VerifiableIdSD:
+        format: dc+sd-jwt
+        identifiers:
+          - PID
+          - NationalIDCert
+          - NationalID
+          - mDL
+
+clients:
+  auth-server:
+    url: ${issuer.base-url}
+
+# Access Token을 발급한 인가서버의 JWKS 엔드포인트 주소
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${clients.auth-server.url}/oauth2/jwks

@@ -169,20 +169,11 @@ struct ViewVcView: View {
         print("--- response.format ---")
         print(walletData.format)
         print("--------------------------------")
-        if walletData.format.contains("NationalID") || walletData.format.contains("mDL") {
+        if walletData.format.contains("NationalID") || walletData.format.contains("mDL") || walletData.format.contains("NationalIDCert") {
             do {
-                guard let credentials = walletData.credentialResponse.credentials.first else {
-                    vcState = .error(message: "No saved VC found.")
-                    return
-                }
-                let claimsDictionary = try manualParseSdJwt(sdJwtString: credentials.credential)
+                let sdJwtString = walletData.credential
+                let claimsDictionary = try manualParseSdJwt(sdJwtString: sdJwtString)
                 let claimViewModels = createClaimViewModels(from: claimsDictionary)
-                            vcState = .loaded(claims: claimViewModels)
-//                let claimViewModels = claimsDictionary.map { key, value in
-//                    return ClaimViewModel(key: key, value: .any(value))
-//                }
-
-                
                 vcState = .loaded(claims: claimViewModels)
                 
             } catch {
@@ -191,35 +182,21 @@ struct ViewVcView: View {
 
         } else if walletData.format.contains("TEC") || walletData.format.contains("UCR") {
             
-            guard let credentials = walletData.credentialResponse.credentials.first else {
-                vcState = .error(message: "No saved VC found.")
-                return
-            }
-            let credentialString = credentials.credential
+            let credentialString = walletData.credential
 
             print("--- Base64 Decoding ---")
             print("Format: \(walletData.format)")
             print("Input String Length: \(credentialString.count)")
-            print("Input String (first 50 chars): \(String(credentialString))")
             print("------------------------------------")
 
-//            guard let decodedData = Data(base64Encoded: walletData.credentialResponse.credential) else {
-//        
-//                vcState = .error(message: "Failed to decode Base64 for StudentID format.")
-//                return
-//            }
             do {
-                guard let credentials = walletData.credentialResponse.credentials.first else {
-                    vcState = .error(message: "No saved VC found.")
-                    return
-                }
-                let decodedData = try decodeBase64URL(credentials.credential)
+                let decodedData = try decodeBase64URL(credentialString)
                  
                 let vc = try JSONDecoder().decode(VerifiableCredential.self, from: decodedData)
                 let claims = vc.credentialSubject.claims.map { ClaimViewModel(key: $0.caption, value: .string($0.value)) }
                 vcState = .loaded(claims: claims)
             } catch {
-                vcState = .error(message: "Failed to parse JSON for StudentID format: \(error.localizedDescription)")
+                vcState = .error(message: "Failed to parse JSON for TEC/UCR format: \(error.localizedDescription)")
             }
         } else {
             vcState = .error(message: "Unsupported VC format: \(walletData.format)")

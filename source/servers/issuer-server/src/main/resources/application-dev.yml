@@ -1,39 +1,16 @@
 server:
-  port: 8096
+  port: 8082
 
-issuer:
-#  metadata-file-path: src/main/resources/issuer_meta_univ.json
-  base-url: http://192.168.3.130:8096
-  metadata-file-path: ./issuer_meta_univ.json
-  grant:
-    authorization-code-enabled: false
-    pre-authorized-code-enabled: true
-
-  credential-configurations:
-    UniversityDegree:
-      format: jwt_vc
-      doctype: UniversityDegree
-    VerifiableIdSD:
-      format: vc+sd-jwt
-      doctype: VerifiableId
-    VerifiableIdLDP:
-      format: ldp-vc
-      doctype: VerifiableId
-    mDoc:
-      format: mso-mdoc
-      doctype: org.iso.18013.5.1.mDL
-    StudentID:
-      format: vc
-      doctype: VerifiableCredential
-
-clients:
-  auth-server:
-    url: http://192.168.3.130:18096
-
-# Access Token을 발급한 인가서버의 JWKS 엔드포인트 주소
 spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${clients.auth-server.url}/oauth2/jwks
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+
+  config:
+    import:
+#      - "classpath:application-database.yml"
+      - "classpath:application-authorization-server.yml"
+      - "classpath:application-issuer-sdk.yml"

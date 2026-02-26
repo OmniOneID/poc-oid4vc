@@ -1,1 +1,4 @@
-rootProject.name = 'issuer'
+rootProject.name = 'issuer-server'
+include 'did-oid4vci-sdk-server'
+include 'did-oid4vc-authorization-sdk-server'
+include 'did-oid4vc-formatter-sdk-server'

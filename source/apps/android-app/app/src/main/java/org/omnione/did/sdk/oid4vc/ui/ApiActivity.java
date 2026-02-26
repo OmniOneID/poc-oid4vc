@@ -32,7 +32,7 @@ import org.omnione.did.sdk.oid4vc.data.dto.AuthorizationDetails;
 import org.omnione.did.sdk.oid4vc.network.ApiService;
 import org.omnione.did.sdk.oid4vc.data.dto.CredentialOfferRequest;
 import org.omnione.did.sdk.oid4vc.data.dto.CredentialRequest;
-import org.omnione.did.sdk.oid4vc.data.dto.Proof;
+import org.omnione.did.sdk.oid4vc.data.dto.Proofs;
 
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
@@ -206,17 +206,14 @@ public class ApiActivity extends AppCompatActivity {
         return true;
     }
 
-    //todo : credentialIdentifier must be specified.. receive from issuer metadata.. NationalID or TEC
     private CredentialRequest createAndUseCredentialRequest() {
         String exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM0MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-        Proof proof = new Proof("jwt", exampleJwt);
-//        String credentialIdentifier = "TEC";
-//        String credentialIdentifier = "VerifiableIdSD";
+        Proofs proof = new Proofs();
+        proof.setJwt(List.of(exampleJwt));
         String credentialIdentifier = "NationalID";
         CredentialRequest credentialRequest = new CredentialRequest();
-//        credentialRequest.setFormat("jwt_vc_json");
         credentialRequest.setCredentialIdentifier(credentialIdentifier);
-        credentialRequest.setProof(proof);
+        credentialRequest.setProofs(proof);
         return credentialRequest;
     }
 }

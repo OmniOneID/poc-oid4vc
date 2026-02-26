@@ -26,5 +26,5 @@ import Foundation
 
 struct WalletData: Codable {
     let format: String
-    let credentialResponse: CredentialResponse
+    let credential: String
 }

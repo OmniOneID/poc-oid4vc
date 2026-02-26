@@ -1,0 +1,27 @@
+# 서버 배포용 인가 서버 설정
+issuer:
+  server-ip: 192.168.3.130
+  server-port: 8082
+  base-url: http://${issuer.server-ip}:${issuer.server-port}
+
+# google login
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "YOUR-ACTUAL-CLIENT-ID"
+            client-secret: "YOUR-ACTUAL-SECRET"
+            scope:
+              - openid
+              - profile
+              - email
+
+oid4vc:
+  auth:
+    issuer-url: ${issuer.base-url}
+    clients:
+      redirect-url: ${issuer.base-url}/auth/callback
+      issuer-server:
+        url: ${issuer.base-url}

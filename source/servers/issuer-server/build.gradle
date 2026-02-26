@@ -4,8 +4,8 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
-group = 'com.example.oid4vc'
-version = '0.0.1-SNAPSHOT'
+group = 'com.example.did'
+version = '1.0.0'
 description = 'OID4VC Issuer'
 
 
@@ -41,22 +41,20 @@ ext {
 
 springBoot {
 	buildInfo()
+	mainClass = 'com.example.did.oid4vc.issuer.IssuerApplication'
 }
 
 
 
 dependencies {
+	implementation project(':did-oid4vci-sdk-server')
+	implementation project(':did-oid4vc-authorization-sdk-server')
 	implementation fileTree(dir: 'libs', include: ['*.jar'])
+
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-web-services'
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-
-//    implementation 'com.apicatalog:titanium-json-ld:1.3.1'
-//    implementation 'org.glassfish:jakarta.json:2.0.1'
-//    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.2'
-//	implementation 'com.danubetech:data-integrity-java:1.14.0'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -64,9 +62,25 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 
-	// QR Image
-	implementation 'com.google.zxing:javase:3.5.1'
+    // DB
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.liquibase:liquibase-core'
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation 'com.google.code.gson:gson'
 
+	//인증서 테스트
+//	implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
+
+	// mdoc
+	implementation 'com.upokecenter:cbor:4.5.2'
+
+	// COSE 서명
+//	implementation 'com.augustcellura:cose-lib:1.1.0'
+	// 공식 COSE-JAVA 라이브러리 (JitPack 이용)
+	implementation 'com.github.cose-wg:COSE-JAVA:1.1.0'
+
+	// 암호화 알고리즘 (Bouncy Castle)
+	implementation 'org.bouncycastle:bcprov-jdk18on:1.76'
 }
 
 dependencyManagement {

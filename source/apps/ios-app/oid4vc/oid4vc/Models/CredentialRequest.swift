@@ -17,11 +17,13 @@
 import Foundation
 
 struct CredentialRequest: Codable {
+    var credentialConfigurationId: String?
     var credentialIdentifier: String?
-    var proof: Proof
+    var proofs: Proofs
     
     enum CodingKeys: String, CodingKey {
+        case credentialConfigurationId = "credential_configuration_id"
         case credentialIdentifier = "credential_identifier"
-        case proof
+        case proofs
     }
 }

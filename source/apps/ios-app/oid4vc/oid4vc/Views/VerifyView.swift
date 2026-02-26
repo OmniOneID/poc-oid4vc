@@ -24,10 +24,9 @@ struct AuthRequest: Codable {
     let state: String
     let clientId: String
     
-    let responseType: String
-    let responseMode: String
-    let dcqlQuery: String
-//    let clientMetadata: [String: AnyCodable]
+    let responseType: String?
+    let responseMode: String?
+    let dcqlQuery: String?
     
     enum CodingKeys: String, CodingKey {
         case responseUri = "response_uri"
@@ -36,47 +35,6 @@ struct AuthRequest: Codable {
         case responseType = "response_type"
         case responseMode = "response_mode"
         case dcqlQuery = "dcql_query"
-//        case clientMetadata = "client_metadata"
-    }
-}
-
-protocol Signer {
-    var algorithm: String { get }
-    func sign(data: Data) throws -> Data
-    func getPublicKeyJwk() -> [String: Any]?
-}
-
-private class HolderSigner: Signer {
-    private var holderPrivateKey = P256.Signing.PrivateKey()
-
-
-    init(pkcs8PrivateKeyBase64: String) throws {
-        guard let privateKeyData = Data(base64Encoded: pkcs8PrivateKeyBase64) else {
-            throw "Invalid Base64 for PKCS#8 key"
-        }
-        self.holderPrivateKey = try P256.Signing.PrivateKey(derRepresentation: privateKeyData)
-    }
-    
-    var algorithm: String { "ES256" }
-
-    func sign(data: Data) throws -> Data {
-        let signature = try holderPrivateKey.signature(for: data)
-        return signature.rawRepresentation
-    }
-
-    func getPublicKeyJwk() -> [String : Any]? {
-        let publicKey = holderPrivateKey.publicKey
-        let x963Data = publicKey.x963Representation
-        let x = x963Data.subdata(in: 1..<33)
-        let y = x963Data.subdata(in: 33..<65)
-        
-        let jwk: [String: Any] = [
-            "kty": "EC",
-            "crv": "P-256",
-            "x": x.base64URLEncodedString(),
-            "y": y.base64URLEncodedString()
-        ]
-        return jwk
     }
 }
 
@@ -153,6 +111,15 @@ struct VerifyView: View {
         let documentsDirectory = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         let fileURL = documentsDirectory.appendingPathComponent("vc.json")
         let data = try Data(contentsOf: fileURL)
+        
+        print("--- Loading VC File Content ---")
+        if let content = String(data: data, encoding: .utf8) {
+            print(content)
+        } else {
+            print("Failed to convert data to UTF-8 string.")
+        }
+        print("-------------------------------")
+        
         let walletDataArray = try JSONDecoder().decode([WalletData].self, from: data)
         
         guard let walletData = walletDataArray.first else {
@@ -238,7 +205,41 @@ struct VerifyView: View {
                 state = .fetchingRequest
                 guard let requestUri = getRequestUri() else { throw "Invalid verification URI." }
                 let authRequestData = try await apiService.getAuthorizationRequest(url: requestUri)
-                let authRequest : AuthRequest = try JSONDecoder().decode(AuthRequest.self, from: authRequestData)
+                
+                print("--- Authorization Request Data ---")
+                if let content = String(data: authRequestData, encoding: .utf8) {
+                    print(content)
+                } else {
+                    print("Failed to convert authRequestData to UTF-8 string.")
+                }
+                print("---------------------------------")
+                
+                let authRequest: AuthRequest
+                do {
+                    // Try JSON decoding first
+                    authRequest = try JSONDecoder().decode(AuthRequest.self, from: authRequestData)
+                } catch {
+                    // If JSON fails, try JWT parsing
+                    print("JSON decoding failed, attempting to parse as JWT...")
+                    if let jwtString = String(data: authRequestData, encoding: .utf8),
+                       var payload = try? parseJwtPayload(jwtString) {
+                        
+                        // If dcql_query is a dictionary (JSON object), convert it back to a string
+                        // because AuthRequest expects a String for dcqlQuery
+                        if let dcqlObj = payload["dcql_query"] as? [String: Any] {
+                            if let jsonData = try? JSONSerialization.data(withJSONObject: dcqlObj),
+                               let jsonString = String(data: jsonData, encoding: .utf8) {
+                                payload["dcql_query"] = jsonString
+                            }
+                        }
+                        
+                        let payloadData = try JSONSerialization.data(withJSONObject: payload)
+                        authRequest = try JSONDecoder().decode(AuthRequest.self, from: payloadData)
+                        print("Successfully parsed AuthRequest from JWT payload.")
+                    } else {
+                        throw error // Re-throw original error if JWT parsing also fails
+                    }
+                }
                 
                 let walletData = try loadVcFile()
                 
@@ -249,13 +250,10 @@ struct VerifyView: View {
                 let dcqlId: String // dcql id as a key
                 
                 if format.contains("NationalID") || format.contains("mDL") {
-                    guard let credentials = walletData.credentialResponse.credentials.first else {
-                        vcState = .error(message: "No saved VC found.")
-                        return
-                    }
+                    let credential = walletData.credential
                     
                     vpToken = try createVpTokenSdJwt(authRequest: authRequest,
-                                                     credential: credentials.credential)
+                                                     credential: credential)
                     
                     state = .submittingVp
                     let finalResponse = try await apiService.postVpToken(url: authRequest.responseUri,
@@ -265,11 +263,7 @@ struct VerifyView: View {
                     state = .completed(message: finalResponse)
                     
                 }  else if format.contains("TEC") || format.contains("UCR") {
-                    guard let credentials = walletData.credentialResponse.credentials.first else {
-                        vcState = .error(message: "No saved VC found.")
-                        return
-                    }
-                    let vcData = credentials.credential
+                    let vcData = walletData.credential
                     let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
                     let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
                     
@@ -301,7 +295,10 @@ struct VerifyView: View {
         let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
                 
         
-        let dcqlQuery : DCQLQuery = try .init(from: authRequest.dcqlQuery)
+        guard let dcqlQueryString = authRequest.dcqlQuery else {
+            throw "dcql_query is missing in the request."
+        }
+        let dcqlQuery : DCQLQuery = try .init(from: dcqlQueryString)
         let validationResult = DCQLQueryValidator.validate(dcqlQuery)
         print("DCQL Query validation result: \(validationResult.isValid())")
         
@@ -406,8 +403,8 @@ struct VerifyView: View {
         let sdHashBase64Url = Data(sdHash).base64URLEncodedString()
 
         let payload: [String: Any] = [
-            "nonce": "dcql-nonce-456",
-            "aud": "did:omn:issuer",
+            "nonce": nonce,
+            "aud": aud,
             "iat": Int(Date().timeIntervalSince1970),
             "sd_hash": sdHashBase64Url
         ]
@@ -453,16 +450,37 @@ struct VerifyView: View {
 //        }
 //        return response.credentialResponse.credentials.first?.credential
 //    }
-}
+    private func parseJwtPayload(_ jwt: String) throws -> [String: Any] {
+        let components = jwt.components(separatedBy: ".")
+        guard components.count >= 2 else {
+            throw "Invalid JWT format"
+        }
+        
+        let payloadBase64 = components[1]
+        let payloadData = try decodeBase64URL(payloadBase64)
+        
+        guard let json = try JSONSerialization.jsonObject(with: payloadData) as? [String: Any] else {
+            throw "Invalid JWT payload"
+        }
+        
+        return json
+    }
 
-extension String: Error {}
-
-extension Data {
-    func base64URLEncodedString() -> String {
-        return self.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
+    private func decodeBase64URL(_ base64UrlString: String) throws -> Data {
+        var base64 = base64UrlString
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        
+        let padding = base64.count % 4
+        if padding != 0 {
+            base64.append(String(repeating: "=", count: 4 - padding))
+        }
+        
+        guard let data = Data(base64Encoded: base64) else {
+            throw "Base64URL decoding failed"
+        }
+        return data
     }
 }
 
+extension String: Error {}

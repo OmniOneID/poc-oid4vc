@@ -1,0 +1,34 @@
+issuer:
+  server-ip: 192.168.3.130
+  server-port: 8082
+  base-url: http://${issuer.server-ip}:${issuer.server-port}
+  data-dir: .
+  metadata-file-path: metadata/issuer_meta_univ.json
+  root-ca-file-name: rootCA.crt
+  wallet-file-name: forten.wallet
+  sdk:
+    credential-configurations:
+      StudentID:
+        format: open-did-vc
+        identifiers:
+          - TEC
+          - UCR
+      VerifiableIdSD:
+        format: dc+sd-jwt
+        identifiers:
+          - PID
+          - NationalID
+          - NationalIDCert
+          - mDL
+
+clients:
+  auth-server:
+    url: ${issuer.base-url}
+
+# Access Token을 발급한 인가서버의 JWKS 엔드포인트 주소
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${clients.auth-server.url}/oauth2/jwks

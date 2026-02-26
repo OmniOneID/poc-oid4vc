@@ -125,7 +125,7 @@ struct APITestView: View {
     private func testToken() async {
         let grantType = "urn:ietf:params:oauth:grant-type:pre-authorized_code"
 //        let preAuthCode = "670e3937-df8d-491a-8f8a-4a06d6844d9a"
-//        let txCode = "9107" // Hardcoded from Android
+//        let txCode = "9107"
         let authDetails = AuthorizationDetails(type: "openid_credential", credentialConfigurationId: "TEC", credentialIdentifiers: nil)
 //        let tokenRequest = TokenRequest(grantType: grantType, preAuthorizedCode: preAuthCode, txCode: txCode, authorizationDetails: [authDetails])
         let tokenRequest = TokenRequest(
@@ -152,8 +152,8 @@ struct APITestView: View {
     
     private func testCredentialRequest() async {
         let exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM0MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-        let proof = Proof(proofType: "jwt", jwt: exampleJwt)
-        let credentialRequest = CredentialRequest(credentialIdentifier: "NationalID", proof: proof)
+        let proofs = Proofs(diVp: nil, jwt: [exampleJwt], attestation: nil)
+        let credentialRequest = CredentialRequest(credentialConfigurationId: nil, credentialIdentifier: "NationalID", proofs: proofs)
         
         let accessToken = "Bearer " + accessTokenForTest
         let requestBodyStr = prettyJson(from: credentialRequest)

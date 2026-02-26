@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, CredentialIssuanceActivity.class);
             intent.putExtra("CREDENTIAL_OFFER_URI", debugInputEditText.getText().toString());
             startActivity(intent);
+            debugInputEditText.setText("");
         });
     }
 

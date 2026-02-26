@@ -158,7 +158,18 @@ struct CredentialIssuanceView: View {
         do {
             let metadata: IssuerMetadataResponse = try await apiService.get(endpoint: ".well-known/openid-credential-issuer", url: URL(string: issuerUrl))
             self.issuerMetadata = metadata
-            self.tokenEndpointUrl = metadata.tokenEndpoint
+            
+            if let authServers = metadata.authorizationServer, !authServers.isEmpty {
+                self.tokenEndpointUrl = authServers[0]
+                print("Token Endpoint URL (from auth server): \(self.tokenEndpointUrl ?? "")")
+            } else if let tokenEndpoint = metadata.tokenEndpoint {
+                self.tokenEndpointUrl = tokenEndpoint
+                print("Token Endpoint URL (from metadata): \(self.tokenEndpointUrl ?? "")")
+            } else {
+                // Fallback to issuerUrl if no auth server or token endpoint is found
+                print("'authorization_server' information not in response. Falling back to issuerUrl.")
+                self.tokenEndpointUrl = issuerUrl
+            }
             
             if self.preAuthCode != nil {
                 self.showPinView = true
@@ -246,26 +257,79 @@ struct CredentialIssuanceView: View {
     }
     
     private func createCredentialRequest() throws -> CredentialRequest {
-        let exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-        let proof = Proof(proofType: "jwt", jwt: exampleJwt)
+        let identifier = self.selectedIdentifier ?? ""
+        var jwtProof = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
         
-        guard let identifier = self.selectedIdentifier else {
-            throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "No Credential Identifier selected."])
+        if identifier == "NationalIDCert" {
+            jwtProof = try createJws()
         }
         
-        return CredentialRequest(credentialIdentifier: identifier, proof: proof)
+        let proofs = Proofs(diVp: nil, jwt: [jwtProof], attestation: nil)
+        
+        return CredentialRequest(credentialConfigurationId: nil, credentialIdentifier: identifier, proofs: proofs)
+    }
 
+    private func createJws() throws -> String {
+        let certString = try readCertFromFile(named: "holder.crt")
+        let headerStr = "{\"alg\":\"ES256\",\"typ\":\"JWT\",\"x5c\":[\"\(certString)\"]}"
+        let headerBase64 = headerStr.data(using: .utf8)!.base64URLEncodedString()
+        
+        let payloadStr = "{\"iss\":\"did:omn:holder\",\"sub\":\"1234567890\",\"name\":\"Raon Kim\",\"iat\":1516239022}"
+        let payloadBase64 = payloadStr.data(using: .utf8)!.base64URLEncodedString()
+        
+        let signingInput = "\(headerBase64).\(payloadBase64)"
+        guard let signingInputData = signingInput.data(using: .utf8) else {
+            throw "Failed to create signing input data"
+        }
+        
+        // 3. Sign (using shared HolderSigner)
+        let pkcs8PrivateKey = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
+        let signer = try HolderSigner(pkcs8PrivateKeyBase64: pkcs8PrivateKey)
+        
+        let signatureData = try signer.sign(data: signingInputData)
+        let signatureBase64 = signatureData.base64URLEncodedString()
+        
+        let jws = "\(signingInput).\(signatureBase64)"
+        print("Generated JWS matching Android sample: \(jws)")
+        return jws
+    }
+
+    private func readCertFromFile(named fileName: String) throws -> String {
+        guard let path = Bundle.main.path(forResource: (fileName as NSString).deletingPathExtension, ofType: (fileName as NSString).pathExtension) else {
+            // Fallback for development if not in bundle yet
+            let documentsURL = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+            let fileURL = documentsURL.deletingLastPathComponent().appendingPathComponent("oid4vc/holder.crt")
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                let content = try String(contentsOf: fileURL, encoding: .utf8)
+                return cleanCert(content)
+            }
+            throw "Certificate file \(fileName) not found."
+        }
+        let content = try String(contentsOfFile: path, encoding: .utf8)
+        return cleanCert(content)
+    }
+    
+    private func cleanCert(_ content: String) -> String {
+        return content
+            .replacingOccurrences(of: "-----BEGIN CERTIFICATE-----", with: "")
+            .replacingOccurrences(of: "-----END CERTIFICATE-----", with: "")
+            .replacingOccurrences(of: "\n", with: "")
+            .replacingOccurrences(of: "\r", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     private func saveCredentialToFile(_ credentialResponse: CredentialResponse) throws {
-        let walletData = WalletData(format: self.selectedIdentifier ?? "", credentialResponse: credentialResponse)
+        guard let credentialString = credentialResponse.credentials.first?.credential else {
+            throw "No credential found in response."
+        }
+        let walletData = WalletData(format: self.selectedIdentifier ?? "", credential: credentialString)
         
         let dataToSave = try JSONEncoder().encode([walletData])
         let documentsURL = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         let fileURL = documentsURL.appendingPathComponent("vc.json")
         try dataToSave.write(to: fileURL)
         
-        print("✅ Path where VC file is saved:")
+        print("Path where VC file is saved:")
         print(fileURL.path)
     }
     
@@ -360,5 +424,30 @@ struct CredentialIssuanceView: View {
         guard let data = verifier.data(using: .utf8) else { return "" }
         let hashed = SHA256.hash(data: data)
         return Data(hashed).base64URLEncodedString()
+    }
+}
+
+extension Data {
+    func base64URLEncodedString() -> String {
+        return self.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+    
+    init?(hexString: String) {
+        let len = hexString.count / 2
+        var data = Data(capacity: len)
+        for i in 0..<len {
+            let j = hexString.index(hexString.startIndex, offsetBy: i*2)
+            let k = hexString.index(j, offsetBy: 2)
+            let bytes = hexString[j..<k]
+            if var num = UInt8(bytes, radix: 16) {
+                data.append(&num, count: 1)
+            } else {
+                return nil
+            }
+        }
+        self = data
     }
 }

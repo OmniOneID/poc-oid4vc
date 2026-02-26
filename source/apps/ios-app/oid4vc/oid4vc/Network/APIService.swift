@@ -229,14 +229,16 @@ class APIService {
             params["tx_code"] = txCode
         }
         
-        guard let requestUrl = url else {
+        guard let url = url else {
             throw APIError.badURL
         }
+        
+        let tokenUrl = url.appendingPathComponent("oauth2/token")
         
         let authHeaderValue = "Basic b2lkNHZjaS1jbGllbnQ6c2VjcmV0"
         
         return try await postFormURLEncoded(
-            url: requestUrl,
+            url: tokenUrl,
             params: params,
             authorization: authHeaderValue
         )
@@ -257,7 +259,9 @@ class APIService {
             "code_verifier": pkceCodeVerifier
         ]
         
-        return try await postFormURLEncoded(url: tokenEndpointUrl, params: params)
+        let tokenUrl = tokenEndpointUrl.appendingPathComponent("oauth2/token")
+        
+        return try await postFormURLEncoded(url: tokenUrl, params: params)
     }
     
     

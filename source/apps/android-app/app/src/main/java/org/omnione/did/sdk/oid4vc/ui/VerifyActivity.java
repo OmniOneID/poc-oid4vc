@@ -25,20 +25,13 @@ import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
-
-import org.omnione.did.oid4vc.dcql.core.DCQLCredentialMatcher;
-import org.omnione.did.oid4vc.dcql.core.DCQLQueryValidator;
-import org.omnione.did.oid4vc.dcql.datamodel.DCQLQuery;
-import org.omnione.did.oid4vc.oid4vp.core.OID4VPHandler;
-import org.omnione.did.sdjwt.datamodel.SDJWT;
+import org.omnione.did.sdjwt.core.oid4vp.OID4VPHandler;
 import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
 import org.omnione.did.sdk.oid4vc.network.ApiService;
 import org.omnione.did.sdk.oid4vc.util.LogUtil;
@@ -46,9 +39,12 @@ import org.omnione.did.sdk.oid4vc.data.dto.tec.VerifiableCredential;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.Header;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.Payload;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -66,10 +62,11 @@ import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -89,6 +86,8 @@ public class VerifyActivity extends AppCompatActivity {
     private TextView infoTextView;
     private Gson gson = new Gson();
     private String authorizationRequestState;
+    private String nonce;
+    private String aud;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,9 +113,6 @@ public class VerifyActivity extends AppCompatActivity {
             String requestUri = uri.getQueryParameter("request_uri");
             Log.d("sangjun", "authorization request_uri from deeplink : " + requestUri);
 
-            // TODO: Extract other parameters such as client_id here if necessary
-            // String clientId = uri.getQueryParameter("client_id");
-
             if (requestUri != null) {
                 String displayText = "OID4VP Request URI: " + requestUri;
                 infoTextView.setText(displayText);
@@ -129,21 +125,45 @@ public class VerifyActivity extends AppCompatActivity {
         }
     }
 
-    private void executeNetworkRequest(String requestUrl) {
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
-                .build();
+    private ApiService getApiService(String baseUrl) {
+        if (!baseUrl.startsWith("http")) {
+            baseUrl = "http://" + baseUrl;
+        }
+        if (!baseUrl.endsWith("/")) {
+            baseUrl = baseUrl + "/";
+        }
 
-        Gson prettyPrintGson = new GsonBuilder().setPrettyPrinting().create();
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(loggingInterceptor).build();
 
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("http://localhost/")
+                .baseUrl(baseUrl)
                 .client(client)
-                .addConverterFactory(GsonConverterFactory.create(prettyPrintGson))
+                .addConverterFactory(GsonConverterFactory.create(new GsonBuilder().setPrettyPrinting().create()))
                 .build();
 
-        ApiService apiService = retrofit.create(ApiService.class);
+        return retrofit.create(ApiService.class);
+    }
 
+    private String extractJsonField(String jsonResponse, String fieldName) {
+        try {
+            JsonParser parser = new JsonParser();
+            JsonObject jsonObject = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
+            if (jsonObject.has(fieldName) && !jsonObject.get(fieldName).isJsonNull()) {
+                if (jsonObject.get(fieldName).isJsonObject()) {
+                    return jsonObject.get(fieldName).toString();
+                }
+                return jsonObject.get(fieldName).getAsString();
+            }
+        } catch (JsonSyntaxException e) {
+            Log.e("sangjun", "JSON parsing error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private void executeNetworkRequest(String requestUrl) {
+        ApiService apiService = getApiService(requestUrl);
         Call<ResponseBody> call = apiService.getRequest(requestUrl);
 
         Log.d("sangjun", "Method: GET Authorization Request");
@@ -152,116 +172,17 @@ public class VerifyActivity extends AppCompatActivity {
         call.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                String responseDataString;
                 if (response.isSuccessful() && response.body() != null) {
                     try {
-                        responseDataString = response.body().string();
-                        Log.d("sangjun", "Authorization Request Response Data:\n" + responseDataString);
-
-                        String responseUri = extractJsonField(responseDataString, "response_uri");
-                        if (responseUri == null) {
-                            Log.e("sangjun", "Could not find 'response_uri' in the response.");
-                            infoTextView.setText("Error: Response URI not found.");
-                            return;
-                        }
-                        Log.d("sangjun", "Extracted response_uri: " + responseUri);
-
-                        authorizationRequestState = extractJsonField(responseDataString, "state");
-                        if (authorizationRequestState == null) {
-                            Log.e("sangjun", "Could not find 'state' in the response.");
-                            infoTextView.setText("Error: state value not found.");
-                            return;
-                        }
-                        Log.d("sangjun", "Extracted Authorization Request state: " + authorizationRequestState);
-
-                        String nonce = extractJsonField(responseDataString, "nonce");
-                        if (nonce == null) {
-                            Log.e("sangjun", "Could not find 'nonce' in the response.");
-                            infoTextView.setText("Error: nonce value not found.");
-                            return;
-                        }
-                        Log.d("sangjun", "Extracted nonce: " + nonce);
-
-                        String aud = extractJsonField(responseDataString, "client_id");
-                        if (aud == null) {
-                            Log.e("sangjun", "Could not find 'client_id' (aud) in the response.");
-                            infoTextView.setText("Error: client_id(aud) value not found.");
-                            return;
-                        }
-                        Log.d("sangjun", "Extracted client_id (aud): " + aud);
-
-                                                // todo : dcql parsing -> format needs to be extracted... hardcoded for now
-
-                                                String vpToken = "";
-
-                                                WalletData walletData = loadVcFileAsVcItem()[0];
-
-                                                if(walletData.getFormat().equals("TEC") || walletData.getFormat().equals("UCR")) {
-
-                                                    // Changed to pass nonce and aud values when creating VP Token
-
-                                                    vpToken = createUnsignedVpToken(nonce, aud); // For TEC
-
-                                                }
-
-                                                else if(walletData.getFormat().equals("NationalID") || walletData.getFormat().equals("mDL")) {
-
-                        
-
-                                                    String dcqlQuery = extractJsonField(responseDataString, "dcql_query");
-
-                                                    vpToken = createVpTokenSdJwt(dcqlQuery);
-
-                                                }
-
-                                                Log.d("sangjun", "Start printing createUnsignedVpToken:");
-
-                                                LogUtil.logLongString("VerifyActivity", vpToken);
-
-                                                Log.d("sangjun", "End printing createUnsignedVpToken.");
-
-                        
-
-                                                // POST request VP Token to response_uri
-
-                                                // Use the state value extracted from the Authorization Request
-
-                                                // Extract response_mode
-
-                                                String responseMode = extractJsonField(responseDataString, "response_mode");
-
-                                                if (responseMode == null) {
-
-                                                    Log.e("sangjun", "Could not find 'responseMode' in the response.");
-
-                                                    infoTextView.setText("Error: responseMode value not found.");
-
-                                                    return;
-
-                                                }
-
-                                                postVpTokenToVerifier(responseUri, vpToken, authorizationRequestState, responseMode);
-
-                        
-
-                                            } catch (IOException | JsonSyntaxException e) {
-
-                                                Log.e("sangjun", "Error reading response body or parsing JSON", e);
-
-                                                infoTextView.setText("Error: A problem occurred while processing the response data.");
-
-                                            }
-                } else {
-                    String errorBody = "";
-                    try {
-                        if (response.errorBody() != null) {
-                            errorBody = response.errorBody().string();
-                        }
-                    } catch (IOException e) {
-                        Log.e("sangjun", "Failed to read error body", e);
+                        String responseData = response.body().string();
+                        Log.d("sangjun", "Authorization Request Response Data:\n" + responseData);
+                        processAuthorizationRequest(responseData);
+                    } catch (Exception e) {
+                        Log.e("sangjun", "Error processing authorization request", e);
+                        infoTextView.setText("Error: A problem occurred while processing the response data.");
                     }
-                    Log.e("sangjun", "Authorization Request GET failed (Code: " + response.code() + ", Body: " + errorBody + ")");
-                    infoTextView.setText("Error: Authorization Request failed (Code: " + response.code() + ")");
+                } else {
+                    handleRequestError(response);
                 }
             }
 
@@ -274,234 +195,200 @@ public class VerifyActivity extends AppCompatActivity {
         });
     }
 
-    private String extractJsonField(String jsonResponse, String fieldName) {
+    private void processAuthorizationRequest(String responseData) throws Exception {
+        String responseDataString = parsePayload(responseData);
+        Log.d("sangjun", "Request Object: " + responseDataString);
+
+        String responseUri = extractJsonField(responseDataString, "response_uri");
+        authorizationRequestState = extractJsonField(responseDataString, "state");
+        nonce = extractJsonField(responseDataString, "nonce");
+        aud = extractJsonField(responseDataString, "client_id");
+        String responseMode = extractJsonField(responseDataString, "response_mode");
+
+        if (responseUri == null || authorizationRequestState == null || nonce == null || aud == null || responseMode == null) {
+            Log.e("sangjun", "Missing required fields in authorization request.");
+            infoTextView.setText("Error: Required fields not found in the response.");
+            return;
+        }
+
+        Log.d("sangjun", "Extracted fields: responseUri=" + responseUri + ", state=" + authorizationRequestState + ", nonce=" + nonce + ", aud=" + aud);
+
+        String vpToken = generateVpToken(responseDataString);
+        Log.d("sangjun", "Start printing VP Token:");
+        LogUtil.logLongString("VerifyActivity", vpToken);
+        Log.d("sangjun", "End printing VP Token.");
+
+        postVpTokenToVerifier(responseUri, vpToken, authorizationRequestState, responseMode);
+    }
+
+    private String generateVpToken(String requestObject) throws Exception {
+        WalletData walletData = loadVcFileAsVcItem()[0];
+        String format = walletData.getFormat();
+
+        if ("TEC".equals(format) || "UCR".equals(format)) {
+            return createUnsignedVpToken(nonce, aud);
+        } else if ("NationalID".equals(format) || "mDL".equals(format) || "NationalIDCert".equals(format)) {
+            return createVpTokenSdJwt();
+        }
+        return "";
+    }
+
+    private void handleRequestError(Response<ResponseBody> response) {
+        String errorBody = "";
         try {
-            JsonParser parser = new JsonParser();
-            JsonObject jsonObject = parser.parse(new StringReader(jsonResponse)).getAsJsonObject();
-            if (jsonObject.has(fieldName) && !jsonObject.get(fieldName).isJsonNull()) {
-                return jsonObject.get(fieldName).getAsString();
+            if (response.errorBody() != null) {
+                errorBody = response.errorBody().string();
             }
-                } catch (JsonSyntaxException e) {
-                    Log.e("sangjun", "JSON parsing error: " + e.getMessage());
-                }
-                return null;
-            }
-        
-            private void postVpTokenToVerifier(String responseUri, String vpToken, String state, String responseMode) {
-                infoTextView.setText("Submitting VP Token to Verifier...");
-        
-                OkHttpClient client = new OkHttpClient.Builder()
-                        .addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
-                        .build();
-        
-                Retrofit retrofit = new Retrofit.Builder()
-                        .baseUrl("http://localhost/")
-                        .client(client)
-                        .addConverterFactory(GsonConverterFactory.create(gson))
-                        .build();
-        
-                ApiService apiService = retrofit.create(ApiService.class);
-        
-                apiService.postVpToken(responseUri, vpToken, state).enqueue(new Callback<ResponseBody>() {
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                        if (response.isSuccessful()) {
-                            Log.d("sangjun", "VP Token submission successful!");
-                            try {
-                                infoTextView.setText("VC submission complete! : " + response.body().string());
-                                Log.d("sangjun", response.body().string());
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                            Toast.makeText(VerifyActivity.this, "VC submission successful!", Toast.LENGTH_LONG).show();
-        
-        //                    finish();
-                        } else {
-                            String errorBody = "";
-                            try {
-                                if (response.errorBody() != null) {
-                                    errorBody = response.errorBody().string();
-                                }
-                            } catch (IOException e) {
-                                Log.e("sangjun", "Failed to read error body", e);
-                            }
-                            Log.e("sangjun", "VP Token submission failed (Code: " + response.code() + ", Body: " + errorBody + ")");
-                            infoTextView.setText("Error: VP Token submission failed (Code: " + response.code() + ")");
-                            Toast.makeText(VerifyActivity.this, "VC submission failed!", Toast.LENGTH_LONG).show();
-                        }
+        } catch (IOException e) {
+            Log.e("sangjun", "Failed to read error body", e);
+        }
+        Log.e("sangjun", "Request failed (Code: " + response.code() + ", Body: " + errorBody + ")");
+        infoTextView.setText("Error: Request failed (Code: " + response.code() + ")");
+    }
+
+    private void postVpTokenToVerifier(String responseUri, String vpToken, String state, String responseMode) {
+        infoTextView.setText("Submitting VP Token to Verifier...");
+        ApiService apiService = getApiService(responseUri);
+
+        apiService.postVpToken(responseUri, vpToken, state).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    Log.d("sangjun", "VP Token submission successful!");
+                    try {
+                        String responseBody = response.body().string();
+                        infoTextView.setText("VC submission complete! : " + responseBody);
+                        Log.d("sangjun", responseBody);
+                    } catch (IOException e) {
+                        Log.e("sangjun", "Error reading success response", e);
                     }
-        
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        Log.e("sangjun", "VP Token submission network request failed", t);
-                        infoTextView.setText("Error: VP Token submission network error.");
-                        Toast.makeText(VerifyActivity.this, "VP Token submission network error!", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-        
-            //sd-jwt test
-            public String createVpTokenSdJwt(String dcqlQuery) throws JsonProcessingException {
-        
-                //todo : must use real key
-                String PRIVATE_KEY = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT";
-                String PUBLIC_KEY= "Ay/5wNs8D1oX+FDRYgnJUmZ/Ovnff+/73G8LD53+m1tk";
-        
-                PrivateKey issuerPrivateKey = getPrivateKeyObject(Base64.getDecoder().decode(PRIVATE_KEY));
-                PublicKey issuerPublicKey = getPublicKeyObject(unCompressPublicKey(Base64.getDecoder().decode(PUBLIC_KEY)));
-                PrivateKey holderPrivateKey = getPrivateKeyObject(Base64.getDecoder().decode(PRIVATE_KEY));
-                PublicKey holderPublicKey = getPublicKeyObject(unCompressPublicKey(Base64.getDecoder().decode(PUBLIC_KEY)));
-        
-                WalletData walletData = loadVcFileAsVcItem()[0];
-                String sdJwtVc = (String) walletData.getCredential();
-        
-                //todo: parse from dcql
-        //        Set<String> onlyRequiredClaims = new HashSet<>(
-        //                Arrays.asList("given_name", "family_name", "birth_date")
-        //        );
-                
-                // extract claim from dcql
-        
-                // DCQL Query JSON conversion
-                Log.d("sangjun", "dcqlJsonString : " + dcqlQuery);
-        
-                // Can be added from here
-                // =========== STEP 4: Create selectively disclosed VP token based on DCQL ===========
-        
-                // Deserialize JSON string to DCQLQuery object
-                ObjectMapper objectMapper = new ObjectMapper();
-                DCQLQuery dcqlQueryFromStr = objectMapper.readValue(dcqlQuery, DCQLQuery.class);
-                Log.d("sangjun", "Create selectively disclosed VP token based on DCQL");
-        
-                // DCQL Query validation
-                DCQLQueryValidator.ValidationResult validationResult = DCQLQueryValidator.validate(dcqlQueryFromStr);
-                Log.d("sangjun", "DCQL Query validation result: " + validationResult.isValid());
-        
-                // SD-JWT and DCQL Query matching test
-                SDJWT parsedVC = SDJWT.parse(sdJwtVc);
-                boolean isMatching = DCQLCredentialMatcher.matchesMetadata(parsedVC, dcqlQueryFromStr.getCredentials().get(0).getMeta()); // Assuming there is one
-                Log.d("sangjun", "SD-JWT and DCQL Meta matching result: " + (isMatching ? "Matching successful" : "Matching failed"));
-        
-                if(!isMatching) {
-                    Log.d("sangjun", "No matching VC");
-                }
-        
-                // Claims extraction test
-                Set<String> dcqlRequiredClaims = DCQLCredentialMatcher.extractMatchingClaimNames(dcqlQueryFromStr, parsedVC);
-                Log.d("sangjun", "Extracted Claim names: " + dcqlRequiredClaims);
-                
-        
-        //        String vpToken = sdJwtVc + "eyJ0eXAiOiJrYitqd3QiLCJhbGciOiJFUzI1NiJ9.eyJzZF9oYXNoIjoiRUhyYlRuLUQzTDcxRUpnTzFCVFV5RGo0WUxUcUR2Um5aZUVlUXEyOTN6RSIsImF1ZCI6ImRpZDpvbW46aXNzdWVyIiwibm9uY2UiOiJ0ZXN0LW5vbmNlLTEyMyIsImlhdCI6MTc1Nzk5MTAxMH0.leHOsTNbJfQkVOMyToXJH17Qh-OsJcnrwkAP4LPSzn0gUgfaJZcrCTZqan2mjWT0ufpv1gnP7_w4P5VKvawtEw";
-        //        String vpToken = OID4VPHandler.createVPToken(
-        //                sdJwtVc,
-        //                dcqlRequiredClaims,
-        //                holderPrivateKey,
-        //                "did:omn:issuer",
-        //                "test-nonce-123"
-        //        );
-        
-                String vpToken = OID4VPHandler.createVPTokenWithDcqlId(
-                        sdJwtVc,
-                        dcqlRequiredClaims,
-                        dcqlQueryFromStr.getCredentials().get(0).getId(), // Extract id from DCQLQuery object
-                        holderPrivateKey,
-                        "did:omn:issuer",
-                        "dcql-nonce-456"
-                );
-                Log.d("sangjun", "VP Token (only name and date of birth disclosed):");
-                Log.d("sangjun", "   " + vpToken);
-        
-                return vpToken;
-            }
-        
-            // jwt vp token creation and signing (hardcoded)
-            // Changed to receive nonce and aud as parameters
-            public String createUnsignedVpToken(String nonce, String aud) {
-                Header header = new Header("ES256", "JWT", "did:example:holder#key-1");
-                long iat = Instant.now().getEpochSecond();
-                long exp = iat + 2592000L;
-                String jti = UUID.randomUUID().toString();
-        
-                // Pass nonce and aud to getVpToken
-                Payload payload = getVpToken(iat, exp, jti, nonce, aud);
-        
-                Gson payLoadGson = new Gson();
-                String headerJson = gson.toJson(header);
-                String payloadJson = payLoadGson.toJson(payload);
-        
-                String headerBase64Url = Base64.getUrlEncoder().withoutPadding().encodeToString(headerJson.getBytes(StandardCharsets.UTF_8));
-                String payloadBase64Url = Base64.getUrlEncoder().withoutPadding().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
-        
-                return headerBase64Url + "." + payloadBase64Url;
-            }
-        
-        
-            // Add iat, exp, jti, nonce, aud parameters
-            private Payload getVpToken(long iat, long exp, String jti, String nonce, String aud){
-                Payload container = new Payload();
-        
-                container.setIssuer("did:example:holder");
-                container.setAudience(aud); // Set with the aud value received from the Authorization Request
-                container.setNonce(nonce); // Set with the nonce value received from the Authorization Request
-                container.setIssuedAt(iat);
-                container.setExpiration(exp);
-        
-                Payload.VerifiablePresentation vp = new Payload.VerifiablePresentation();
-                vp.setContext(Collections.singletonList("https://www.w3.org/ns/credentials/v2"));
-                vp.setType(Collections.singletonList("VerifiablePresentation"));
-        
-                Payload.Proof vpProof = new Payload.Proof();
-                vpProof.setType("DataIntegrityProof");
-                vpProof.setCryptosuite("ecdsa-rdfc-2019");
-                vpProof.setCreated(Instant.now().toString());
-                vpProof.setProofPurpose("authentication");
-                vpProof.setVerificationMethod("did:example:holder#key-1");
-                vpProof.setChallenge(nonce); // Use nonce value
-                vpProof.setDomain(aud); // Use aud value
-                vpProof.setProofValue("zQeVbY4oQowNiQoClz9Qg8X6PpuKy4tP9t8rKHHB3P4...");
-                vp.setVpProof(vpProof);
-        
-                WalletData walletData = loadVcFileAsVcItem()[0];
-                byte[] decodedBytes = android.util.Base64.decode((String) walletData.getCredential(), android.util.Base64.DEFAULT);
-                String vc = new String(decodedBytes, StandardCharsets.UTF_8);
-                VerifiableCredential vcItem = new Gson().fromJson(vc, VerifiableCredential.class);
-                if (vcItem != null) {
-                    vp.setVerifiableCredential(Collections.singletonList(vcItem));
+                    Toast.makeText(VerifyActivity.this, "VC submission successful!", Toast.LENGTH_LONG).show();
                 } else {
-                    Log.e("sangjun", "VC file cannot be loaded and is not included in VP.");
-                }
-        
-                container.setVp(vp);
-        
-                return container;
-            }
-        
-            private WalletData[] loadVcFileAsVcItem() {
-                File file = new File(getFilesDir(), "vc.json");
-                String vcData = "";
-                if (!file.exists()) {
-                    Log.e("sangjun", "vc.json file not found.");
-                    return null;
-                }
-        
-                try (FileInputStream fis = new FileInputStream(file)) {
-                    byte[] buffer = new byte[(int) file.length()];
-                    fis.read(buffer);
-                    vcData = new String(buffer, StandardCharsets.UTF_8);
-        
-        //            byte[] decodedBytes = android.util.Base64.decode(encodedVcData, android.util.Base64.DEFAULT);
-        //            String decodedVcJson = new String(decodedBytes, StandardCharsets.UTF_8);
-                    Log.d("sangjun", "vc load :\n" + vcData);
-        
-                    return gson.fromJson(vcData, WalletData[].class);
-        
-                } catch (IOException | JsonSyntaxException e) {
-                    Log.e("sangjun", "VC file read or JSON parsing error", e);
-                    return null;
+                    handleRequestError(response);
+                    Toast.makeText(VerifyActivity.this, "VC submission failed!", Toast.LENGTH_LONG).show();
                 }
             }
 
-    // todo : sample key
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Log.e("sangjun", "VP Token submission network request failed", t);
+                infoTextView.setText("Error: VP Token submission network error.");
+                Toast.makeText(VerifyActivity.this, "VP Token submission network error!", Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+        
+    public String createVpTokenSdJwt() throws Exception {
+        String PRIVATE_KEY = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT";
+        String PUBLIC_KEY = "Ay/5wNs8D1oX+FDRYgnJUmZ/Ovnff+/73G8LD53+m1tk";
+
+        PrivateKey holderPrivateKey = getPrivateKeyObject(Base64.getDecoder().decode(PRIVATE_KEY));
+
+        WalletData walletData = loadVcFileAsVcItem()[0];
+        String sdJwtVc = (String) walletData.getCredential();
+
+        Log.d("sangjun", "Create selectively disclosed VP token based on DCQL");
+
+        List<String> holderX5cChain = readCertFromAssets("holder.crt");
+        if (holderX5cChain.isEmpty()) {
+            Log.e("sangjun", "Certificate not found or empty");
+            return null;
+        }
+
+        Log.d("sangjun", "holderX5cChain : " + holderX5cChain.get(0));
+        Set<String> requestedClaims = Set.of("family_name", "given_name", "phone_number", "birth_date", "email");
+
+        String vpToken = OID4VPHandler.createVPTokenWithDcqlId(
+                sdJwtVc,
+                requestedClaims,
+                "national_id",
+                holderPrivateKey,
+                holderX5cChain,
+                aud,
+                nonce
+        );
+
+        Log.d("sangjun", "VP Token (only name and date of birth disclosed):");
+        Log.d("sangjun", "   " + vpToken);
+
+        return vpToken;
+    }
+
+    public String createUnsignedVpToken(String nonce, String aud) {
+        Header header = new Header("ES256", "JWT", "did:example:holder#key-1");
+        long iat = Instant.now().getEpochSecond();
+        long exp = iat + 2592000L;
+        String jti = UUID.randomUUID().toString();
+
+        Payload payload = getVpToken(iat, exp, jti, nonce, aud);
+
+        String headerJson = gson.toJson(header);
+        String payloadJson = gson.toJson(payload);
+
+        String headerBase64Url = Base64.getUrlEncoder().withoutPadding().encodeToString(headerJson.getBytes(StandardCharsets.UTF_8));
+        String payloadBase64Url = Base64.getUrlEncoder().withoutPadding().encodeToString(payloadJson.getBytes(StandardCharsets.UTF_8));
+
+        return headerBase64Url + "." + payloadBase64Url;
+    }
+
+    private Payload getVpToken(long iat, long exp, String jti, String nonce, String aud) {
+        Payload container = new Payload();
+
+        container.setIssuer("did:example:holder");
+        container.setAudience(aud);
+        container.setNonce(nonce);
+        container.setIssuedAt(iat);
+        container.setExpiration(exp);
+
+        Payload.VerifiablePresentation vp = new Payload.VerifiablePresentation();
+        vp.setContext(Collections.singletonList("https://www.w3.org/ns/credentials/v2"));
+        vp.setType(Collections.singletonList("VerifiablePresentation"));
+
+        Payload.Proof vpProof = new Payload.Proof();
+        vpProof.setType("DataIntegrityProof");
+        vpProof.setCryptosuite("ecdsa-rdfc-2019");
+        vpProof.setCreated(Instant.now().toString());
+        vpProof.setProofPurpose("authentication");
+        vpProof.setVerificationMethod("did:example:holder#key-1");
+        vpProof.setChallenge(nonce);
+        vpProof.setDomain(aud);
+        vpProof.setProofValue("zQeVbY4oQowNiQoClz9Qg8X6PpuKy4tP9t8rKHHB3P4...");
+        vp.setVpProof(vpProof);
+
+        WalletData walletData = loadVcFileAsVcItem()[0];
+        byte[] decodedBytes = android.util.Base64.decode((String) walletData.getCredential(), android.util.Base64.DEFAULT);
+        String vc = new String(decodedBytes, StandardCharsets.UTF_8);
+        VerifiableCredential vcItem = new Gson().fromJson(vc, VerifiableCredential.class);
+
+        if (vcItem != null) {
+            vp.setVerifiableCredential(Collections.singletonList(vcItem));
+        } else {
+            Log.e("sangjun", "VC file cannot be loaded and is not included in VP.");
+        }
+
+        container.setVp(vp);
+        return container;
+    }
+
+    private WalletData[] loadVcFileAsVcItem() {
+        File file = new File(getFilesDir(), "vc.json");
+        if (!file.exists()) {
+            Log.e("sangjun", "vc.json file not found.");
+            return null;
+        }
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[(int) file.length()];
+            fis.read(buffer);
+            String vcData = new String(buffer, StandardCharsets.UTF_8);
+            Log.d("sangjun", "vc load :\n" + vcData);
+            return gson.fromJson(vcData, WalletData[].class);
+        } catch (IOException | JsonSyntaxException e) {
+            Log.e("sangjun", "VC file read or JSON parsing error", e);
+            return null;
+        }
+    }
+
     private PrivateKey getPrivateKeyObject(byte[] privateKeyBytes) {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
@@ -511,6 +398,7 @@ public class VerifyActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
     }
+
     private PublicKey getPublicKeyObject(byte[] publicKeyBytes) {
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
@@ -520,6 +408,7 @@ public class VerifyActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
     }
+
     private byte[] unCompressPublicKey(byte[] compressedPublicKey) {
         try {
             AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
@@ -532,8 +421,7 @@ public class VerifyActivity extends AppCompatActivity {
             BigInteger p = ((java.security.spec.ECFieldFp) ecParams.getCurve().getField()).getP();
             BigInteger a = ecParams.getCurve().getA();
             BigInteger b = ecParams.getCurve().getB();
-            BigInteger rhs = x.modPow(BigInteger.valueOf(3), p)
-                    .add(a.multiply(x)).add(b).mod(p);
+            BigInteger rhs = x.modPow(BigInteger.valueOf(3), p).add(a.multiply(x)).add(b).mod(p);
             BigInteger y = rhs.modPow(p.add(BigInteger.ONE).divide(BigInteger.valueOf(4)), p);
 
             boolean yOdd = (compressedPublicKey[0] & 1) == 1;
@@ -550,5 +438,33 @@ public class VerifyActivity extends AppCompatActivity {
         } catch (InvalidKeySpecException | NoSuchAlgorithmException | InvalidParameterSpecException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static String parsePayload(String token) {
+        try {
+            String[] chunks = token.split("\\.");
+            Base64.Decoder decoder = Base64.getUrlDecoder();
+            return new String(decoder.decode(chunks[1]));
+        } catch (Exception e) {
+            throw new RuntimeException("토큰 파싱 실패", e);
+        }
+    }
+
+    private List<String> readCertFromAssets(String fileName) throws Exception {
+        List<String> certs = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+
+        try (InputStream is = this.getAssets().open(fileName);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("BEGIN CERTIFICATE") || line.contains("END CERTIFICATE")) {
+                    continue;
+                }
+                sb.append(line.trim());
+            }
+        }
+        certs.add(sb.toString());
+        return certs;
     }
 }

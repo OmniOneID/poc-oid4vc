@@ -20,7 +20,6 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.List;
 
-// todo: For TEC, delete later?
 public class Payload {
 
     @SerializedName("iss")

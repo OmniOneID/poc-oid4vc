@@ -27,6 +27,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,6 +43,9 @@ import android.widget.Toast;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.omnione.did.sdk.core.keymanager.supportalgorithm.Secp256R1Manager;
 import org.omnione.did.sdk.oid4vc.data.dto.AuthorizationDetails;
 import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
 import org.omnione.did.sdk.oid4vc.network.ApiService;
@@ -49,16 +53,20 @@ import org.omnione.did.sdk.oid4vc.data.dto.CredentialOfferResponse;
 import org.omnione.did.sdk.oid4vc.data.dto.CredentialRequest;
 import org.omnione.did.sdk.oid4vc.data.dto.CredentialResponse;
 import org.omnione.did.sdk.oid4vc.data.dto.IssuerMetadataResponse;
-import org.omnione.did.sdk.oid4vc.data.dto.Proof;
+import org.omnione.did.sdk.oid4vc.data.dto.Proofs;
 import org.omnione.did.sdk.oid4vc.data.dto.TokenResponse;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -72,6 +80,9 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import org.omnione.did.sdk.oid4vc.R;
+import org.omnione.did.sdk.utility.DataModels.DigestEnum;
+import org.omnione.did.sdk.utility.DigestUtils;
+import org.omnione.did.sdk.utility.MultibaseUtils;
 
 public class CredentialIssuanceActivity extends AppCompatActivity {
 
@@ -124,32 +135,6 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         Log.d("sangjun", "-------------------------------------------------------------");
 
         step0_fetchCredentialOffer(offerUriString);
-
-        // Respond directly to credential offer from QR data by value
-
-//        try {
-//            CredentialOfferResponse offer = gson.fromJson(qrData, CredentialOfferResponse.class);
-//
-//            if (offer == null || offer.getCredentialIssuer() == null || offer.getGrants() == null ||
-//                    offer.getGrants().getPreAuthorizedCode() == null || offer.getGrants().getPreAuthorizedCode().getPreAuthorizedCode() == null) {
-//                handleFailure("Required information is missing in the QR data.");
-//                return;
-//            }
-//
-//            issuerUrl = offer.getCredentialIssuer();
-//            preAuthCode = offer.getGrants().getPreAuthorizedCode().getPreAuthorizedCode();
-//
-//            step1_getIssuerInfo();
-//
-//
-//        } catch (JsonSyntaxException e) {
-//            Log.e("sangjun", "JSON parsing failed! Cause: " + e.getMessage());
-//            handleFailure("Invalid QR data format.");
-//
-//        } catch (Exception e) {
-//            Log.e("sangjun", "Unknown error occurred: " + e.getMessage());
-//            handleFailure("An error occurred while processing QR data.");
-//        }
     }
 
 
@@ -178,8 +163,6 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
                         String credentialOffer = response.body().string();
-                        // todo : eudiw
-//                        qrData = "{\"credential_issuer\": \"https://issuer.eudiw.dev\", \"credential_configuration_ids\": [\"eu.europa.ec.eudi.pid_vc_sd_jwt\"], \"grants\": {\"urn:ietf:params:oauth:grant-type:pre-authorized_code\": {\"pre-authorized_code\": \"4357c191-fd69-487b-a5bb-0e8c5ad0f558\", \"tx_code\": {\"length\": 5, \"input_mode\": \"numeric\", \"description\": \"Please provide the one-time code.\"}}}} ";
                         CredentialOfferResponse offer = gson.fromJson(credentialOffer, CredentialOfferResponse.class);
                         issuerUrl = offer.getCredentialIssuer();
                         credentialConfigurationIds = offer.getCredentialConfigurationIds();
@@ -295,27 +278,29 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         List<RadioGroup> radioGroups = new ArrayList<>();
 
         for (AuthorizationDetails group : authorizationDetails) {
-            TextView groupTitle = new TextView(this);
-            groupTitle.setText(group.getCredentialConfigurationId());
-            groupTitle.setTextSize(18f);
-            groupTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-            groupTitle.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
-            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            titleParams.setMargins(0, 24, 0, 8);
-            groupTitle.setLayoutParams(titleParams);
-            container.addView(groupTitle);
+            if(group.getCredentialIdentifiers().size() > 1) {
+                TextView groupTitle = new TextView(this);
+                groupTitle.setText(group.getCredentialConfigurationId());
+                groupTitle.setTextSize(18f);
+                groupTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+                groupTitle.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
+                LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                titleParams.setMargins(0, 24, 0, 8);
+                groupTitle.setLayoutParams(titleParams);
+                container.addView(groupTitle);
 
-            RadioGroup radioGroup = new RadioGroup(this);
-            for (String identifier : group.getCredentialIdentifiers()) {
-                RadioButton radioButton = new RadioButton(this);
-                radioButton.setText(identifier);
-                radioButton.setTextSize(16f);
-                radioButton.setId(View.generateViewId());
-                radioGroup.addView(radioButton);
+                RadioGroup radioGroup = new RadioGroup(this);
+                for (String identifier : group.getCredentialIdentifiers()) {
+                    RadioButton radioButton = new RadioButton(this);
+                    radioButton.setText(identifier);
+                    radioButton.setTextSize(16f);
+                    radioButton.setId(View.generateViewId());
+                    radioGroup.addView(radioButton);
+                }
+                radioGroups.add(radioGroup);
+                container.addView(radioGroup);
             }
-            radioGroups.add(radioGroup);
-            container.addView(radioGroup);
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -376,12 +361,6 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         String authorizationHeader = "Basic b2lkNHZjaS1jbGllbnQ6c2VjcmV0";   //todo : client id : secret must be generated instead of a fixed value
         String grantType = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
 
-        // Create Authorization header (Base64 encoding)
-//        String clientId = "your_client_id";
-//        String clientSecret = "your_client_secret";
-//        String credentials = clientId + ":" + clientSecret;
-//        String encodedCredentials = android.util.Base64.encodeToString(credentials.getBytes(), android.util.Base64.NO_WRAP);
-//        String authorizationHeader = "Basic " + encodedCredentials;
         List<AuthorizationDetails> authDetailsList = new ArrayList<>();
         for(String credentialConfigurationId : credentialConfigurationIds) {
             AuthorizationDetails authDetails = new AuthorizationDetails("openid_credential", credentialConfigurationId, null);
@@ -413,17 +392,13 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                             for (AuthorizationDetails id : responseAuthDetails) {
                                 Log.d("sangjun", "Response Authorization Details - ID: " + id.getCredentialConfigurationId());
                                 if (id.getCredentialIdentifiers() != null) {
-                                    // todo : how to handle this array?
-                                        showCredentialSelectionDialog(responseAuthDetails, authHeaderValue, tokenResponse.getAuthorizationDetails());
+                                    showCredentialSelectionDialog(responseAuthDetails, authHeaderValue, tokenResponse.getAuthorizationDetails());
                                     for (String actualId : id.getCredentialIdentifiers()) {
                                         Log.d("sangjun", "  Actual Credential ID: " + actualId);
                                     }
                                 }
                             }
 
-                        } else {
-                            // todo : if authDetails is missing, use scope?
-//                            step3_getCredential(authHeaderValue, tokenResponse.getAuthorizationDetails());
                         }
                     } catch (IOException e) {
                         handleFailure("Failed to parse token response.");
@@ -439,16 +414,10 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         });
     }
 
-    // Final credential issuance request
-    // draft 14
-    // todo : if authorization Details are returned, use credential_identifier (select tec, ucr)
-    // todo : (e.g., if credential was requested as a scope value, or if pre-authorisation code was used but Authorization Details were not returned) use credential_configuration_id
     private void step3_getCredential(String accessToken, List<AuthorizationDetails> tokenResponseAuthDetails, String selectedCredentialIdentifiers) {
         statusTextView.setText("Requesting Credential...");
         ApiService issuerApiService = createApiService(issuerUrl);
 
-        // TODO: Logic to create the actual CredentialRequest object
-        // Create Credential Request object
         CredentialRequest credentialRequest;
 
         if (tokenResponseAuthDetails != null && !tokenResponseAuthDetails.isEmpty()) {
@@ -461,7 +430,7 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
             if (issuerSupportedConfigurations != null && !issuerSupportedConfigurations.isEmpty()) {
                 IssuerMetadataResponse.CredentialConfiguration config = issuerSupportedConfigurations.get(credentialConfigurationIds.get(0));
                 if (config != null && config.getFormat() != null) {
-                    credentialRequest = createCredentialRequestWithFormatAndDoctype(config.getFormat(), config.getDoctype());
+                    credentialRequest = createCredentialRequestWithIds(credentialConfigurationIds.get(0));
                     Log.d("sangjun", "Request with Format/Doctype: " + config.getFormat() + ", " + config.getDoctype());
                 } else {
                     handleFailure("Could not find format information for '" + credentialConfigurationIds.get(0) + "' in Issuer support settings.");
@@ -481,7 +450,6 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                         String responseJson = response.body().string();
                         CredentialResponse credentialResponse = gson.fromJson(responseJson, CredentialResponse.class);
                         WalletData walletData = new WalletData();
-                        // todo : 0th value in the list
                         walletData.setCredential(credentialResponse.getCredentials().get(0).getCredential());
                         Log.d("sangjun", "selectedCredentialIdentifiers to be saved in wallet : " + selectedCredentialIdentifiers);
                         walletData.setFormat(selectedCredentialIdentifiers);
@@ -563,44 +531,33 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         }
     }
 
-    //todo : credentialIdentifier must be specified.. receive from issuer metadata.. sd-jwt or TEC
-
-    private CredentialRequest createAndUseCredentialRequest() {
-        String exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-        Proof proof = new Proof("jwt", exampleJwt);
-//        String credentialIdentifier = "TEC";
-//        String credentialIdentifier = "sd-jwt";
-        CredentialRequest credentialRequest = new CredentialRequest();
-        credentialRequest.setCredentialIdentifier(credentialConfigurationIds.get(0));
-        credentialRequest.setProof(proof);
-
-        Log.d("sangjun", "Credential Identifier to request: " + credentialRequest.getCredentialIdentifier());
-        Log.d("sangjun", "Proof Type: " + credentialRequest.getProof().getProofType());
-
-        return credentialRequest;
-    }
-
-
-    // Helper to create CredentialRequest requesting with credential_identifier
     private CredentialRequest createCredentialRequestWithIdentifier(String identifier) {
+        // 실제 서명한 data를 넣어야함 //////////
         String exampleJwtProof = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-        Proof proof = new Proof("jwt", exampleJwtProof);
+        Proofs proofs = new Proofs();
+        proofs.setJwt(List.of(exampleJwtProof));
 
+        // cert test
+        if(identifier.equals("NationalIDCert")) {
+            exampleJwtProof = createJws();;
+            proofs.setJwt(List.of(exampleJwtProof));
+        }
+        Log.d("sangjun", "Identifier : " + identifier + " / " + exampleJwtProof);
         CredentialRequest request = new CredentialRequest();
         request.setCredentialIdentifier(identifier);
-        request.setProof(proof);
+        request.setProofs(proofs);
         return request;
     }
 
     // Helper to create CredentialRequest requesting with format and doctype
-    private CredentialRequest createCredentialRequestWithFormatAndDoctype(String format, String doctype) {
+    private CredentialRequest createCredentialRequestWithIds(String id) {
         String exampleJwtProof = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
-        Proof proof = new Proof("jwt", exampleJwtProof);
+        Proofs proof = new Proofs();
+        proof.setJwt(List.of(exampleJwtProof));
 
         CredentialRequest request = new CredentialRequest();
-        request.setFormat(format);
-        request.setDocType(doctype);
-        request.setProof(proof);
+        request.setCredentialConfigurationId(id);
+        request.setProofs(proof);
         return request;
     }
 
@@ -631,8 +588,6 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                             String tokenResponseJson = data.getStringExtra("TOKEN_RESPONSE_JSON");
                             TokenResponse tokenResponse = gson.fromJson(tokenResponseJson, TokenResponse.class);
 
-                            // TODO: Verify by comparing the state returned from AuthorizeActivity with generatedStateForAuthFlow
-
                             Log.d("IssuanceActivity", "Authorization Code Flow successful! Access Token: " + accessToken);
                             Toast.makeText(this, "Continuing with Credential issuance.", Toast.LENGTH_SHORT).show();
 
@@ -644,17 +599,12 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                                 for (AuthorizationDetails id : responseAuthDetails) {
                                     Log.d("sangjun", "Response Authorization Details - ID: " + id.getCredentialConfigurationId());
                                     if (id.getCredentialIdentifiers() != null) {
-                                        // todo : how to handle this array?
                                         showCredentialSelectionDialog(responseAuthDetails, authHeaderValue, tokenResponse.getAuthorizationDetails());
                                         for (String actualId : id.getCredentialIdentifiers()) {
                                             Log.d("sangjun", "  Actual Credential ID: " + actualId);
                                         }
                                     }
                                 }
-
-                            } else {
-                                // todo : if authDetails is missing, use scope?
-//                            step3_getCredential(authHeaderValue, tokenResponse.getAuthorizationDetails());
                             }
                         }
                     }
@@ -666,4 +616,83 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                     handleFailure("Unknown result of Authorization Code Flow.");
                 }
             });
+
+    public String createJws() {
+        try {
+
+            JSONObject payloadJson = new JSONObject();
+            payloadJson.put("iss", "did:omn:holder");  // holder did
+            payloadJson.put("sub", "1234567890");  // pii
+            payloadJson.put("name", "Raon Kim");
+            payloadJson.put("iat", 1516239022);
+
+            String serializedPayload = payloadJson.toString();
+            Log.d("sangjun", "Payload: " + serializedPayload);
+
+            List<String> x5cList = readCertFromAssets("holder.crt");
+            if (x5cList.isEmpty()) {
+                Log.e("sangjun", "Certificate not found or empty");
+                return null;
+            }
+
+            JSONObject headerJson = new JSONObject();
+            headerJson.put("alg", "ES256");
+            headerJson.put("typ", "JWT");
+
+            JSONArray x5cArray = new JSONArray();
+            for (String cert : x5cList) {
+                x5cArray.put(cert);
+            }
+            headerJson.put("x5c", x5cArray);
+
+            String encodedHeader = base64UrlEncode(headerJson.toString().getBytes(StandardCharsets.UTF_8));
+            String encodedPayload = base64UrlEncode(serializedPayload.getBytes(StandardCharsets.UTF_8));
+
+            String signingInput = encodedHeader + "." + encodedPayload;
+            byte[] signingInputBytes = signingInput.getBytes(StandardCharsets.UTF_8);
+            Secp256R1Manager secp256R1Manager = new Secp256R1Manager();
+
+            byte[] aosPrivateKey = MultibaseUtils.decode("f98c395f0b9a2b4838a402ca749b0b1b16d3199532e42374fb6225d8e1c1fc746");
+            byte[] hashedData = DigestUtils.getDigest(signingInputBytes, DigestEnum.DIGEST_ENUM.SHA_256);
+            byte[] signatureBytes = secp256R1Manager.sign(aosPrivateKey, hashedData);
+            String encodedSignature = base64UrlEncode(signatureBytes);
+            String jws = signingInput + "." + encodedSignature;
+            Log.d("sangjun", "Generated JWS: " + jws);
+            return jws;
+
+        } catch (Exception e) {
+            Log.e("sangjun", "Error generating JWS", e);
+            return null;
+        }
+    }
+
+    /**
+     * assets 폴더에서 인증서 파일을 읽어 PEM 헤더/푸터를 제거한 문자열 반환
+     */
+    private List<String> readCertFromAssets(String fileName) throws Exception {
+        List<String> certs = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+
+        try (InputStream is = this.getAssets().open(fileName);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("BEGIN CERTIFICATE") || line.contains("END CERTIFICATE")) {
+                    continue;
+                }
+                sb.append(line.trim());
+            }
+        }
+        // RFC 7515: x5c는 Base64 인코딩된 DER 값이어야 함 (PEM 내용물 자체가 Base64임)
+        certs.add(sb.toString());
+        return certs;
+    }
+
+    /**
+     * JWS 규격용 Base64Url 인코딩 (Padding 제거, 줄바꿈 제거, URL Safe)
+     */
+    private String base64UrlEncode(byte[] data) {
+        return Base64.encodeToString(data, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
+    }
 }

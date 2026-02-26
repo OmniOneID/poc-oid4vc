@@ -1,0 +1,27 @@
+# 로컬 개발 환경용 인가 서버 설정
+issuer:
+  server-ip: photospheric-nondyspeptically-donny.ngrok-free.dev
+  server-port: 8082
+  base-url: https://${issuer.server-ip}
+
+# google login
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "YOUR-ACTUAL-CLIENT-ID"
+            client-secret: "YOUR-ACTUAL-SECRET"
+            scope:
+              - openid
+              - profile
+              - email
+
+oid4vc:
+  auth:
+    issuer-url: ${issuer.base-url}
+    clients:
+      redirect-url: ${issuer.base-url}/auth/callback
+      issuer-server:
+        url: ${issuer.base-url}
