@@ -377,3 +377,39 @@ The basic installation and running of the OID4VC project is complete. For detail
 | **iOS App** | iOS-based OID4VC sample application | [README](../../source/apps/ios-app/README.md) |
 
 ---
+
+## Appendix A. Notes on EUDI Wallet Interoperability
+
+Refer to the following notes when testing the Open DID Issuer/Verifier servers with the [EUDI Wallet](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui).
+
+### A.1. HTTPS Configuration
+
+The EUDI Wallet only supports HTTPS communication, so the Open DID Issuer/Verifier servers must be served over HTTPS.
+In a local development environment, you can use a tunneling tool such as [ngrok](https://ngrok.com/) to easily set up HTTPS endpoints.
+
+```bash
+# Create an HTTPS tunnel for the Issuer Server (port 8080)
+ngrok http 8080
+
+# Create an HTTPS tunnel for the Verifier Server (port 8081)
+ngrok http 8081
+```
+
+After running ngrok, apply the generated URL (e.g., `https://xxxx.ngrok-free.app`) to your server configuration.
+
+### A.2. Trust Configuration for EUDI Wallet
+
+A custom build of the EUDI Wallet app is required so that it can trust the Open DID Issuer/Verifier servers. Refer to the guide below to perform the build.
+
+- [EUDI Wallet Android - How to Build](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/blob/main/wiki/how_to_build.md)
+
+### A.3. EUDI Wallet Version Used for Testing
+
+The interoperability tests for this project were performed with the following version of the EUDI Wallet.
+
+| Item | Details |
+| :--- | :--- |
+| **Release** | [Demo_Version=2026.02.35-Demo_Build=35](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2026.02.35-Demo_Build%3D35) |
+| **Commit** | [`bb00869`](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/commit/bb008698fe48fcd3f7224d516aca0748fb1566f3) |
+
+---
