@@ -271,9 +271,9 @@ public class OID4VPController {
     return "verifier/test";
   }
 
-  @GetMapping("/test/scope_only")
-  public String test_scope_only() {
-    return "verifier/test-scope-only";
+  @GetMapping("/test/simple")
+  public String testSimple() {
+    return "verifier/test-simple";
   }
 
   /**

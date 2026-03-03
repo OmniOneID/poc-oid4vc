@@ -37,15 +37,9 @@
 
           <!-- Quick Templates -->
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
-            <select onchange="loadTemplate(this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="">-- Select Template --</option>
-              <option value="identity" selected>National ID (OpenDID VC) - All Claims</option>
-              <option value="identity2">National ID (SD-JWT) - All Claims</option>
-              <!--
-              <option value="education">Education Credential</option>
-              <option value="driver">Driver License (mDL)</option>
-              <option value="complex">Complex Multi-Credential</option>-->
+            <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates (Scope-based)</label>
+            <select id="templateSelect" onchange="loadTemplate(this.value)" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <option value="">-- Loading... --</option>
             </select>
           </div>
 
@@ -107,24 +101,6 @@
                 </label>
               </div>
             </div>
-          </div>
-
-          <!-- Scope Selection -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Scope (Optional)</label>
-            <select id="scopeSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md">
-              <option value="">-- No Scope (use DCQL only) --</option>
-              <option value="sdjwt_test">sdjwt_test</option>
-              <option value="opendid_vc_test">opendid_vc_test</option>
-            </select>
-            <p class="text-xs text-gray-500 mt-1">Select a predefined scope or leave empty to use DCQL query only</p>
-          </div>
-
-          <!-- Custom Scope Input -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Custom Scope (Optional)</label>
-            <input type="text" id="customScope" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="e.g., custom_test">
-            <p class="text-xs text-gray-500 mt-1">If specified, this overrides the select box above</p>
           </div>
 
           <!-- Client Metadata -->
@@ -235,31 +211,48 @@
         }
       }
 
-      // Load DCQL template
-      function loadTemplate(template) {
-        const templates = {
-          identity: {
-            credentials: [{
-              "id": "student_id",
-              "format": "opendid_vc",
-              "meta": {
-                "credential_schema_id_values": ["http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema"]
-              }
-            }]
-          },
-          identity2: {
-            credentials: [{
-              "id": "national_id",
-              "format": "dc+sd-jwt",
-              "meta": {
-                "vct_values": ["https://credentials.gov.kr/identity_credential"]
-              }
-            }]
-          }
-        };
+      // Scope mappings loaded from server
+      let scopeMappings = [];
 
-        if (template && templates[template]) {
-          document.getElementById('dcqlQuery').value = JSON.stringify(templates[template], null, 2);
+      // Load scope mappings from server API
+      async function loadScopeMappings() {
+        try {
+          const response = await fetch('/oid4vp/config/api/scope');
+          const data = await response.json();
+          scopeMappings = data.filter(item => item.enabled !== false);
+
+          // Populate Quick Templates select
+          const templateSelect = document.getElementById('templateSelect');
+          templateSelect.innerHTML = '<option value="">-- Select Template --</option>';
+          scopeMappings.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.scope;
+            option.textContent = item.description ? item.scope + ' - ' + item.description : item.scope;
+            templateSelect.appendChild(option);
+          });
+          // Auto-select first template if available
+          if (scopeMappings.length > 0) {
+            templateSelect.value = scopeMappings[0].scope;
+            loadTemplate(scopeMappings[0].scope);
+          }
+
+        } catch (e) {
+          console.error('Failed to load scope mappings:', e);
+          document.getElementById('templateSelect').innerHTML = '<option value="">-- Failed to load --</option>';
+        }
+      }
+
+      // Load DCQL template from scope mapping data
+      function loadTemplate(scope) {
+        if (!scope) return;
+        const mapping = scopeMappings.find(item => item.scope === scope);
+        if (mapping && mapping.dcqlQuery) {
+          try {
+            const dcqlObj = typeof mapping.dcqlQuery === 'string' ? JSON.parse(mapping.dcqlQuery) : mapping.dcqlQuery;
+            document.getElementById('dcqlQuery').value = JSON.stringify(dcqlObj, null, 2);
+          } catch (e) {
+            document.getElementById('dcqlQuery').value = mapping.dcqlQuery;
+          }
         }
       }
 
@@ -348,20 +341,10 @@
           const responseMode = document.querySelector('input[name="responseMode"]:checked').value;
           const clientMetadata = document.getElementById('clientMetadata').value;
 
-          // Get scope - custom scope takes priority over select box
-          const customScope = document.getElementById('customScope').value.trim();
-          const selectedScope = document.getElementById('scopeSelect').value;
-          const scope = customScope || selectedScope;
-
           const params = new URLSearchParams({
             dcql_query: dcqlQuery,
             response_mode: responseMode
           });
-
-          // Add scope if specified
-          if (scope) {
-            params.append('scope', scope);
-          }
 
           if (clientMetadata.trim()) {
             params.append('client_metadata', clientMetadata);
@@ -485,9 +468,9 @@
         // nothing
       }
 
-      // Initialize credential format on page load
+      // Initialize on page load
       document.addEventListener('DOMContentLoaded', function() {
-        loadTemplate('identity');  // 'identity' template load
+        loadScopeMappings();  // Dynamically load templates and scopes from server
         switchRequestMode('request_uri');
       });
     </script>

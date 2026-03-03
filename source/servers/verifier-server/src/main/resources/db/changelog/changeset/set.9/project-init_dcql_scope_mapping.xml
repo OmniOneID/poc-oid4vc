@@ -61,7 +61,7 @@
     }
   ]
 }]]></column>
-      <column name="description" value="Mobile Driver License credential query"/>
+      <column name="description" value="Student ID credential query"/>
       <column name="enabled" valueBoolean="true"/>
     </insert>
     <insert tableName="dcql_scope_mapping">
