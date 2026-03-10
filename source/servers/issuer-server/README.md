@@ -33,12 +33,17 @@ issuer-server
 ## Libraries
 
 ### 1. Open DID Libraries
-These core libraries are used by the SDKs and the application:
-- `did-wallet-sdk-server-2.0.0.jar` (in `libs/`)
-- `did-crypto-sdk-server-2.0.0.jar` (in `did-oid4vci-sdk-server/libs/`)
-- `did-datamodel-sdk-server-2.0.0.jar` (in `did-oid4vci-sdk-server/libs/`)
-- `did-sdk-common-2.0.0.jar` (in `did-oid4vci-sdk-server/libs/`)
-- `sd-jwt-sdk-vc-1.0.0.jar` (in `did-oid4vci-sdk-server/libs/`)
+These core libraries are bundled in the `libs/` directory:
+- `did-wallet-sdk-server-2.0.0.jar`
+- `did-crypto-sdk-server-2.0.0.jar`
+- `did-datamodel-sdk-server-2.0.0.jar`
+- `did-sdk-common-2.0.0.jar`
+- `did-oid4vci-sdk-server-3.0.0.jar`
+- `did-oid4vc-authorization-sdk-server-3.0.0.jar`
+- `did-oid4vc-formatter-sdk-server-3.0.0.jar`
+- `did-mso-mdoc-sdk-server-3.0.0.jar`
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar`
+- `opendid-vc-sdk-1.0.0.jar`
 
 ### 2. Third-Party Libraries
 Key dependencies managed via Gradle:

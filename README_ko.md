@@ -26,6 +26,8 @@ Open DID의 Issuer 및 Verifier 서버가 EUDI Wallet과 OID4VCI/OID4VP 표준 �
 | Issuance | Pre-Authorized Code Flow | 사전 인가 코드 기반의 VC 발급 수행 |
 | Verification | direct_post | VP Token을 direct_post 방식으로 제출하여 검증 수행 |
 
+위 시연 영상은 SD-JWT VC 흐름을 기준으로 하며, 이 외에도 **mDoc 기반의 Credential 발급 및 검증**을 지원합니다. EUDI Wallet 상호운용 시 **PID(Person Identification Data)** 및 **mDL(Mobile Driving License)** 포맷의 mDoc 발급·검증이 가능합니다.
+
 ### 시퀀스 다이어그램 기반 구성도
 
 ```mermaid
@@ -121,8 +123,8 @@ poc-oid4vc
 || Pre-Authorized Code Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 |Credential Formats| SD-JWT VC |  ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Open DID VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
+|| mDoc Format | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD) | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
-|| mDoc Format | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 |Endpoints| Token Endpoint | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Credential Endpoint | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Nonce Endpoint | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
@@ -146,8 +148,8 @@ poc-oid4vc
 || Cross-Device Flow | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 |Credential Formats| SD-JWT VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Open DID VC | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
+|| mDoc Format | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD)  | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
-|| mDoc Format | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |
 |Authorization Request| Verifiable Presentations Authorization Requests | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Scoped Authorization Requests | ![지원됨](https://img.shields.io/badge/지원됨-✅-brightgreen) |
 || Self-Issued OpenID Provider Authorization Requests | ![계획됨](https://img.shields.io/badge/계획됨-📅-blue) |

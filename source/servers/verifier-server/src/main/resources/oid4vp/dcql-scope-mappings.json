@@ -1,20 +1,32 @@
 [
   {
     "scope": "sdjwt_test",
-    "description": "National ID credential query",
+    "description": "SD-JWT VC Test",
     "enabled": true,
     "dcqlQuery": "{\"credentials\":[{\"id\":\"national_id\",\"format\":\"dc+sd-jwt\",\"meta\":{\"vct_values\":[\"https://credentials.gov.kr/identity_credential\"]}}]}"
   },
   {
     "scope": "opendid_vc_test",
-    "description": "Student ID credential query",
+    "description": "OpenDID VC Test",
     "enabled": true,
-    "dcqlQuery": "{\"credentials\":[{\"id\":\"student_id\",\"format\":\"opendid_vc\",\"meta\":{\"credential_schema_id_values\":[\"http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema\"]}}]}"
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"student_id\",\"format\":\"opendid_vc\",\"meta\":{\"credential_schema_id_values\":[\"http://10.48.17.124:8084/issuer/api/v1/vc/vcschema?name=tec.student_id\"]}}]}"
   },
   {
-    "scope": "eudi_pid_test",
-    "description": "EUDI PID credential query",
+    "scope": "sdjwt_eudi_pid_test",
+    "description": "EUDI Wallet Test",
     "enabled": true,
-    "dcqlQuery": "{\"credentials\":[{\"id\":\"query_0\",\"format\":\"dc+sd-jwt\",\"meta\":{\"vct_values\":[\"urn:eudi:pid:1\"]}}]}"
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"national_id\",\"format\":\"dc+sd-jwt\",\"meta\":{\"vct_values\":[\"urn:eudi:pid:1\"]}}]}"
+  },
+  {
+    "scope": "mdoc_eudi_mdl_test",
+    "description": "EUDI Wallet Test",
+    "enabled": true,
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"query_0\",\"format\":\"mso_mdoc\",\"meta\":{\"doctype_value\":\"org.iso.18013.5.1.mDL\"}}]}"
+  },
+  {
+    "scope": "mdoc_eudi_pid_test",
+    "description": "EUDI Wallet Test",
+    "enabled": true,
+    "dcqlQuery": "{\"credentials\":[{\"id\":\"query_0\",\"format\":\"mso_mdoc\",\"meta\":{\"doctype_value\":\"eu.europa.ec.eudi.pid.1\"}}]}"
   }
 ]

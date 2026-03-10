@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(./gradlew compileJava:*)",
-      "Bash(/Users/shlee1223/20260126/did-oid4vp-sdk-server/source/verifier-example-server/gradlew:*)"
-    ]
-  }
-}

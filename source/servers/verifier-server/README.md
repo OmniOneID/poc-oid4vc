@@ -8,9 +8,7 @@ Here's an overview of the directory structure.
 
 ```
 verifier-server
-├── did-oid4vp-sdk-server              # OID4VP SDK (Core Logic)
-├── did-oid4vc-formatter-sdk-server    # OID4VC Formatter SDK
-├── libs                               # Shared libraries
+├── libs                               # SDK JAR libraries
 ├── src                                # Verifier Example Application source code
 │   ├── main
 │   │   ├── java                       # Java source code (com.example.did.oid4vc.verifier)
@@ -23,19 +21,16 @@ verifier-server
 
 | Name | Description |
 |------|-------------|
-| `did-oid4vp-sdk-server` | Subproject containing the core OID4VP SDK logic |
-| `did-oid4vc-formatter-sdk-server` | Subproject for OID4VC Formatter SDK |
-| `libs` | Contains `did-wallet-sdk-server-2.0.0.jar`, `did-crypto-sdk-server-2.0.0.jar` used for signing |
+| `libs` | SDK JAR libraries used at runtime via `fileTree` |
 | `src/main/resources` | Contains application properties and UI templates |
 
 ## Libraries
 
 ### 1. Open DID Libraries
-These core libraries are used by the SDKs and the application:
-- `did-wallet-sdk-server-2.0.0.jar` (in `libs/`)
-- `did-crypto-sdk-server-2.0.0.jar` (in `libs/`)
-- `did-sd-jwt-vc-sdk-server-3.0.0.jar` (in `did-oid4vp-sdk-server/libs/`)
-- `opendid-vc-sdk-1.0.0.jar` (in `did-oid4vp-sdk-server/libs/`)
+These core libraries are bundled in the `libs/` directory:
+- `did-wallet-sdk-server-2.0.0.jar`
+- `did-crypto-sdk-server-2.0.0.jar`
+- `did-oid4vp-sdk-server-3.0.0.jar`
 
 ### 2. Third-Party Libraries
 Key dependencies managed via Gradle:

@@ -8,9 +8,7 @@ Verifier Server 소스 코드 리포지토리에 오신 것을 환영합니다. 
 
 ```
 verifier-server
-├── did-oid4vp-sdk-server              # OID4VP SDK (핵심 로직)
-├── did-oid4vc-formatter-sdk-server    # OID4VC Formatter SDK
-├── libs                               # 공통 라이브러리
+├── libs                               # SDK JAR 라이브러리
 ├── src                                # 검증자 예제 애플리케이션 소스 코드
 │   ├── main
 │   │   ├── java                       # Java 소스 코드 (com.example.did.oid4vc.verifier)
@@ -23,19 +21,16 @@ verifier-server
 
 | 이름 | 설명 |
 |------|-------------|
-| `did-oid4vp-sdk-server` | 핵심 OID4VP SDK 로직을 포함하는 서브 프로젝트 |
-| `did-oid4vc-formatter-sdk-server` | OID4VC Formatter SDK 서브 프로젝트 |
-| `libs` | 서명에 사용되는 `did-wallet-sdk-server-2.0.0.jar`, `did-crypto-sdk-server-2.0.0.jar` 포함 |
+| `libs` | 런타임에 `fileTree`로 사용되는 SDK JAR 라이브러리 |
 | `src/main/resources` | 애플리케이션 프로퍼티 및 UI 템플릿 포함 |
 
 ## 라이브러리
 
 ### 1. Open DID 라이브러리
-SDK 및 애플리케이션에서 사용하는 핵심 라이브러리입니다:
-- `did-wallet-sdk-server-2.0.0.jar` (`libs/` 폴더)
-- `did-crypto-sdk-server-2.0.0.jar` (`libs/` 폴더)
-- `did-sd-jwt-vc-sdk-server-3.0.0.jar` (`did-oid4vp-sdk-server/libs/` 폴더)
-- `opendid-vc-sdk-1.0.0.jar` (`did-oid4vp-sdk-server/libs/` 폴더)
+`libs/` 디렉토리에 포함된 핵심 라이브러리입니다:
+- `did-wallet-sdk-server-2.0.0.jar`
+- `did-crypto-sdk-server-2.0.0.jar`
+- `did-oid4vp-sdk-server-3.0.0.jar`
 
 ### 2. 외부 라이브러리
 Gradle을 통해 관리되는 주요 종속성입니다:

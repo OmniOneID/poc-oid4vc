@@ -26,6 +26,8 @@ The demo video above demonstrates the following:
 | Issuance | Pre-Authorized Code Flow | VC issuance via pre-authorized code |
 | Verification | direct_post | VP Token submitted and verified via direct_post |
 
+In addition to the SD-JWT VC flow shown in the demo, the project also supports **mDoc-based credential issuance and verification**, including **PID (Person Identification Data)** and **mDL (Mobile Driving License)** formats for EUDI Wallet interoperability.
+
 ### Sequence Diagram
 
 ```mermaid
@@ -119,8 +121,8 @@ Description of each folder:
 || Pre-Authorized Code Flow | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 |Credential Formats| SD-JWT VC |  ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Open DID VC | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
+|| mDoc Format | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD) | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
-|| mDoc Format | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
 |Endpoints| Token Endpoint | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Credential Endpoint | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Nonce Endpoint | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
@@ -144,8 +146,8 @@ Description of each folder:
 || Cross-Device Flow | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 |Credential Formats| SD-JWT VC | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Open DID VC | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
+|| mDoc Format | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || W3C VC DM(JWT, JSON-LD)  | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
-|| mDoc Format | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
 |Authorization Request| Verifiable Presentations Authorization Requests | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Scoped Authorization Requests | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Self-Issued OpenID Provider Authorization Requests | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |

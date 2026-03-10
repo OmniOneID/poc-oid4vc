@@ -93,6 +93,11 @@ public class OID4VPController {
       @RequestParam(required = false) String wallet_metadata) {
     log.debug("wallet_metadata: {}", wallet_metadata);
 
+    // x509_san_dns: use x5c certificate chain in JWS header
+    if (authorizationService.isX509SanDns()) {
+      return getAuthorizationRequestWithX5c(request_id);
+    }
+
     // Verifier DID Doc, Application Layer
     String signKeyId = "assert";
     //String verificationMethod = verifierDidDoc.getId() + "?versionId=" + verifierDidDoc.getVersionId() + "#" + signKeyId;
@@ -144,6 +149,9 @@ public class OID4VPController {
       @RequestParam(required = false) String error_description,
       HttpServletRequest request) {
 
+    System.out.println("zzzzzzzzz");
+    System.out.println(vp_token);
+
     Map<String, List<Object>> vpTokenMap = null;
     List<String> issuerPublicKeys = new ArrayList<>();
     List<String> holderPublicKeys = new ArrayList<>();
@@ -159,7 +167,8 @@ public class OID4VPController {
 
         // Check if any credential uses x5c-based verification
         boolean hasX5cCredential = issuerIdentifiers.stream()
-            .anyMatch(id -> id != null && id.getType() == IdentifierResult.Type.SD_JWT_X5C);
+            .anyMatch(id -> id != null && (id.getType() == IdentifierResult.Type.SD_JWT_X5C
+                || id.getType() == IdentifierResult.Type.MSO_MDOC_X5C));
 
         if (hasX5cCredential) {
           // x5c-based verification: use trusted root certificates
@@ -173,7 +182,12 @@ public class OID4VPController {
             // eudi AgeVerificationIssuerCA01
             ClassPathResource certResourceEudi1 = new ClassPathResource("x509_eudi_age_verification_issuer_ca01_test_rootca.crt");
             X509Certificate rootCertTestEudi1 = loadCertificateFromInputStream(certResourceEudi1.getInputStream());
-            List<X509Certificate> trustedRoots = List.of(rootCertTest, rootCertTestEudi1);
+
+            // oidf demo certification test root ca
+            ClassPathResource certResourceOidf = new ClassPathResource("x509_oidf_test_cert.crt");
+            X509Certificate rootCertTestOidf = loadCertificateFromInputStream(certResourceOidf.getInputStream());
+
+            List<X509Certificate> trustedRoots = List.of(rootCertTest, rootCertTestEudi1, rootCertTestOidf);
 
             // Call handleVPToken with trustedRoots for x5c-based verification
             ServiceResult<Map<String, Object>> result = oid4VPHelperService.handleVPToken(
@@ -340,4 +354,64 @@ public class OID4VPController {
     CertificateFactory factory = CertificateFactory.getInstance("X.509");
     return (X509Certificate) factory.generateCertificate(inputStream);
   }
+
+  /**
+   * Handles authorization request for x509_san_dns scheme.
+   * Loads verifier certificate chain and private key, then signs with x5c header.
+   */
+  private ResponseEntity<String> getAuthorizationRequestWithX5c(String requestId) {
+    try {
+      // Load verifier private key for x509_san_dns signing
+      // TODO: Configure certificate/key paths via oid4vp-config.json
+      ClassPathResource keyResource = new ClassPathResource("x509_verifier.pem");
+      java.security.PrivateKey privateKey = loadPrivateKey(keyResource.getInputStream());
+
+      // Load x5c certificate chain (leaf first)
+      List<String> x5cCertChain = new ArrayList<>();
+      ClassPathResource leafCert = new ClassPathResource("x509_verifier.crt");
+      x5cCertChain.add(encodeCertToBase64(leafCert.getInputStream()));
+
+      /*
+      // Add intermediate certificate if exists
+      ClassPathResource intermediateCert = new ClassPathResource("x509_verifier_intermediate.crt");
+      if (intermediateCert.exists()) {
+        x5cCertChain.add(encodeCertToBase64(intermediateCert.getInputStream()));
+      }
+      */
+
+      ServiceResult<String> result = authorizationService.getAuthorizationRequest(
+          requestId, privateKey, x5cCertChain);
+      return toStringResponse(result);
+
+    } catch (Exception e) {
+      log.error("Failed to create x509_san_dns authorization request", e);
+      return ResponseEntity.internalServerError().body(
+          "{\"error\":\"x5c_signing_error\",\"error_description\":\"" + e.getMessage() + "\"}");
+    }
+  }
+
+  /**
+   * Loads a PKCS8 PEM private key from InputStream.
+   */
+  private java.security.PrivateKey loadPrivateKey(java.io.InputStream inputStream) throws Exception {
+    String pem = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+    String base64 = pem
+        .replace("-----BEGIN PRIVATE KEY-----", "")
+        .replace("-----END PRIVATE KEY-----", "")
+        .replaceAll("\\s", "");
+    byte[] keyBytes = java.util.Base64.getDecoder().decode(base64);
+    java.security.spec.PKCS8EncodedKeySpec spec = new java.security.spec.PKCS8EncodedKeySpec(keyBytes);
+    java.security.KeyFactory kf = java.security.KeyFactory.getInstance("EC");
+    return kf.generatePrivate(spec);
+  }
+
+  /**
+   * Encodes an X.509 certificate from InputStream to Base64 (DER) string for x5c header.
+   */
+  private String encodeCertToBase64(java.io.InputStream inputStream) throws Exception {
+    CertificateFactory factory = CertificateFactory.getInstance("X.509");
+    X509Certificate cert = (X509Certificate) factory.generateCertificate(inputStream);
+    return java.util.Base64.getEncoder().encodeToString(cert.getEncoded());
+  }
 }
+

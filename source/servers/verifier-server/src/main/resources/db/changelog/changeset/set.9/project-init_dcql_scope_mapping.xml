@@ -45,7 +45,7 @@
     }
   ]
 }]]></column>
-      <column name="description" value="National ID credential query"/>
+      <column name="description" value="SD-JWT VC Test"/>
       <column name="enabled" valueBoolean="true"/>
     </insert>
     <insert tableName="dcql_scope_mapping">
@@ -56,20 +56,20 @@
       "id": "student_id",
       "format": "opendid_vc",
       "meta": {
-        "credential_schema_id_values": ["http://192.168.3.130:8091/issuer/api/v1/vc/vcschema?name=toppan-schema"]
+        "credential_schema_id_values": ["http://10.48.17.124:8084/issuer/api/v1/vc/vcschema?name=tec.student_id"]
       }
     }
   ]
 }]]></column>
-      <column name="description" value="Student ID credential query"/>
+      <column name="description" value="OpenDID VC Test"/>
       <column name="enabled" valueBoolean="true"/>
     </insert>
     <insert tableName="dcql_scope_mapping">
-      <column name="scope" value="eudi_pid_test"/>
+      <column name="scope" value="sdjwt_eudi_pid_test"/>
       <column name="dcql_query"><![CDATA[{
   "credentials": [
     {
-      "id": "query_0",
+      "id": "national_id",
       "format": "dc+sd-jwt",
       "meta": {
         "vct_values": ["urn:eudi:pid:1"]
@@ -77,7 +77,39 @@
     }
   ]
 }]]></column>
-      <column name="description" value="EUDI PID credential query"/>
+      <column name="description" value="EUDI Wallet Test"/>
+      <column name="enabled" valueBoolean="true"/>
+    </insert>
+    <insert tableName="dcql_scope_mapping">
+      <column name="scope" value="mdoc_eudi_mdl_test"/>
+      <column name="dcql_query"><![CDATA[{
+  "credentials": [
+    {
+      "id": "query_0",
+      "format": "mso_mdoc",
+      "meta": {
+        "doctype_value": "org.iso.18013.5.1.mDL"
+      }
+    }
+  ]
+}]]></column>
+      <column name="description" value="EUDI Wallet Test"/>
+      <column name="enabled" valueBoolean="true"/>
+    </insert>
+    <insert tableName="dcql_scope_mapping">
+      <column name="scope" value="mdoc_eudi_pid_test"/>
+      <column name="dcql_query"><![CDATA[{
+  "credentials": [
+    {
+      "id": "query_0",
+      "format": "mso_mdoc",
+      "meta": {
+        "doctype_value": "eu.europa.ec.eudi.pid.1"
+      }
+    }
+  ]
+}]]></column>
+      <column name="description" value="EUDI Wallet Test"/>
       <column name="enabled" valueBoolean="true"/>
     </insert>
   </changeSet>

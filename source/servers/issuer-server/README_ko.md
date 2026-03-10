@@ -33,12 +33,17 @@ issuer-server
 ## 라이브러리
 
 ### 1. Open DID 라이브러리
-SDK 및 애플리케이션에서 사용하는 핵심 라이브러리입니다:
-- `did-wallet-sdk-server-2.0.0.jar` (`libs/` 폴더)
-- `did-crypto-sdk-server-2.0.0.jar` (`did-oid4vci-sdk-server/libs/` 폴더)
-- `did-datamodel-sdk-server-2.0.0.jar` (`did-oid4vci-sdk-server/libs/` 폴더)
-- `did-sdk-common-2.0.0.jar` (`did-oid4vci-sdk-server/libs/` 폴더)
-- `sd-jwt-sdk-vc-1.0.0.jar` (`did-oid4vci-sdk-server/libs/` 폴더)
+`libs/` 디렉토리에 포함된 핵심 라이브러리입니다:
+- `did-wallet-sdk-server-2.0.0.jar`
+- `did-crypto-sdk-server-2.0.0.jar`
+- `did-datamodel-sdk-server-2.0.0.jar`
+- `did-sdk-common-2.0.0.jar`
+- `did-oid4vci-sdk-server-3.0.0.jar`
+- `did-oid4vc-authorization-sdk-server-3.0.0.jar`
+- `did-oid4vc-formatter-sdk-server-3.0.0.jar`
+- `did-mso-mdoc-sdk-server-3.0.0.jar`
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar`
+- `opendid-vc-sdk-1.0.0.jar`
 
 ### 2. 외부 라이브러리
 Gradle을 통해 관리되는 주요 종속성입니다:

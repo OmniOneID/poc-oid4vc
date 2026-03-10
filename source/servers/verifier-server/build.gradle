@@ -8,21 +8,19 @@ group = 'com.example.did'
 version = '3.0.0'
 description = 'Verifier Example Server'
 
-allprojects {
-    repositories {
-        mavenCentral()
-        google()
-        maven { url "https://repo.danubetech.com/repository/maven-public/" }
-        maven { url "https://maven.scijava.org/content/repositories/public/" }
-        maven { url "https://jitpack.io" }
-    }
+repositories {
+    mavenCentral()
+    google()
+    maven { url "https://repo.danubetech.com/repository/maven-public/" }
+    maven { url "https://maven.scijava.org/content/repositories/public/" }
+    maven { url "https://jitpack.io" }
+}
 
-    configurations.all {
-        resolutionStrategy {
-            force 'org.bouncycastle:bcpkix-jdk18on:1.80'
-            force 'org.bouncycastle:bcprov-jdk18on:1.80'
-            force 'org.bouncycastle:bcutil-jdk18on:1.80'
-        }
+configurations.all {
+    resolutionStrategy {
+        force 'org.bouncycastle:bcpkix-jdk18on:1.80'
+        force 'org.bouncycastle:bcprov-jdk18on:1.80'
+        force 'org.bouncycastle:bcutil-jdk18on:1.80'
     }
 }
 
@@ -55,9 +53,8 @@ springBoot {
 }
 
 dependencies {
-    // SDK
-    implementation project(':did-oid4vp-sdk-server')
-    implementation project(':did-oid4vc-formatter-sdk-server')
+    // Local SDK libraries
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -80,9 +77,6 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // Local SDK libraries
-    implementation fileTree(dir: "libs", includes: ["*"])
 }
 
 dependencyManagement {
