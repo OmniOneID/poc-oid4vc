@@ -40,7 +40,8 @@ spring:
 
 logging:
   level:
-    root: DEBUG
+    root: INFO
+    com.example.did.oid4vc.verifier.config.RequestResponseLoggingFilter: DEBUG
 
 springdoc:
   api-docs:

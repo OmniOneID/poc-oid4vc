@@ -30,7 +30,13 @@ verifier-server
 These core libraries are bundled in the `libs/` directory:
 - `did-wallet-sdk-server-2.0.0.jar`
 - `did-crypto-sdk-server-2.0.0.jar`
+- `did-datamodel-sdk-server-2.0.0.jar`
+- `did-sdk-common-2.0.0.jar`
 - `did-oid4vp-sdk-server-3.0.0.jar`
+- `did-oid4vc-formatter-sdk-server-3.0.0.jar`
+- `did-mso-mdoc-sdk-server-3.0.0.jar`
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar`
+- `opendid-vc-sdk-1.0.0.jar`
 
 ### 2. Third-Party Libraries
 Key dependencies managed via Gradle:

@@ -291,6 +291,9 @@ oid4vp:
       "dc+sd-jwt": {
         "sd-jwt_alg_values": ["ES256"],
         "kb-jwt_alg_values": ["ES256"]
+      },
+      "mso_mdoc": {
+        "alg_values_supported": ["ES256"]
       }
     }
   },

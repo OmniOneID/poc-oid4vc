@@ -30,7 +30,13 @@ verifier-server
 `libs/` 디렉토리에 포함된 핵심 라이브러리입니다:
 - `did-wallet-sdk-server-2.0.0.jar`
 - `did-crypto-sdk-server-2.0.0.jar`
+- `did-datamodel-sdk-server-2.0.0.jar`
+- `did-sdk-common-2.0.0.jar`
 - `did-oid4vp-sdk-server-3.0.0.jar`
+- `did-oid4vc-formatter-sdk-server-3.0.0.jar`
+- `did-mso-mdoc-sdk-server-3.0.0.jar`
+- `did-sd-jwt-vc-sdk-server-3.0.0.jar`
+- `opendid-vc-sdk-1.0.0.jar`
 
 ### 2. 외부 라이브러리
 Gradle을 통해 관리되는 주요 종속성입니다:
