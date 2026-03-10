@@ -22,6 +22,30 @@ oid4vc:
   auth:
     issuer-url: ${issuer.base-url}
     clients:
+      client-id: "oid4vci-client"
+      client-secret: "secret"
       redirect-url: ${issuer.base-url}/auth/callback
+      redirect-uris:
+        - https://oauth.pstmn.io/v1/callback
+        - http://localhost:8081/auth/callback
+      scopes:
+        - openid
+      android:
+        client-id: "oid4vci-android"
+        redirect-uris:
+          - "org.omnione.did.sdk.oid4vc://callback"
+        scopes:
+          - "openid"
+          - "eu.europa.ec.eudi.pid_vc_sd_jwt"
+          - "eu.europa.ec.eudi.pid_mdoc"
+          - "eu.europa.ec.eudi.mdl_mdoc"
+      ios:
+        client-id: "oid4vci-ios"
+        redirect-uris:
+          - "oid4vc-app://callback"
+        scopes:
+          - "openid"
+          - "eu.europa.ec.eudi.pid_mdoc"
+          - "eu.europa.ec.eudi.mdl_mdoc"
       issuer-server:
         url: ${issuer.base-url}

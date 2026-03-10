@@ -278,7 +278,7 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
         List<RadioGroup> radioGroups = new ArrayList<>();
 
         for (AuthorizationDetails group : authorizationDetails) {
-            if(group.getCredentialIdentifiers().size() > 1) {
+            if(group.getCredentialIdentifiers().size() > 0) {
                 TextView groupTitle = new TextView(this);
                 groupTitle.setText(group.getCredentialConfigurationId());
                 groupTitle.setTextSize(18f);
@@ -539,6 +539,10 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
 
         // cert test
         if(identifier.equals("NationalIDCert")) {
+            exampleJwtProof = createJws();;
+            proofs.setJwt(List.of(exampleJwtProof));
+        }
+        if(identifier.equals("mDL")) {
             exampleJwtProof = createJws();;
             proofs.setJwt(List.of(exampleJwtProof));
         }

@@ -46,6 +46,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.15.2'
 
     //zxing
     implementation "com.journeyapps:zxing-android-embedded:4.3.0"
@@ -60,4 +61,11 @@ dependencies {
     implementation 'com.madgag.spongycastle:prov:1.54.0.0'
     implementation 'com.madgag.spongycastle:pkix:1.54.0.0'
     implementation 'com.madgag.spongycastle:pg:1.54.0.0'
+
+    // mDoc
+    implementation 'com.upokecenter:cbor:4.5.2'
+
+    // COSE 서명
+    // 공식 COSE-JAVA 라이브러리 (JitPack 이용)
+    implementation 'com.github.cose-wg:COSE-JAVA:1.1.0'
 }

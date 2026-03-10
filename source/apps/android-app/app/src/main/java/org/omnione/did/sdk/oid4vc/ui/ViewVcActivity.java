@@ -21,6 +21,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Base64;
@@ -29,10 +31,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.journeyapps.barcodescanner.ScanContract;
@@ -49,11 +54,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.omnione.did.sdk.oid4vc.R;
+
+import COSE.CoseException;
+import COSE.Message;
+import COSE.MessageTag;
+import COSE.OneKey;
+import COSE.Sign1Message;
 
 public class ViewVcActivity extends AppCompatActivity {
 
@@ -152,7 +164,7 @@ public class ViewVcActivity extends AppCompatActivity {
             Object credentialData = walletData.getCredential();
 
             // Branch based on format value
-            if (format.equals("NationalID") || format.equals("mDL") || format.equals("NationalIDCert")) {
+            if (format.equals("NationalID") || format.equals("NationalIDCert")) {
                 if (credentialData instanceof String) {
                     displayJwtVc((String) credentialData);
                 } else {
@@ -165,10 +177,84 @@ public class ViewVcActivity extends AppCompatActivity {
                 String jsonArrayString = new String(decodedBytes, StandardCharsets.UTF_8);
                 VerifiableCredential vc = gson.fromJson(jsonArrayString, VerifiableCredential.class);
                 tec(vc);
-            } else {
+            }
+            else if( format.equals("mDL") || format.equals("mDocPID")) {
+                if (credentialData instanceof String) {
+                    displaymDL((String) credentialData);
+                } else {
+                    showError("Invalid mDL format VC.");
+                }
+            }
+            else {
                 showError("Unsupported VC format: " + format);
             }
 
+    }
+
+    private void displaymDL(String mDlData) {
+        try {
+            claimsContainer.setVisibility(ViewGroup.VISIBLE);
+            claimsContainer.removeAllViews();
+
+            addClaimView("Format", "mDoc", 0);
+
+            try {
+                byte[] decodedBytes = Base64.decode(mDlData, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+                
+                // Use Jackson CBOR decoding
+                ObjectMapper mapper = new ObjectMapper(new CBORFactory());
+                Map<String, Object> map = mapper.readValue(decodedBytes, Map.class);
+                
+                if (map != null) {
+                    // Try to extract namespaces if they exist in a typical mDL structure
+                    if (map.containsKey("nameSpaces")) {
+                        Object nameSpacesObj = map.get("nameSpaces");
+                        if (nameSpacesObj instanceof Map) {
+                            Map<String, Object> nameSpaces = (Map<String, Object>) nameSpacesObj;
+                            for (Map.Entry<String, Object> entry : nameSpaces.entrySet()) {
+                                Log.d("sangjun", "Namespace: " + entry.getKey());
+                                addClaimView("Namespace", entry.getKey(), 0);
+                                Object itemsObj = entry.getValue();
+                                if (itemsObj instanceof List) {
+                                    List<?> items = (List<?>) itemsObj;
+                                    for (Object item : items) {
+                                        if (item instanceof byte[]) {
+                                            try {
+                                                Map<String, Object> decodedItem = mapper.readValue((byte[]) item, Map.class);
+                                                if (decodedItem.containsKey("elementIdentifier") && decodedItem.containsKey("elementValue")) {
+                                                    String identifier = (String) decodedItem.get("elementIdentifier");
+                                                    Object value = decodedItem.get("elementValue");
+                                                    Log.d("sangjun", "mDL Item - Key: " + identifier + ", Value: " + value);
+                                                    addClaimView(identifier, value, 1);
+                                                }
+                                            } catch (Exception ignored) {
+                                                // Fallback: if it's not a map, just show it
+                                                Log.d("sangjun", "mDL Item (Raw) - Value: " + item);
+                                                addClaimView("Item", item, 1);
+                                            }
+                                        } else {
+                                            Log.d("sangjun", "mDL Item (Non-byte[]) - Value: " + item);
+                                            addClaimView("Item", item, 1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    addClaimView("mDL Data", mDlData, 0);
+                }
+            } catch (Exception e) {
+                Log.e("sangjun", "CBOR decoding failed", e);
+                // If CBOR decoding fails, try to show the base64url data
+                addClaimView("mDL Data (Base64URL)", mDlData, 0);
+            }
+
+            submitButton.setVisibility(View.VISIBLE);
+        } catch (Exception e) {
+            Log.e("sangjun", "mDL display failed", e);
+            showError("Failed to display mDL data.");
+        }
     }
 
     private void tec(VerifiableCredential vc){
@@ -305,7 +391,7 @@ public class ViewVcActivity extends AppCompatActivity {
         int marginLeft = (int) (getResources().getDisplayMetrics().density * 20 * indentLevel);
 
         if (value instanceof Map) {
-            String formattedCaption = caption.substring(0, 1).toUpperCase() + caption.substring(1);
+            String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
 
             TextView parentCaptionTextView = new TextView(this);
             parentCaptionTextView.setText(formattedCaption + ":"); // e.g., "Address:"
@@ -320,7 +406,7 @@ public class ViewVcActivity extends AppCompatActivity {
             }
 
         } else if (value instanceof List) {
-            String formattedCaption = caption.substring(0, 1).toUpperCase() + caption.substring(1);
+            String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
 
             TextView listCaptionTextView = new TextView(this);
             listCaptionTextView.setText(formattedCaption + ":");
@@ -336,13 +422,41 @@ public class ViewVcActivity extends AppCompatActivity {
 
         } else {
             TextView captionTextView = new TextView(this);
-            String formattedCaption = caption.substring(0, 1).toUpperCase() + caption.substring(1);
+            String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
             captionTextView.setText(formattedCaption);
             captionTextView.setTextSize(14f);
             captionTextView.setPadding(marginLeft, 0, 0, 0); // Apply indentation
+            claimsContainer.addView(captionTextView);
+
+            if ("portrait".equalsIgnoreCase(caption) && value instanceof byte[]) {
+                byte[] imageBytes = (byte[]) value;
+                Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
+                if (bitmap != null) {
+                    ImageView imageView = new ImageView(this);
+                    imageView.setImageBitmap(bitmap);
+                    imageView.setAdjustViewBounds(true);
+                    int maxHeightPx = (int) (getResources().getDisplayMetrics().density * 200);
+                    imageView.setMaxHeight(maxHeightPx);
+
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT
+                    );
+                    params.setMargins(marginLeft, 0, 0, (int)(getResources().getDisplayMetrics().density * 16));
+                    imageView.setLayoutParams(params);
+                    claimsContainer.addView(imageView);
+                    return;
+                }
+            }
 
             TextView valueTextView = new TextView(this);
-            valueTextView.setText(String.valueOf(value)); // Convert Object to String
+            String displayValue;
+            if (value instanceof byte[]) {
+                displayValue = Base64.encodeToString((byte[]) value, Base64.NO_WRAP);
+            } else {
+                displayValue = String.valueOf(value);
+            }
+            valueTextView.setText(displayValue);
             valueTextView.setTextSize(18f);
             valueTextView.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
             valueTextView.setPadding(marginLeft, 0, 0, 0); // Apply indentation
@@ -354,8 +468,33 @@ public class ViewVcActivity extends AppCompatActivity {
             params.setMargins(0, 0, 0, (int)(getResources().getDisplayMetrics().density * 4)); // Reduce margin slightly for better appearance
             valueTextView.setLayoutParams(params);
 
-            claimsContainer.addView(captionTextView);
             claimsContainer.addView(valueTextView);
         }
+    }
+
+    public boolean verifySignatureMdl(byte[] issuerAuthBytes) {
+//        try {
+//            String publicKey= "Ay/5wNs8D1oX+FDRYgnJUmZ/Ovnff+/73G8LD53+m1tk";
+//
+//            PublicKey publicKeyObject = KeyUtil.getPublicKeyObject(KeyUtil.unCompressPublicKey(org.bouncycastle.util.encoders.Base64.decode(publicKey)));
+//            // 1. 바이트를 COSE Sign1 메시지 객체로 변환
+//            Sign1Message msg = (Sign1Message) Message.DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1);
+//
+//            // 2. 검증에 사용할 공개키를 OneKey 객체로 변환
+//            OneKey key = new OneKey(publicKeyObject, null);
+//
+//            // 3. 라이브러리 내장 함수로 검증 수행
+//            // 내부적으로 [Protected Header + Payload(MSO) + External AAD]를 해시하고
+//            // 서명값(Signature)과 비교합니다.
+//            boolean isValid = msg.validate(key);
+//
+//            System.out.println(">>> 서명 검증 결과: " + (isValid ? "성공 (Pass)" : "실패 (Fail)"));
+//            return isValid;
+//
+//        } catch (CoseException e) {
+//            System.err.println("서명 검증 중 오류: " + e.getMessage());
+//            return false;
+//        }
+        return true;
     }
 }

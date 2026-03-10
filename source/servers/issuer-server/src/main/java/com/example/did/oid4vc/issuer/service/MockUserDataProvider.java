@@ -22,6 +22,9 @@ import org.omnione.did.oid4vc.oid4vci.service.UserDataProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Base64;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,13 +39,43 @@ public class MockUserDataProvider implements UserDataProvider {
         Map<String, Object> dynamicClaims = userClaimsStore.getClaims(userId, credentialType);
         if (dynamicClaims != null && !dynamicClaims.isEmpty()) {
             System.out.println("dynamicClaims load");
-            return dynamicClaims;
+            
+            // Create a mutable copy to modify if necessary
+            Map<String, Object> claims = new HashMap<>(dynamicClaims);
+            
+            // Critical: portrait must be a byte[] to be encoded as a CBOR byte string (bstr)
+            if (claims.containsKey("portrait") && claims.get("portrait") instanceof String) {
+                try {
+                    String portraitBase64 = (String) claims.get("portrait");
+                    if (!"IMAGE_NOT_FOUND".equals(portraitBase64)) {
+                        byte[] portraitBytes = Base64.getDecoder().decode(portraitBase64);
+                        claims.put("portrait", portraitBytes);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Failed to decode portrait Base64: " + e.getMessage());
+                }
+            }
+            return claims;
         }
 
         // Fallback to hardcoded values
         return switch (credentialType) {
-            case "mDL" -> Map.of(
-
+            case "mDL", "mDoc", "mDocPID" -> Map.ofEntries(
+                    Map.entry("family_name", "Kim"),
+                    Map.entry("given_name", "MDOC"),
+                    Map.entry("birth_date", "1990-01-01"),
+                    Map.entry("issue_date", "2026-01-10T09:30:00Z"),
+                    Map.entry("expiry_date", "2036-01-10T00:00:00Z"),
+                    Map.entry("issuing_country", "KR"),
+                    Map.entry("issuing_authority", "Korean National Police Agency"),
+                    Map.entry("document_number", "11-123456-78"),
+                    Map.entry("portrait", new byte[0]), // Placeholder for bstr
+                    Map.entry("driving_privileges", List.of(Map.of(
+                            "vehicle_category_code", "B",
+                            "issue_date", "2024-01-10",
+                            "expiry_date", "2034-01-10"
+                    ))),
+                    Map.entry("un_distinguishing_sign", "ROK")
             );
             // format : dc+sd-jwt
             case "NationalID", "NationalIDCert", "PID" -> Map.of(

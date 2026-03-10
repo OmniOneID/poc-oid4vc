@@ -91,8 +91,6 @@ public class IssuerEndpointConfig {
 
         } catch (NoSuchMethodException e) {
             log.error("Method {} not found in CredentialIssuanceController", methodName, e);
-        } catch (Exception e) {
-            log.error("Error registering endpoint {} -> {}", fullUrl, methodName, e);
         }
     }
 }

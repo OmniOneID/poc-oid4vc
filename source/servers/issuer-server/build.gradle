@@ -47,8 +47,6 @@ springBoot {
 
 
 dependencies {
-	implementation project(':did-oid4vci-sdk-server')
-	implementation project(':did-oid4vc-authorization-sdk-server')
 	implementation fileTree(dir: 'libs', include: ['*.jar'])
 
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -81,6 +79,14 @@ dependencies {
 
 	// 암호화 알고리즘 (Bouncy Castle)
 	implementation 'org.bouncycastle:bcprov-jdk18on:1.76'
+
+	// 추가해야할것들
+	// QR Code Generation (ZXing)
+	implementation 'com.google.zxing:core:3.5.1'
+	implementation 'com.google.zxing:javase:3.5.1'
+	// oauth
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-authorization-server'
 }
 
 dependencyManagement {

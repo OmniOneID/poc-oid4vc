@@ -68,9 +68,28 @@
             gap: 10px;
             margin-bottom: 10px;
             align-items: center;
+            background: #fff;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .portrait-preview {
+            width: 80px;
+            height: 100px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-left: auto; /* Push to the right */
+            display: block;
         }
         .claim-row input {
             flex: 1;
+        }
+        .claim-row.fixed-row {
+            background-color: #f9f9f9;
+        }
+        .claim-row.fixed-row input {
+            border-color: #eee;
+            color: #7f8c8d;
         }
         .btn {
             padding: 10px 15px;
@@ -198,10 +217,16 @@
                 <input type="text" id="userId" placeholder="e.g., user123">
             </div>
             <div class="form-group">
+                <label for="credentialConfig">Credential Configuration</label>
+                <select id="credentialConfig" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
+                    <option value="">-- Select Configuration --</option>
+                    <option th:each="entry : ${credentialConfigs}" th:value="${entry.key}" th:text="${entry.key}"></option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="credentialType">Credential Type</label>
                 <select id="credentialType" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;">
                     <option value="">-- Select Credential Type --</option>
-                    <option th:each="type : ${credentialTypes}" th:value="${type}" th:text="${type}"></option>
                 </select>
             </div>
 
@@ -226,18 +251,64 @@
 
     <div id="toast" class="toast">Saved Successfully</div>
 
-    <script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const mdocDefaults = /*[[${mdocDefaults}]]*/ {};
+        const credentialConfigs = /*[[${credentialConfigs}]]*/ {};
+        /*]]>*/
+
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedList();
-            // Default first row
-            addRow('given_name', 'Raon');
+            
+            const configSelect = document.getElementById('credentialConfig');
+            const typeSelect = document.getElementById('credentialType');
+
+            // Handle configuration selection change
+            configSelect.addEventListener('change', (e) => {
+                const selectedConfig = e.target.value;
+                typeSelect.innerHTML = '<option value="">-- Select Credential Type --</option>';
+                
+                if (selectedConfig && credentialConfigs[selectedConfig]) {
+                    const identifiers = credentialConfigs[selectedConfig].identifiers;
+                    identifiers.forEach(id => {
+                        const option = document.createElement('option');
+                        option.value = id;
+                        option.textContent = id;
+                        typeSelect.appendChild(option);
+                    });
+                }
+            });
+
+            // Handle credential type selection change
+            typeSelect.addEventListener('change', (e) => {
+                const selectedType = e.target.value;
+                const container = document.getElementById('claimsContainer');
+                container.innerHTML = '';
+
+                if (selectedType === 'mDL') {
+                    Object.entries(mdocDefaults).forEach(([k, v]) => {
+                        addRow(k, v, true); // Pass true for isFixed
+                    });
+                } else if (selectedType === 'mDocPID') {
+                    Object.entries(mdocDefaults).forEach(([k, v]) => {
+                        addRow(k, v, true); // Pass true for isFixed
+                    });
+                }
+                else if (selectedType) {
+                    addRow('family_name', 'Kim');
+                    addRow('given_name', 'Raon');
+                }
+            });
+
+            // Initial default row
             addRow('family_name', 'Kim');
+            addRow('given_name', 'Raon');
         });
 
-        function addRow(key = '', value = '') {
+        function addRow(key = '', value = '', isFixed = false) {
             const container = document.getElementById('claimsContainer');
             const row = document.createElement('div');
-            row.className = 'claim-row';
+            row.className = 'claim-row' + (isFixed ? ' fixed-row' : '');
             
             // Format value if it's an object
             let displayValue = typeof value === 'object' ? JSON.stringify(value) : value;
@@ -247,21 +318,40 @@
             keyInput.className = 'claim-key';
             keyInput.placeholder = 'Key';
             keyInput.value = key;
+            if (isFixed) keyInput.readOnly = true;
 
             const valueInput = document.createElement('input');
             valueInput.type = 'text';
             valueInput.className = 'claim-value';
             valueInput.placeholder = 'Value';
             valueInput.value = displayValue;
-
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'btn btn-remove';
-            removeBtn.textContent = 'X';
-            removeBtn.onclick = () => removeRow(removeBtn);
+            // valueInput is no longer readOnly even if isFixed is true, allowing edits.
+            
+            // If it's a long portrait value, hide the input but keep it in DOM for saving
+            if (key === 'portrait') {
+                valueInput.style.display = 'none';
+            }
 
             row.appendChild(keyInput);
             row.appendChild(valueInput);
-            row.appendChild(removeBtn);
+
+            // Add remove button only if not fixed
+            if (!isFixed) {
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-remove';
+                removeBtn.textContent = 'X';
+                removeBtn.onclick = () => removeRow(removeBtn);
+                row.appendChild(removeBtn);
+            }
+
+            // Append image preview to the right if it's portrait
+            if (key === 'portrait' && displayValue !== 'IMAGE_NOT_FOUND' && displayValue !== '') {
+                const img = document.createElement('img');
+                img.className = 'portrait-preview';
+                img.src = 'data:image/jpeg;base64,' + displayValue;
+                row.appendChild(img);
+            }
+
             container.appendChild(row);
         }
 
@@ -319,8 +409,12 @@
                 .then(claims => {
                     const container = document.getElementById('claimsContainer');
                     container.innerHTML = '';
+                    const isMdl = (type === 'mDL');
                     Object.entries(claims).forEach(([k, v]) => {
-                        addRow(k, v);
+                        // Apply fixed logic for mDL essential fields or all fields if desired
+                        // Here we apply it if it's mDL and the key is in our default mDoc keys
+                        const isEssential = isMdl && mdocDefaults.hasOwnProperty(k);
+                        addRow(k, v, isEssential);
                     });
                     showToast('Loaded claims for ' + userId, 'success');
                 });

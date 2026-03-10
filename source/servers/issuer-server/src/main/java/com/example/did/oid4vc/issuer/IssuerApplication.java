@@ -16,6 +16,7 @@
 
 package com.example.did.oid4vc.issuer;
 
+import com.example.did.oid4vc.issuer.property.WalletProperty;
 import org.omnione.did.oid4vc.oid4vci.property.IssuerProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,7 +28,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = {
 		"com.example.did.oid4vc.issuer",
-		"org.omnione.did.oid4vc.oid4vci"
+		"org.omnione.did.oid4vc.oid4vci",
+		"org.omnione.did.oid4vc.formatter"
 })
 @EnableFeignClients(basePackages = {
 		"com.example.did.oid4vc.issuer",
@@ -42,7 +44,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 //		"com.example.did.oid4vc.issuer.db.entity",
 //		"org.omnione.did.oid4vc.oid4vci"
 //})
-@EnableConfigurationProperties(IssuerProperties.class)
+@EnableConfigurationProperties({IssuerProperties.class, WalletProperty.class})
 public class IssuerApplication {
 
 	public static void main(String[] args) {

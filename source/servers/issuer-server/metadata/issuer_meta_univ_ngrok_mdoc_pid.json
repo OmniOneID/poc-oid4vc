@@ -1,0 +1,466 @@
+{
+  "credential_issuer": "https://photospheric-nondyspeptically-donny.ngrok-free.dev",
+  "authorization_server": ["https://photospheric-nondyspeptically-donny.ngrok-free.dev"],
+  "credential_offer_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/credential-offer",
+  "credential_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/credential",
+  "token_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/oauth2/token",
+  "nonce_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/nonce",
+  "deferred_credential_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/deferred_credential",
+  "notification_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/notification",
+  "credential_request_encryption": {
+    "enc_values_supported": [
+      "A128GCM",
+      "A256GCM",
+      "A128CBC-HS256",
+      "A256CBC-HS512",
+      "ECDH-ES"
+    ],
+    "encryption_required": false,
+    "jwks": {
+      "keys": [
+        {
+          "alg": "ECDH-ES",
+          "crv": "P-256",
+          "kid": "D6KSZ43BrxnLwBAajruJpB1t7TrsWuE-mAn6ihHqT8w",
+          "kty": "EC",
+          "use": "enc",
+          "x": "xuUPSgobyy2Pxw-rUgmYHe92K4JuuFIAKu1vbIw6pgo",
+          "y": "HoYHVVdZdEdVYZWf_ryHhgd4ak5-6xykpvFgZaK_Z8Q"
+        }
+      ]
+    }
+  },
+  "credential_response_encryption": {
+    "alg_values_supported": [
+      "RSA1_5",
+      "RSA-OAEP",
+      "RSA-OAEP-256",
+      "ECDH-ES"
+    ],
+    "enc_values_supported": [
+      "A128CBC-HS256",
+      "A192CBC-HS384",
+      "A256CBC-HS512",
+      "A128GCM",
+      "A192GCM",
+      "A256GCM"
+    ],
+    "encryption_required": false
+  },
+  "display": [
+    {
+      "locale": "en",
+      "logo": {
+        "alt_text": "EU Digital Identity Wallet Logo",
+        "uri": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/ic-logo.png"
+      },
+      "name": "Digital Credentials Issuer"
+    }
+  ],
+  "grants_supported": {
+    "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
+      "pre-authorized_code": {}
+      }
+  },
+  "batch_credential_issuance": {
+    "batch_size": 100
+  },
+  "credential_configurations_supported": {
+    "mDocPID":{
+      "credential_metadata":{
+        "claims":[
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Family Name(s)"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "family_name"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Given Name(s)"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "given_name"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Birth Date"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "birth_date"
+            ],
+            "value_type":"full-date"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Birth Family Name(s)"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "family_name_birth"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Birth Given Name(s)"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "given_name_birth"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Birth Place"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "place_of_birth"
+            ],
+            "value_type":"places"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident Address"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_address"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident Country"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_country"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident State"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_state"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident City"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_city"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident Postal Code"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_postal_code"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident Street"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_street"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Resident House Number"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "resident_house_number"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Personal Administrative Number"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "personal_administrative_number"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Sex"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "sex"
+            ],
+            "value_type":"uint"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Email Address"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "email_address"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Mobile Phone Number"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "mobile_phone_number"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Nationality"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "nationality"
+            ],
+            "value_type":"nationalities"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Issuance Date"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "issuance_date"
+            ]
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Expiry Date"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "expiry_date"
+            ]
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Issuance Authority"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "issuing_authority"
+            ]
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Document Number"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "document_number"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Trust Anchor"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "trust_anchor"
+            ],
+            "value_type":"string"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Issuing Country"
+              }
+            ],
+            "mandatory":true,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "issuing_country"
+            ]
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Portrait Image"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "portrait"
+            ],
+            "value_type":"jpeg"
+          },
+          {
+            "display":[
+              {
+                "locale":"en",
+                "name":"Issuing Jurisdiction"
+              }
+            ],
+            "mandatory":false,
+            "path":[
+              "eu.europa.ec.eudi.pid.1",
+              "issuing_jurisdiction"
+            ]
+          }
+        ],
+        "display":[
+          {
+            "locale":"en",
+            "logo":{
+              "alt_text":"A square figure of a PID",
+              "uri":"https://examplestate.com/public/pid.png"
+            },
+            "name":"PID (MSO Mdoc)"
+          }
+        ]
+      },
+      "credential_signing_alg_values_supported":[
+        -7
+      ],
+      "cryptographic_binding_methods_supported":[
+        "jwk",
+        "cose_key"
+      ],
+      "doctype":"eu.europa.ec.eudi.pid.1",
+      "format":"mso_mdoc",
+      "policy":{
+        "batch_size":15,
+        "one_time_use":true
+      },
+      "proof_types_supported":{
+        "jwt":{
+          "proof_signing_alg_values_supported":[
+            "ES256"
+          ]
+        }
+      },
+      "scope":"eu.europa.ec.eudi.pid_mdoc"
+    }
+  }
+}

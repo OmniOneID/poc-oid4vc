@@ -36,7 +36,6 @@ public class IssuerSecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/credential/**").authenticated()
                         .anyRequest().permitAll())
-                // verify access token
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
                 .csrf(csrf -> csrf.disable());
         return http.build();

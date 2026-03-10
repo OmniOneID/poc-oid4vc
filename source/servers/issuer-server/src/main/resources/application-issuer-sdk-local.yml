@@ -5,7 +5,10 @@ issuer:
   base-url: https://${issuer.server-ip}
   data-dir: .
   metadata-file-path: metadata/issuer_meta_univ_ngrok.json
-  root-ca-file-name: rootCA.crt
+  root-ca-file-name: cert/rootCA.crt
+  issuer-cert-file-name: cert/issuer.crt
+  intermediate-cert-file-name: cert/intermediate.crt
+  holder-cert-file-name: cert/holder.crt
   wallet-file-name: forten.wallet
   sdk:
     credential-configurations:
@@ -17,10 +20,17 @@ issuer:
       VerifiableIdSD:
         format: dc+sd-jwt
         identifiers:
-          - PID
-          - NationalIDCert
           - NationalID
+          - PID
+      VerifiableIdSDCert:
+        format: dc+sd-jwt-did
+        identifiers:
+          - NationalIDWithDID
+      mDoc:
+        format: mso-mdoc
+        identifiers:
           - mDL
+          - mDocPID
 
 clients:
   auth-server:

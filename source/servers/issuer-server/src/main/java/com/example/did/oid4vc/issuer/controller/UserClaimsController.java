@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.Base64;
+import org.springframework.core.io.ClassPathResource;
+import java.io.InputStream;
+import java.util.LinkedHashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -40,10 +44,39 @@ public class UserClaimsController {
 
     @GetMapping("/claims-page")
     public String claimsPage(Model model) {
-        Set<String> identifiers = issuerSdkProperties.getIdentifiersByConfigId("VerifiableIdSD");
-        List<String> sortedIdentifiers = new ArrayList<>(identifiers);
-        Collections.sort(sortedIdentifiers);
-        model.addAttribute("credentialTypes", sortedIdentifiers);
+        // Pass the full map of configurations to the frontend (configId -> {format, identifiers})
+        model.addAttribute("credentialConfigs", issuerSdkProperties.getCredentialConfigurations());
+
+        // Add default claims for mDoc (mDL)
+        Map<String, Object> mdocDefaults = new java.util.LinkedHashMap<>();
+        mdocDefaults.put("family_name", "Kim");
+        mdocDefaults.put("given_name", "Raon");
+        mdocDefaults.put("birth_date", "1990-05-15");
+        mdocDefaults.put("issue_date", "2026-01-10T09:30:00Z");
+        mdocDefaults.put("expiry_date", "2036-01-10T00:00:00Z");
+        mdocDefaults.put("issuing_country", "KR");
+        mdocDefaults.put("issuing_authority", "Korean National Police Agency");
+        mdocDefaults.put("document_number", "11-123456-78");
+        
+        // Load portrait from static resources
+        try {
+            InputStream is = new ClassPathResource("static/images/portrait-sample.jpg").getInputStream();
+            byte[] bytes = is.readAllBytes();
+            String portraitBase64 = Base64.getEncoder().encodeToString(bytes);
+            mdocDefaults.put("portrait", portraitBase64);
+        } catch (Exception e) {
+            mdocDefaults.put("portrait", "IMAGE_NOT_FOUND");
+        }
+
+        mdocDefaults.put("driving_privileges", List.of(Map.of(
+                "vehicle_category_code", "B",
+                "issue_date", "2024-01-10",
+                "expiry_date", "2034-01-10"
+        )));
+        mdocDefaults.put("un_distinguishing_sign", "ROK");
+
+        model.addAttribute("mdocDefaults", mdocDefaults);
+
         return "claims-editor";
     }
 
