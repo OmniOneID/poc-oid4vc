@@ -16,14 +16,12 @@
 
 import SwiftUI
 
+/// A view that provides an interface for testing OID4VC API endpoints.
 struct APITestView: View {
     private let apiService = APIService()
     
     @State private var issuerUrl: String = "http://192.168.3.130:8096/"
     @State private var tokenUrl: String = "http://192.168.3.130:18096/"
-    
-//    @State private var issuerUrl: String = "http://10.48.17.124:8080"
-//    @State private var tokenUrl: String = "http://10.48.17.124:8081"
     
     @State private var preAuthCodeForTest: String = ""
     @State private var txCodeForTest: String = ""
@@ -32,6 +30,7 @@ struct APITestView: View {
     @State private var resultToShow: APIResult?
     @State private var isResultViewActive = false
 
+    /// The user interface body of the API test view.
     var body: some View {
         Form {
                    Section(header: Text("Endpoints")) {
@@ -99,7 +98,7 @@ struct APITestView: View {
         )
     }
     
-    
+    /// Tests the credential offer API endpoint.
     private func testCredentialOffer() async {
         let requestDesc = "Method: GET\nURL: \(issuerUrl)/credential-offer/test"
         do {
@@ -111,6 +110,7 @@ struct APITestView: View {
         }
     }
     
+    /// Tests the issuer metadata API endpoint.
     private func testIssuerInfo() async {
         let requestDesc = "Method: GET\nURL: \(issuerUrl)/.well-known/openid-credential-issuer"
         do {
@@ -122,16 +122,14 @@ struct APITestView: View {
         }
     }
     
+    /// Tests the token API endpoint using a pre-authorized code.
     private func testToken() async {
         let grantType = "urn:ietf:params:oauth:grant-type:pre-authorized_code"
-//        let preAuthCode = "670e3937-df8d-491a-8f8a-4a06d6844d9a"
-//        let txCode = "9107"
         let authDetails = AuthorizationDetails(type: "openid_credential", credentialConfigurationId: "TEC", credentialIdentifiers: nil)
-//        let tokenRequest = TokenRequest(grantType: grantType, preAuthorizedCode: preAuthCode, txCode: txCode, authorizationDetails: [authDetails])
         let tokenRequest = TokenRequest(
             grantType: grantType,
-            preAuthorizedCode: preAuthCodeForTest, // Use value from input instead of hardcoded value
-            txCode: txCodeForTest,             // Use value from input instead of hardcoded value
+            preAuthorizedCode: preAuthCodeForTest,
+            txCode: txCodeForTest,
             authorizationDetails: [authDetails]
         )
         let authDetailsJson = prettyJson(from: [authDetails])
@@ -142,7 +140,6 @@ struct APITestView: View {
         print("------------------------------------")
         do {
             let response: TokenResponse = try await apiService.getTokenByPreAuthCode(tokenRequest: tokenRequest, url: URL(string: tokenUrl + "/oauth2/token"))
-//            let response: TokenResponse = try await apiService.getTokenByPreAuthCode(tokenRequest: tokenRequest, url: URL(string: "http://10.48.17.124:8081"))
             let responseStr = prettyJson(from: response)
             showResult(request: requestDesc, response: responseStr)
         } catch {
@@ -150,6 +147,7 @@ struct APITestView: View {
         }
     }
     
+    /// Tests the credential request API endpoint.
     private func testCredentialRequest() async {
         let exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM0MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
         let proofs = Proofs(diVp: nil, jwt: [exampleJwt], attestation: nil)
@@ -168,11 +166,18 @@ struct APITestView: View {
         }
     }
     
+    /// Displays the API request and response results.
+    /// - Parameters:
+    ///   - request: The string representation of the request.
+    ///   - response: The string representation of the response.
     private func showResult(request: String, response: String) {
         self.resultToShow = APIResult(requestBody: request, responseBody: response)
         self.isResultViewActive = true
     }
     
+    /// Converts an Encodable value into a pretty-printed JSON string.
+    /// - Parameter value: The value to be encoded.
+    /// - Returns: A pretty-printed JSON string.
     private func prettyJson<T: Encodable>(from value: T) -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted

@@ -31,15 +31,12 @@ import org.omnione.did.sdk.oid4vc.data.dto.AuthorizationDetails;
 import org.omnione.did.sdk.oid4vc.data.dto.IssuerMetadataResponse;
 import org.omnione.did.sdk.oid4vc.data.dto.TokenResponse;
 import org.omnione.did.sdk.oid4vc.network.ApiService;
+import org.omnione.did.sdk.oid4vc.util.CryptoUtil;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 import okhttp3.OkHttpClient;
@@ -55,19 +52,23 @@ public class AuthorizeActivity extends AppCompatActivity {
 
     private static final String TAG = "AuthorizeActivity";
 
-    // Data to be received from CredentialIssuanceActivity
-    private String authorizationEndpoint; // Login screen URL of the authorization server
-    private String issuerUrl; // Base URL of the Issuer
-    private String issuerState; // State for CSRF prevention
-    private List<String> credentialConfigurationIds; // List of Credential Configuration IDs to be issued
-    private String clientId; // Client ID of the Wallet app
-    private String tokenEndpoint; // Token endpoint received from IssuerMetadataResponse
+    private String authorizationEndpoint;
+    private String issuerUrl;
+    private String issuerState;
+    private List<String> credentialConfigurationIds;
+    private String clientId;
+    private String tokenEndpoint;
 
     private String codeChallenge;
     private String codeVerifier;
 
     private Gson gson;
 
+    /**
+     * Called when the activity is first created.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,7 +89,6 @@ public class AuthorizeActivity extends AppCompatActivity {
                 tokenEndpoint = intent.getStringExtra("TOKEN_ENDPOINT");
 
                 if (authorizationEndpoint == null || issuerUrl == null || clientId == null || credentialConfigurationIds == null || tokenEndpoint == null) {
-                    Log.e(TAG, "Missing required data: authorizationEndpoint, issuerUrl, clientId, credentialConfigurationIds, tokenEndpoint");
                     finishWithError("Insufficient data to start Authorization Flow.");
                     return;
                 }
@@ -96,11 +96,15 @@ public class AuthorizeActivity extends AppCompatActivity {
                 startChromeCustomTabs(authorizationEndpoint, issuerState, credentialConfigurationIds, clientId);
             }
         } else {
-            Log.e(TAG, "No intent data. Abnormal access.");
             finishWithError("Abnormal Authorization Flow access.");
         }
     }
 
+    /**
+     * This is called for activities that set launchMode to "singleTop" in their manifest, or if a client used the Intent.FLAG_ACTIVITY_SINGLE_TOP flag when calling startActivity(Intent).
+     *
+     * @param intent The new intent that was started for the activity.
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -108,6 +112,14 @@ public class AuthorizeActivity extends AppCompatActivity {
         handleAuthorizationResponse(intent.getData());
     }
 
+    /**
+     * Constructs the authorization URL and launches Chrome Custom Tabs.
+     *
+     * @param authorizationEndpoint The authorization endpoint.
+     * @param issuerState The state provided by the issuer.
+     * @param credentialConfigurationIds List of requested credential configuration IDs.
+     * @param clientId The client identifier.
+     */
     private void startChromeCustomTabs(String authorizationEndpoint, String issuerState, List<String> credentialConfigurationIds, String clientId) {
         String redirectUri = "org.omnione.did.sdk.oid4vc://callback";
 
@@ -122,69 +134,63 @@ public class AuthorizeActivity extends AppCompatActivity {
         try {
             encodedAuthDetails = URLEncoder.encode(authDetailsJson, "UTF-8");
         } catch (java.io.UnsupportedEncodingException e) {
-            Log.e(TAG, "authorization_details URL encoding failed", e);
             finishWithError("URL encoding failed.");
             return;
         }
 
-        // generatePkceValues
         generatePkceValues();
         Uri.Builder authUriBuilder = Uri.parse(authorizationEndpoint +"/oauth2/authorize").buildUpon()
                 .appendQueryParameter("response_type", "code")
                 .appendQueryParameter("client_id", clientId)
                 .appendQueryParameter("redirect_uri", redirectUri)
                 .appendQueryParameter("authorization_details", encodedAuthDetails)
-                // pkce
                 .appendQueryParameter("code_challenge", codeChallenge)
-                .appendQueryParameter("code_challenge_method", "S256"); //sha256
+                .appendQueryParameter("code_challenge_method", "S256");
 
         if (issuerState != null && !issuerState.isEmpty()) {
             authUriBuilder.appendQueryParameter("state", issuerState);
         }
 
         String finalAuthorizationUrl = authUriBuilder.build().toString();
-        Log.d(TAG, "Final Authorization URL: " + finalAuthorizationUrl);
 
-        // Execute Chrome Custom Tabs
         CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
         CustomTabsIntent customTabsIntent = builder.build();
         customTabsIntent.launchUrl(this, Uri.parse(finalAuthorizationUrl));
     }
 
-
+    /**
+     * Processes the authorization response from the deep link URI.
+     *
+     * @param uri The deep link URI containing authorization response parameters.
+     */
     private void handleAuthorizationResponse(Uri uri) {
 
         if (uri != null && uri.toString().startsWith("org.omnione.did.sdk.oid4vc://callback")) {
-            Log.d(TAG, "Authorization code response: " + uri.toString());
             String code = uri.getQueryParameter("code");
             String receivedState = uri.getQueryParameter("state");
 
             if (this.issuerState == null || !this.issuerState.equals(receivedState)) {
-                Log.e(TAG, "State mismatch: Possible CSRF attack. Expected: " + this.issuerState + ", Received: " + receivedState);
                 finishWithError("Security error: State mismatch.");
                 return;
             }
 
             if (code != null) {
-                Log.d(TAG, "Authorization code received: " + code);
                 exchangeCodeForToken(code);
             } else {
                 String error = uri.getQueryParameter("error");
                 String errorDescription = uri.getQueryParameter("error_description");
-                Log.e(TAG, "Authorization request error: " + error + ", " + errorDescription);
                 finishWithError("Authorization request error: " + (errorDescription != null ? errorDescription : error));
             }
         }
     }
 
+    /**
+     * Exchanges the authorization code for an access token.
+     *
+     * @param code The authorization code.
+     */
     private void exchangeCodeForToken(String code) {
-        Log.d(TAG, "Exchanging authorization code for token...");
-        Log.d(TAG, "issuerUrl : " + issuerUrl);
-        Log.d(TAG, "tokenEndpoint : " + tokenEndpoint);
-        Log.d(TAG, "clientId : " + clientId);
-        Log.d(TAG, "credentialConfigurationIds : " + credentialConfigurationIds);
         if (issuerUrl == null || tokenEndpoint == null || clientId == null || credentialConfigurationIds == null) {
-            Log.e(TAG, "Missing data required for token exchange.");
             finishWithError("Insufficient data for token exchange.");
             return;
         }
@@ -204,43 +210,36 @@ public class AuthorizeActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
                         String tokenResponseJson = response.body().string();
-                        Log.d(TAG, "Token response: " + tokenResponseJson);
                         TokenResponse tokenResponse = gson.fromJson(tokenResponseJson, TokenResponse.class);
                         String accessToken = tokenResponse.getAccessToken();
 
                         if (accessToken != null) {
-                            Log.d(TAG, "Access Token obtained successfully.");
                             finishWithSuccess(accessToken, tokenResponse);
                         } else {
                             finishWithError("Access Token not in response.");
                         }
 
                     } catch (IOException e) {
-                        Log.e(TAG, "Failed to parse token response", e);
                         finishWithError("Failed to parse token response: " + e.getMessage());
                     }
                 } else {
-                    String errorBody = "N/A";
-                    try {
-                        if (response.errorBody() != null)
-                            errorBody = response.errorBody().string();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    Log.e(TAG, "Token exchange failed (Code: " + response.code() + ", Error: " + errorBody + ")");
                     finishWithError("Token exchange failed (Code: " + response.code() + ")");
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                Log.e(TAG, "Token request failed", t);
                 finishWithError("Token request failed: " + t.getMessage());
             }
         });
     }
 
-    // Pass results to CredentialIssuanceActivity
+    /**
+     * Finishes the activity with a success result.
+     *
+     * @param accessToken The obtained access token.
+     * @param tokenResponse The complete token response.
+     */
     private void finishWithSuccess(String accessToken, TokenResponse tokenResponse) {
         Intent resultIntent = new Intent();
         resultIntent.putExtra("AUTH_CODE_FLOW_RESULT", "SUCCESS");
@@ -250,8 +249,12 @@ public class AuthorizeActivity extends AppCompatActivity {
         finish();
     }
 
+    /**
+     * Finishes the activity with an error result.
+     *
+     * @param errorMessage The error message explaining the failure.
+     */
     private void finishWithError(String errorMessage) {
-        Log.e(TAG, "Authorization Flow error: " + errorMessage);
         Intent resultIntent = new Intent();
         resultIntent.putExtra("AUTH_CODE_FLOW_RESULT", "FAILURE");
         resultIntent.putExtra("ERROR_MESSAGE", errorMessage);
@@ -259,6 +262,12 @@ public class AuthorizeActivity extends AppCompatActivity {
         finish();
     }
 
+    /**
+     * Creates and configures an ApiService instance for network requests.
+     *
+     * @param baseUrl The base URL for the API service.
+     * @return A configured ApiService instance.
+     */
     private ApiService createApiService(String baseUrl) {
         if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
             baseUrl = "http://" + baseUrl;
@@ -279,21 +288,12 @@ public class AuthorizeActivity extends AppCompatActivity {
         return retrofit.create(ApiService.class);
     }
 
+    /**
+     * Generates PKCE (Proof Key for Code Exchange) values for the authorization flow.
+     */
     private void generatePkceValues() {
-
-        byte[] verifierBytes = new byte[32];
-        new SecureRandom().nextBytes(verifierBytes);
-
-        codeVerifier = Base64.getUrlEncoder().withoutPadding().encodeToString(verifierBytes);
-
-        MessageDigest messageDigest = null;
-        try {
-            messageDigest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        byte[] digest = messageDigest.digest(codeVerifier.getBytes());
-        codeChallenge = Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
-
+        CryptoUtil.PkceValues pkceValues = CryptoUtil.generatePkceValues();
+        codeVerifier = pkceValues.codeVerifier;
+        codeChallenge = pkceValues.codeChallenge;
     }
 }

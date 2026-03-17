@@ -27,6 +27,12 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
+    packaging {
+        resources {
+            excludes += "/log4j2.yml"
+        }
+    }
+
 }
 
 dependencies {
@@ -55,6 +61,10 @@ dependencies {
     implementation "androidx.browser:browser:1.3.0"
 
     implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'org.slf4j:slf4j-android:1.7.36'
+
+    // BouncyCastle - Required by mDoc SDK
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.76'
 
     // SpongyCastle - 서명용
     implementation 'com.madgag.spongycastle:core:1.54.0.0'

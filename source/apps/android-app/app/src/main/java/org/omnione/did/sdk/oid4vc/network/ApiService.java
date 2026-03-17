@@ -16,41 +16,67 @@
 
 package org.omnione.did.sdk.oid4vc.network;
 
-import org.omnione.did.sdk.oid4vc.data.dto.CredentialOfferRequest;
 import org.omnione.did.sdk.oid4vc.data.dto.CredentialRequest;
 
-import okhttp3.ResponseBody; // Change import to ResponseBody
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.Field;
 import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
-import retrofit2.http.POST; // POST method example
+import retrofit2.http.POST;
 import retrofit2.http.Url;
 
 public interface ApiService {
 
-    //oid4vci
-
-    // Credential offer request
+    /**
+     * Retrieves a credential offer for testing purposes.
+     *
+     * @return A Call object for the response body.
+     */
     @GET("credential-offer/test")
     Call<ResponseBody> getCredentialOfferForTest();
-    // Issuer information query
+
+    /**
+     * Retrieves information about the credential issuer.
+     *
+     * @return A Call object for the response body.
+     */
     @GET(".well-known/openid-credential-issuer")
     Call<ResponseBody> getIssuerInfo();
 
-    // POST method for Credential request
+    /**
+     * Submits a credential request to the issuer.
+     *
+     * @param authorization The authorization header.
+     * @param body The credential request body.
+     * @return A Call object for the response body.
+     */
     @POST("credential")
     Call<ResponseBody> getCredential(
             @Header("Authorization") String authorization,
             @Body CredentialRequest body
     );
-    // Authorize
+
+    /**
+     * Retrieves authorization from the issuer.
+     *
+     * @return A Call object for the response body.
+     */
     @GET("authorize")
     Call<ResponseBody> getAuthorize();
 
-    // Token POST request (x-www-form-urlencoded) - pre-authorized-code
+    /**
+     * Obtains a token using a pre-authorized code.
+     *
+     * @param authorization The authorization header.
+     * @param grantType The grant type.
+     * @param preAuthorizedCode The pre-authorized code.
+     * @param txCode The transaction code.
+     * @param authorizationDetailsJson JSON string containing authorization details.
+     * @return A Call object for the response body.
+     */
     @FormUrlEncoded
     @POST("oauth2/token")
     Call<ResponseBody> getTokenByPreAuthCode(
@@ -61,7 +87,17 @@ public interface ApiService {
             @Field("authorization_details") String authorizationDetailsJson
     );
 
-    // Token POST request (x-www-form-urlencoded) - authorization-code
+    /**
+     * Obtains a token using an authorization code.
+     *
+     * @param authorization The authorization header.
+     * @param grantType The grant type.
+     * @param code The authorization code.
+     * @param codeVerifier The code verifier for PKCE.
+     * @param redirectUri The redirect URI.
+     * @param clientId The client identifier.
+     * @return A Call object for the response body.
+     */
     @FormUrlEncoded
     @POST("oauth2/token")
     Call<ResponseBody> getTokenByAuthCode(
@@ -71,23 +107,25 @@ public interface ApiService {
             @Field("code_verifier") String codeVerifier,
             @Field("redirect_uri") String redirectUri,
             @Field("client_id") String clientId
-//            @Field("client_assertion_type") String clientAssertionType,
-//            @Field("client_assertion") String clientAssertion
-
     );
-//    grant_type=authorization_code
-//&code=SplxlOBeZQQYbYS6WxSbIA
-//&code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
-//&redirect_uri=https%3A%2F%2Fwallet.example.org%2Fcb
-//&client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer
-//&client_assertion=eyJhbGciOiJSU...
-    //oid4vp
 
-    //authorization request
+    /**
+     * Performs a GET request to a specified URL.
+     *
+     * @param url The URL to send the request to.
+     * @return A Call object for the response body.
+     */
     @GET
     Call<ResponseBody> getRequest(@Url String url);
 
-    // VP Token submission (Form URL Encoded)
+    /**
+     * Submits a VP (Verifiable Presentation) token to a specified URL.
+     *
+     * @param url The URL to send the request to.
+     * @param vpToken The VP token.
+     * @param state The state parameter.
+     * @return A Call object for the response body.
+     */
     @FormUrlEncoded
     @POST
     Call<ResponseBody> postVpToken(

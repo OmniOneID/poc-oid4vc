@@ -1,5 +1,6 @@
+//
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +15,11 @@
  * limitations under the License.
  */
 
-package org.omnione.did.sdk.oid4vc.data.dto;
+import Foundation
 
-public class CredentialOfferRequest {
-
-    private String userId;
-
-    /**
-     * Constructs a new CredentialOfferRequest with the specified user ID.
-     * @param userId the ID of the user.
-     */
-    public CredentialOfferRequest(String userId) {
-        this.userId = userId;
+public class WalletUtil {
+    public static func getWalletData() -> WalletData? {
+        // Placeholder for wallet data retrieval
+        return nil
     }
-
-    /**
-     * Gets the user ID.
-     * @return the user ID string.
-     */
-    public String getUserId() {
-        return userId;
-    }
-
 }

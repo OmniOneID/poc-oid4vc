@@ -31,27 +31,50 @@ public class Proofs {
     @SerializedName("attestation")
     private List<String> attestation;
 
-
+    /**
+     * Gets the list of decentralized identifier verifiable presentations.
+     * @return the list of di_vp strings.
+     */
     public List<String> getDiVp() {
         return diVp;
     }
 
+    /**
+     * Sets the list of decentralized identifier verifiable presentations.
+     * @param diVp the list of di_vp strings to set.
+     */
     public void setDiVp(List<String> diVp) {
         this.diVp = diVp;
     }
 
+    /**
+     * Gets the list of JSON Web Tokens.
+     * @return the list of jwt strings.
+     */
     public List<String> getJwt() {
         return jwt;
     }
 
+    /**
+     * Sets the list of JSON Web Tokens.
+     * @param jwt the list of jwt strings to set.
+     */
     public void setJwt(List<String> jwt) {
         this.jwt = jwt;
     }
 
+    /**
+     * Gets the list of attestations.
+     * @return the list of attestation strings.
+     */
     public List<String> getAttestation() {
         return attestation;
     }
 
+    /**
+     * Sets the list of attestations.
+     * @param attestation the list of attestation strings to set.
+     */
     public void setAttestation(List<String> attestation) {
         this.attestation = attestation;
     }

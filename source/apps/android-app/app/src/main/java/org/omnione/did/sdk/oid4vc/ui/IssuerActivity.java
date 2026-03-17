@@ -21,45 +21,51 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 
 import org.omnione.did.sdk.oid4vc.R;
 
 public class IssuerActivity extends AppCompatActivity {
 
+    /**
+     * Called when the activity is first created.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_issuer);
         Intent intent = getIntent();
-        // Receiver for credential offer deeplink
         handleIntent(intent);
     }
 
+    /**
+     * This is called for activities that set launchMode to "singleTop" in their manifest, or if a client used the Intent.FLAG_ACTIVITY_SINGLE_TOP flag when calling startActivity(Intent).
+     *
+     * @param intent The new intent that was started for the activity.
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent);
     }
 
+    /**
+     * Processes the incoming intent and extracts the credential offer URI from the deep link.
+     *
+     * @param intent The intent to handle.
+     */
     private void handleIntent(Intent intent) {
         Uri uri = intent.getData();
 
         if (uri != null) {
-
             String requestUri = uri.getQueryParameter("credential_offer_uri");
-            Log.d("sangjun", "credential offer_uri from deeplink : " + requestUri);
 
             if (requestUri != null) {
-                Log.d("sangjun","OID4VCI Request URI: " + uri);
                 Intent intent2 = new Intent(IssuerActivity.this, CredentialIssuanceActivity.class);
                 intent2.putExtra("CREDENTIAL_OFFER_URI", uri.toString());
                 startActivity(intent2);
-            } else {
-                Log.d("sangjun","Error: request_uri not found.");
             }
-        } else {
-            Log.d("sangjun","Error: Deep link data not found.");
         }
         finish();
     }

@@ -24,10 +24,12 @@
 
 import SwiftUI
 
+/// A view that displays the results of an API operation, including request and response bodies.
 struct ResultView: View {
 
     let result: APIResult
     
+    /// The user interface body of the result view.
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading) {

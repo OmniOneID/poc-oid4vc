@@ -25,18 +25,34 @@ public class WalletData {
     @SerializedName("credential")
     private Object credential;
 
+    /**
+     * Gets the format of the wallet data.
+     * @return the format string.
+     */
     public String getFormat() {
         return format;
     }
 
+    /**
+     * Sets the format of the wallet data.
+     * @param format the format string to set.
+     */
     public void setFormat(String format) {
         this.format = format;
     }
 
+    /**
+     * Gets the credential object.
+     * @return the credential object.
+     */
     public Object getCredential() {
         return credential;
     }
 
+    /**
+     * Sets the credential object.
+     * @param credential the credential object to set.
+     */
     public void setCredential(Object credential) {
         this.credential = credential;
     }

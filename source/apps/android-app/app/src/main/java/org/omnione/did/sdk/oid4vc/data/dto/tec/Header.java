@@ -21,32 +21,62 @@ public class Header {
     private String typ;
     private String kid;
 
+    /**
+     * Constructs a new Header with the specified algorithm, type, and key ID.
+     * @param alg the algorithm used for the header.
+     * @param typ the type of the header.
+     * @param kid the key ID used for the header.
+     */
     public Header(String alg, String typ, String kid) {
         this.alg = alg;
         this.typ = typ;
         this.kid = kid;
     }
 
+    /**
+     * Gets the algorithm used in the header.
+     * @return the algorithm string.
+     */
     public String getAlg() {
         return alg;
     }
 
+    /**
+     * Sets the algorithm used in the header.
+     * @param alg the algorithm string to set.
+     */
     public void setAlg(String alg) {
         this.alg = alg;
     }
 
+    /**
+     * Gets the type of the header.
+     * @return the type string.
+     */
     public String getTyp() {
         return typ;
     }
 
+    /**
+     * Sets the type of the header.
+     * @param typ the type string to set.
+     */
     public void setTyp(String typ) {
         this.typ = typ;
     }
 
+    /**
+     * Gets the key ID of the header.
+     * @return the key ID string.
+     */
     public String getKid() {
         return kid;
     }
 
+    /**
+     * Sets the key ID of the header.
+     * @param kid the key ID string to set.
+     */
     public void setKid(String kid) {
         this.kid = kid;
     }

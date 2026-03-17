@@ -32,54 +32,98 @@ public class TokenResponse {
     private Integer expiresIn;
 
     @SerializedName("c_nonce")
-    private String cNonce; // Optional
+    private String cNonce;
 
     @SerializedName("c_nonce_expires_in")
-    private Integer cNonceExpiresIn; // Optional
+    private Integer cNonceExpiresIn;
 
     @SerializedName("authorization_details")
     private List<AuthorizationDetails> authorizationDetails;
 
+    /**
+     * Gets the access token.
+     * @return the access token string.
+     */
     public String getAccessToken() {
         return accessToken;
     }
 
+    /**
+     * Gets the token type.
+     * @return the token type string.
+     */
     public String getTokenType() {
         return tokenType;
     }
 
+    /**
+     * Sets the token type.
+     * @param tokenType the token type string to set.
+     */
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
     }
 
+    /**
+     * Gets the expiration time of the access token.
+     * @return the expiration time in seconds.
+     */
     public Integer getExpiresIn() {
         return expiresIn;
     }
 
+    /**
+     * Sets the expiration time of the access token.
+     * @param expiresIn the expiration time in seconds to set.
+     */
     public void setExpiresIn(Integer expiresIn) {
         this.expiresIn = expiresIn;
     }
 
+    /**
+     * Gets the credential nonce.
+     * @return the c_nonce string.
+     */
     public String getcNonce() {
         return cNonce;
     }
 
+    /**
+     * Sets the credential nonce.
+     * @param cNonce the c_nonce string to set.
+     */
     public void setcNonce(String cNonce) {
         this.cNonce = cNonce;
     }
 
+    /**
+     * Gets the expiration time of the credential nonce.
+     * @return the c_nonce expiration time in seconds.
+     */
     public Integer getcNonceExpiresIn() {
         return cNonceExpiresIn;
     }
 
+    /**
+     * Sets the expiration time of the credential nonce.
+     * @param cNonceExpiresIn the c_nonce expiration time in seconds to set.
+     */
     public void setcNonceExpiresIn(Integer cNonceExpiresIn) {
         this.cNonceExpiresIn = cNonceExpiresIn;
     }
 
+    /**
+     * Gets the authorization details.
+     * @return the list of AuthorizationDetails objects.
+     */
     public List<AuthorizationDetails> getAuthorizationDetails() {
         return authorizationDetails;
     }
 
+    /**
+     * Sets the authorization details.
+     * @param authorizationDetails the list of AuthorizationDetails objects to set.
+     */
     public void setAuthorizationDetails(List<AuthorizationDetails> authorizationDetails) {
         this.authorizationDetails = authorizationDetails;
     }

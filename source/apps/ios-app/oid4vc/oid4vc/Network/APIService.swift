@@ -41,11 +41,16 @@ class APIService {
         var request = URLRequest(url: finalUrl)
         request.httpMethod = "GET"
         
+        LogUtil.logLongString("sangjun", "HTTP GET Request: \(finalUrl.absoluteString)")
+        
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
+            let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+            LogUtil.logLongString("sangjun", "HTTP GET Response from \(finalUrl.absoluteString): \(responseString)")
+            
             guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.badServerResponse(statusCode: 500) // Or some default
+                throw APIError.badServerResponse(statusCode: 500)
             }
             guard (200...299).contains(httpResponse.statusCode) else {
                 let errorText = String(data: data, encoding: .utf8) ?? "Unknown server error"
@@ -65,11 +70,6 @@ class APIService {
     }
     
     private func post<Body: Encodable, Response: Decodable>(endpoint: String? = nil, body: Body, authorization: String? = nil, url: URL? = nil) async throws -> Response {
-        print("--- post ---")
-        print(endpoint)
-        print(url)
-        print("--------------------------------")
-        
         let finalUrl: URL
         if let url = url {
             if let endpoint = endpoint {
@@ -85,12 +85,8 @@ class APIService {
         } else {
             throw APIError.badURL
         }
-        print("--- Credential Request URL ---")
-        print(finalUrl)
-        print("--------------------------------")
         
         var request = URLRequest(url: finalUrl)
-    
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
@@ -104,8 +100,14 @@ class APIService {
             throw APIError.jsonEncodingFailed(error)
         }
         
+        let bodyString = String(data: request.httpBody ?? Data(), encoding: .utf8) ?? "N/A"
+        LogUtil.logLongString("sangjun", "HTTP POST Request: \(finalUrl.absoluteString)\nBody: \(bodyString)")
+        
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
+            
+            let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+            LogUtil.logLongString("sangjun", "HTTP POST Response from \(finalUrl.absoluteString): \(responseString)")
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.badServerResponse(statusCode: 500)
@@ -128,12 +130,6 @@ class APIService {
     }
     
     private func postFormURLEncoded<Response: Decodable>(url: URL, params: [String: String], authorization: String? = nil) async throws -> Response {
-//        guard let url = URL(string: baseURL + endpoint) else {
-//            throw APIError.badURL
-//        }
-        print("--- Token Request URL ---")
-        print(url)
-        print("--------------------------------")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -148,20 +144,13 @@ class APIService {
         
         request.httpBody = bodyString.data(using: .utf8)
         
-        print("--- Sending Request ---")
-        print("URL: \(url.absoluteString)")
-        print("Method: \(request.httpMethod ?? "N/A")")
-        print("Headers: \(request.allHTTPHeaderFields ?? [:])")
-        print("Body: \(bodyString)")
-        print("-------------------------")
+        LogUtil.logLongString("sangjun", "HTTP POST Form Request: \(url.absoluteString)\nBody: \(bodyString)")
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
-            let responseBodyString = String(data: data, encoding: .utf8) ?? "Failed to convert data to string"
-            print("--- Token Request Raw Response ---")
-            print(responseBodyString)
-            print("--------------------------------")
+            let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+            LogUtil.logLongString("sangjun", "HTTP POST Form Response from \(url.absoluteString): \(responseString)")
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.badServerResponse(statusCode: 500)
@@ -185,21 +174,8 @@ class APIService {
     
     // MARK: - OID4VCI API Calls
     
-//    func getCredentialOffer(requestBody: CredentialOfferRequest) async throws -> CredentialOfferResponse {
-//        return try await post(endpoint: "credential-offer", body: requestBody)
-//    }
-    
     func getCredentialOfferForTest(issuerUrl: String) async throws -> TestCredentialOfferResponse {
-        print("--- Calling getCredentialOfferForTest ---")
-        print("issuerUrl: \(issuerUrl)")
-        
-        let response: TestCredentialOfferResponse = try await get(endpoint: "credential-offer/test", url: URL(string: issuerUrl))
-        
-        print("--- getCredentialOfferForTest received response ---")
-        print(response)
-    
-        return response
-//        return try await get(endpoint: "credential-offer/test")
+        return try await get(endpoint: "credential-offer/test", url: URL(string: issuerUrl))
     }
     
     func getIssuerInfo(issuerUrl: String) async throws -> IssuerMetadataResponse {
@@ -215,10 +191,6 @@ class APIService {
         let detailsData = try encoder.encode(tokenRequest.authorizationDetails)
         let detailsString = String(data: detailsData, encoding: .utf8) ?? ""
 
-        print("---Sending authorization_details ---")
-        print(detailsString)
-        print("------------------------------------")
-        
         var params = [
             "grant_type": tokenRequest.grantType,
             "pre-authorized_code": tokenRequest.preAuthorizedCode,
@@ -234,7 +206,6 @@ class APIService {
         }
         
         let tokenUrl = url.appendingPathComponent("oauth2/token")
-        
         let authHeaderValue = "Basic b2lkNHZjaS1jbGllbnQ6c2VjcmV0"
         
         return try await postFormURLEncoded(
@@ -260,7 +231,6 @@ class APIService {
         ]
         
         let tokenUrl = tokenEndpointUrl.appendingPathComponent("oauth2/token")
-        
         return try await postFormURLEncoded(url: tokenUrl, params: params)
     }
     
@@ -271,7 +241,14 @@ class APIService {
         guard let fullUrl = URL(string: url) else {
             throw APIError.badURL
         }
+        
+        LogUtil.logLongString("sangjun", "HTTP GET Authorization Request: \(fullUrl.absoluteString)")
+        
         let (data, response) = try await URLSession.shared.data(from: fullUrl)
+        
+        let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+        LogUtil.logLongString("sangjun", "HTTP GET Authorization Response from \(fullUrl.absoluteString): \(responseString)")
+        
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw APIError.badServerResponse(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 500)
         }
@@ -298,15 +275,20 @@ class APIService {
         
         request.httpBody = bodyString.data(using: .utf8)
         
+        LogUtil.logLongString("sangjun", "HTTP POST VP Token Request: \(fullUrl.absoluteString)\nBody: \(bodyString)")
+        
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
+            let responseString = String(data: data, encoding: .utf8) ?? "N/A"
+            LogUtil.logLongString("sangjun", "HTTP POST VP Token Response from \(fullUrl.absoluteString): \(responseString)")
+            
             guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                let errorText = String(data: data, encoding: .utf8) ?? "Unknown server error"
+                let errorText = responseString
                 throw APIError.serverErrorString(body: errorText)
             }
             
-            return String(data: data, encoding: .utf8) ?? ""
+            return responseString
 
         } catch let error as APIError {
             throw error

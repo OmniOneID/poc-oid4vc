@@ -1,5 +1,5 @@
 {
-  "originHash" : "802720068ee0646b87aa1bb81f9228fe7fbe12dc998564adfb0d7664d66bcba3",
+  "originHash" : "348f083b6b2a78e38afb1b3664a9c93f0b3cada354e6768bba3e586f209828a5",
   "pins" : [
     {
       "identity" : "codescanner",
@@ -11,12 +11,12 @@
       }
     },
     {
-      "identity" : "multiformatvc-ios",
+      "identity" : "swiftcbor",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pingidentity/MultiformatVC-iOS",
+      "location" : "https://github.com/unrelentingtech/SwiftCBOR.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "def7218d734dfd0f1a8043740f5ca995208b3c5a"
+        "branch" : "master",
+        "revision" : "fd929a6d8f7651ce0f63fc99397fd5762358cc29"
       }
     }
   ],

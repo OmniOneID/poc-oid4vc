@@ -25,10 +25,12 @@ import Foundation
 import AuthenticationServices
 import CryptoKit
 
+/// An enumeration representing errors that can occur during the authorization process.
 enum AuthorizationError: Error, LocalizedError {
     case missingCallbackURL
     case missingAuthorizationCode
     
+    /// A localized description of the error.
     var errorDescription: String? {
         switch self {
         case .missingCallbackURL:
@@ -39,9 +41,19 @@ enum AuthorizationError: Error, LocalizedError {
     }
 }
 
+/// A utility structure for handling OID4VC authorization.
 struct Authorize {
     
-    /// Starts ASWebAuthenticationSession to request Authorization Code
+    /// Starts an ASWebAuthenticationSession to request an authorization code.
+    /// - Parameters:
+    ///   - authorizationServerUrl: The URL of the authorization server.
+    ///   - clientId: The client identifier.
+    ///   - redirectUri: The redirect URI for the authorization callback.
+    ///   - state: The state parameter for the authorization request.
+    ///   - codeChallenge: The PKCE code challenge.
+    ///   - credentialConfigurationIds: The list of credential configuration IDs.
+    ///   - presentationContextProvider: The provider for the authentication session's presentation context.
+    /// - Returns: The authorization code received from the server.
     static func start(
         authorizationServerUrl: URL,
         clientId: String,
@@ -88,7 +100,7 @@ struct Authorize {
         return try await withCheckedThrowingContinuation { continuation in
             let session = ASWebAuthenticationSession(
                 url: authURL,
-                callbackURLScheme: URL(string: redirectUri)?.scheme // "oid4vc-app"
+                callbackURLScheme: URL(string: redirectUri)?.scheme
             ) { callbackURL, error in
                 
                 if let error = error {
@@ -115,6 +127,13 @@ struct Authorize {
         }
     }
     
+    /// Exchanges an authorization code for an access token.
+    /// - Parameters:
+    ///   - code: The authorization code.
+    ///   - pkceCodeVerifier: The PKCE code verifier.
+    ///   - tokenEndpointUrl: The URL of the token endpoint.
+    ///   - apiService: The API service instance.
+    /// - Returns: A TokenResponse containing the access token.
     static func exchangeCodeForToken(
             code: String,
             pkceCodeVerifier: String,

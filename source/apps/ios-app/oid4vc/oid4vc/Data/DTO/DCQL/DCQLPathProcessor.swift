@@ -122,22 +122,3 @@ public enum SimpleJWTDecoder {
         return SimpleJWT(header: headerObj, payload: payloadObj)
     }
 }
-
-public enum Base64URL {
-    public static func encode(_ data: Data) -> String {
-        let b64 = data.base64EncodedString()
-        return b64
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-
-    public static func decode(_ s: String) -> Data? {
-        var b64 = s
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-        let pad = 4 - (b64.count % 4)
-        if pad < 4 { b64 += String(repeating: "=", count: pad) }
-        return Data(base64Encoded: b64)
-    }
-}

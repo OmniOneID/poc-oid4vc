@@ -29,6 +29,11 @@ public class ResultActivity extends AppCompatActivity {
     private TextView requestTextView;
     private TextView responseTextView;
 
+    /**
+     * Initializes the activity, sets the content view, and populates text views with data from the intent.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down, this contains the most recent data.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,6 +54,11 @@ public class ResultActivity extends AppCompatActivity {
         responseTextView.setText(responseData);
     }
 
+    /**
+     * Handles the action when the up navigation button is pressed.
+     *
+     * @return true if navigation was successful.
+     */
     @Override
     public boolean onSupportNavigateUp() {
         finish();

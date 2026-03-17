@@ -14,26 +14,17 @@
  * limitations under the License.
  */
 
-package org.omnione.did.sdk.oid4vc.data.dto;
+//
+//  WalletData.swift
+//  oid4vc
+//
+//  Created by sjkim on 10/10/25.
+//
 
-public class CredentialOfferRequest {
 
-    private String userId;
+import Foundation
 
-    /**
-     * Constructs a new CredentialOfferRequest with the specified user ID.
-     * @param userId the ID of the user.
-     */
-    public CredentialOfferRequest(String userId) {
-        this.userId = userId;
-    }
-
-    /**
-     * Gets the user ID.
-     * @return the user ID string.
-     */
-    public String getUserId() {
-        return userId;
-    }
-
+public struct WalletData: Codable {
+    public let format: String
+    public let credential: String
 }

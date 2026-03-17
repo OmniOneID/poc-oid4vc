@@ -16,6 +16,7 @@
 
 import SwiftUI
 
+/// A view that provides a numeric keypad for PIN entry.
 struct PinView: View {
     @State private var pin: String = ""
     var onPinEntered: (String) -> Void
@@ -23,6 +24,7 @@ struct PinView: View {
     private let maxPinLength = 4
     private let columns: [GridItem] = Array(repeating: .init(.flexible()), count: 3)
     
+    /// The user interface body of the PIN entry view.
     var body: some View {
         VStack(spacing: 40) {
             Spacer()
@@ -46,10 +48,12 @@ struct PinView: View {
     }
 }
 
+/// A view that displays a visual indicator of the number of digits entered in a PIN.
 private struct PinIndicator: View {
     let pinLength: Int
     let maxPinLength: Int
     
+    /// The user interface body of the PIN indicator.
     var body: some View {
         HStack(spacing: 20) {
             ForEach(0..<maxPinLength, id: \.self) { index in
@@ -61,6 +65,7 @@ private struct PinIndicator: View {
     }
 }
 
+/// A view that provides a grid of numeric keys for inputting a PIN.
 private struct KeypadView: View {
     @Binding var pin: String
     private let maxPinLength = 4
@@ -72,6 +77,7 @@ private struct KeypadView: View {
     ]
     private let columns: [GridItem] = Array(repeating: .init(.flexible()), count: 3)
     
+    /// The user interface body of the keypad view.
     var body: some View {
         LazyVGrid(columns: columns, spacing: 20) {
             ForEach(keys, id: \.self) { key in
@@ -88,6 +94,8 @@ private struct KeypadView: View {
         .padding(.horizontal)
     }
     
+    /// Handles key press events from the keypad.
+    /// - Parameter key: The key that was pressed.
     private func handleKeyPress(_ key: String) {
         switch key {
         case "X":
@@ -104,7 +112,9 @@ private struct KeypadView: View {
     }
 }
 
+/// A preview provider for the PinView.
 struct PinView_Previews: PreviewProvider {
+    /// Provides previews for the PinView.
     static var previews: some View {
         PinView(onPinEntered: { pin in
             print("Entered PIN: \(pin)")

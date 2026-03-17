@@ -20,9 +20,6 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import java.util.Map;
 
-/**
- * VO for .well-known/openid-credential-issuer response
- */
 public class IssuerMetadataResponse {
 
     @SerializedName("credential_issuer")
@@ -37,10 +34,25 @@ public class IssuerMetadataResponse {
     @SerializedName("credential_configurations_supported")
     private Map<String, CredentialConfiguration> credentialConfigurationsSupported;
 
-    // --- Getters ---
+    /**
+     * Gets the credential issuer URL.
+     * @return the credential issuer string.
+     */
     public String getCredentialIssuer() { return credentialIssuer; }
+    /**
+     * Gets the list of authorization server URLs.
+     * @return the list of authorization server strings.
+     */
     public List<String> getAuthorizationServer() { return authorizationServer; }
+    /**
+     * Gets the credential endpoint URL.
+     * @return the credential endpoint string.
+     */
     public String getCredentialEndpoint() { return credentialEndpoint; }
+    /**
+     * Gets the map of supported credential configurations.
+     * @return the map of credential configurations.
+     */
     public Map<String, CredentialConfiguration> getCredentialConfigurationsSupported() { return credentialConfigurationsSupported; }
 
     public static class CredentialConfiguration {
@@ -50,7 +62,15 @@ public class IssuerMetadataResponse {
         @SerializedName("doctype")
         private String doctype;
 
+        /**
+         * Gets the format of the credential configuration.
+         * @return the format string.
+         */
         public String getFormat() { return format; }
+        /**
+         * Gets the document type of the credential configuration.
+         * @return the doctype string.
+         */
         public String getDoctype() { return doctype; }
     }
 }

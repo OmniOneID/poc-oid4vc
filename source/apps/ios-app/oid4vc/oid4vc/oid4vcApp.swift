@@ -16,10 +16,12 @@
 
 import SwiftUI
 
+/// The main application structure for the OID4VC app.
 @main
 struct oid4vcApp: App {
     @StateObject private var navigationManager = NavigationManager()
 
+    /// The user interface body of the application.
     var body: some Scene {
         WindowGroup {
             ContentView()

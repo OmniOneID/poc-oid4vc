@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
-
 import Foundation
 import Combine
 
+/// A manager that handles navigation within the application.
 class NavigationManager: ObservableObject {
     
+    /// The potential navigation destinations.
     enum Destination: Hashable {
         case issuance(uri: String)
-        case verification(uri: String)
+        case verification(uri: String, selectedClaimsKeys: [String]?, selectedClaimsNamespaces: [String]?)
     }
     
+    /// The current navigation path.
     @Published var path: [Destination] = []
     
+    /// Handles an incoming URL and updates the navigation path.
+    /// - Parameter url: The URL to be handled.
     func handle(url: URL) {
         if url.scheme == "openid-credential-offer" {
             path.append(.issuance(uri: url.absoluteString))
         } else if url.scheme == "openid4vp" {
-            path.append(.verification(uri: url.absoluteString))
+            path.append(.verification(uri: url.absoluteString, selectedClaimsKeys: nil, selectedClaimsNamespaces: nil))
         }
     }
 }

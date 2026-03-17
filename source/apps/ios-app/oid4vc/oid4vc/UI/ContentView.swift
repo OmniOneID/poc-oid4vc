@@ -17,19 +17,19 @@
 import SwiftUI
 import CodeScanner
 
+/// The main entry view of the application, providing access to issuance, verification, and settings.
 struct ContentView: View {
     @EnvironmentObject var navigationManager: NavigationManager
     @State private var isShowingScanner = false
     
-    // For simulator
     @State private var manualUriInput: String = ""
     
-    // For iOS 15 navigation
     @State private var isIssuanceViewActive = false
     @State private var isVerificationViewActive = false
     @State private var activeIssuanceUri: String? 
     @State private var activeVerificationUri: String?
 
+    /// The user interface body of the content view.
     var body: some View {
         if #available(iOS 16.0, *) {
             NavigationStack(path: $navigationManager.path) {
@@ -55,6 +55,7 @@ struct ContentView: View {
         }
     }
     
+    /// The primary content of the view, including action buttons.
     private var mainContent: some View {
         VStack(spacing: 20) {
             
@@ -113,26 +114,29 @@ struct ContentView: View {
         }
     }
     
+    /// Returns the view corresponding to a given navigation destination.
+    /// - Parameter destination: The navigation destination.
+    /// - Returns: A view representing the destination.
     @ViewBuilder
     private func destinationView(for destination: NavigationManager.Destination) -> some View {
         switch destination {
         case .issuance(let uri):
             CredentialIssuanceView(credentialOfferUri: uri)
-        case .verification(let uri):
-            VerifyView(verificationUri: uri)
+        case .verification(let uri, let keys, let namespaces):
+            VerifyView(verificationUri: uri, selectedClaimsKeys: keys, selectedClaimsNamespaces: namespaces)
         }
     }
     
-    // Handles navigation for iOS 15 by setting state variables
+    /// Handles navigation for backward compatibility with iOS 15.
+    /// - Parameter destination: The navigation destination.
     private func handleNavigation(to destination: NavigationManager.Destination) {
         if #available(iOS 16.0, *) {
-            // iOS 16 uses path-based navigation, no extra action needed
         } else {
             switch destination {
             case .issuance(let uri):
                 activeIssuanceUri = uri
                 isIssuanceViewActive = true
-            case .verification(let uri):
+            case .verification(let uri, _, _):
                 activeVerificationUri = uri
                 isVerificationViewActive = true
             }
@@ -140,6 +144,7 @@ struct ContentView: View {
         }
     }
     
+    /// A view containing tools specifically for the simulator environment.
     private var simulatorTools: some View {
         VStack {
             Text("Enter QR Code Data")
@@ -150,12 +155,15 @@ struct ContentView: View {
             Button("Issue") {
                 if let url = URL(string: manualUriInput) {
                     navigationManager.handle(url: url)
+                    manualUriInput = ""
                 }
             }
             .padding()
         }
     }
     
+    /// Handles the result of a QR code scan.
+    /// - Parameter result: The result of the scan operation.
     private func handleScan(result: Result<ScanResult, ScanError>) {
         self.isShowingScanner = false
         switch result {
@@ -169,7 +177,9 @@ struct ContentView: View {
     }
 }
 
+/// A preview provider for the ContentView.
 struct ContentView_Previews: PreviewProvider {
+    /// Provides previews for the ContentView.
     static var previews: some View {
         ContentView()
             .environmentObject(NavigationManager())

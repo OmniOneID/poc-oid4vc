@@ -23,6 +23,7 @@
 
 import SwiftUI
 
+/// A view that allows the user to select a credential from a list of available options.
 struct SelectionView: View {
     let details: [AuthorizationDetails]
     @Binding var selection: String?
@@ -30,9 +31,10 @@ struct SelectionView: View {
     
     @Environment(\.dismiss) var dismiss
 
+    /// The user interface body of the selection view.
     var body: some View {
         VStack {
-            Text("Select Identifier")
+            Text("Select Credential")
                 .font(.headline)
                 .padding()
 
@@ -40,7 +42,7 @@ struct SelectionView: View {
             
             ScrollView {
                 VStack(alignment: .leading) {
-                    ForEach(details, id: \.self) { detail in
+                    ForEach(details.filter { !($0.credentialIdentifiers ?? []).isEmpty }, id: \.self) { detail in
                         Text(detail.credentialConfigurationId)
                             .font(.title3).fontWeight(.bold)
                             .padding(.top)
@@ -49,19 +51,7 @@ struct SelectionView: View {
                             Button(action: {
                                 self.selection = identifier
                             }) {
-                                HStack {
-                                    Text(identifier)
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    if selection == identifier {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.accentColor)
-                                    } else {
-                                        Image(systemName: "circle")
-                                            .foregroundColor(.gray)
-                                    }
-                                }
-                                .padding(.vertical, 8)
+                                geometryBasedButtonContent(identifier: identifier)
                             }
                         }
                         Divider()
@@ -83,5 +73,25 @@ struct SelectionView: View {
             .disabled(selection == nil)
             .padding()
         }
+    }
+    
+    /// Generates the view content for a credential button based on its identifier.
+    /// - Parameter identifier: The unique identifier of the credential.
+    /// - Returns: A view representing the button content.
+    @ViewBuilder
+    private func geometryBasedButtonContent(identifier: String) -> some View {
+        HStack {
+            Text(identifier)
+                .foregroundColor(.primary)
+            Spacer()
+            if selection == identifier {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.accentColor)
+            } else {
+                Image(systemName: "circle")
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.vertical, 8)
     }
 }

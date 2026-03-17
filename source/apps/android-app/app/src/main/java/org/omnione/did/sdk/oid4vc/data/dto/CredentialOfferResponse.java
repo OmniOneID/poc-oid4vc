@@ -30,14 +30,26 @@ public class CredentialOfferResponse {
     @SerializedName("grants")
     private Grants grants;
 
+    /**
+     * Gets the credential issuer URL.
+     * @return the credential issuer string.
+     */
     public String getCredentialIssuer() {
         return credentialIssuer;
     }
 
+    /**
+     * Gets the list of credential configuration IDs.
+     * @return the list of configuration ID strings.
+     */
     public List<String> getCredentialConfigurationIds() {
         return credentialConfigurationIds;
     }
 
+    /**
+     * Gets the grants associated with the credential offer.
+     * @return the grants object.
+     */
     public Grants getGrants() {
         return grants;
     }
@@ -50,18 +62,34 @@ public class CredentialOfferResponse {
         @SerializedName("authorization_code")
         private AuthorizationCodeGrant authorizationCodeGrant;
 
+        /**
+         * Gets the pre-authorized code grant.
+         * @return the pre-authorized code grant object.
+         */
         public PreAuthorizedCodeGrant getPreAuthorizedCodeGrant() {
             return preAuthorizedCodeGrant;
         }
 
+        /**
+         * Sets the pre-authorized code grant.
+         * @param preAuthorizedCodeGrant the pre-authorized code grant object to set.
+         */
         public void setPreAuthorizedCodeGrant(PreAuthorizedCodeGrant preAuthorizedCodeGrant) {
             this.preAuthorizedCodeGrant = preAuthorizedCodeGrant;
         }
 
+        /**
+         * Gets the authorization code grant.
+         * @return the authorization code grant object.
+         */
         public AuthorizationCodeGrant getAuthorizationCodeGrant() {
             return authorizationCodeGrant;
         }
 
+        /**
+         * Sets the authorization code grant.
+         * @param authorizationCodeGrant the authorization code grant object to set.
+         */
         public void setAuthorizationCodeGrant(AuthorizationCodeGrant authorizationCodeGrant) {
             this.authorizationCodeGrant = authorizationCodeGrant;
         }
@@ -75,10 +103,18 @@ public class CredentialOfferResponse {
         @SerializedName("tx_code")
         private TxCode txCode;
 
+        /**
+         * Gets the pre-authorized code.
+         * @return the pre-authorized code string.
+         */
         public String getPreAuthorizedCode() {
             return preAuthorizedCode;
         }
 
+        /**
+         * Gets the transaction code information.
+         * @return the TxCode object.
+         */
         public TxCode getTxCode() {
             return txCode;
         }
@@ -95,14 +131,26 @@ public class CredentialOfferResponse {
         @SerializedName("description")
         private String description;
 
+        /**
+         * Gets the input mode for the transaction code.
+         * @return the input mode string.
+         */
         public String getInputMode() {
             return inputMode;
         }
 
+        /**
+         * Gets the length of the transaction code.
+         * @return the length of the code.
+         */
         public int getLength() {
             return length;
         }
 
+        /**
+         * Gets the description of the transaction code.
+         * @return the description string.
+         */
         public String getDescription() {
             return description;
         }
@@ -114,6 +162,10 @@ public class CredentialOfferResponse {
         @SerializedName("issuer_state")
         private String issuerState;
 
+        /**
+         * Gets the issuer state for the authorization code grant.
+         * @return the issuer state string.
+         */
         public String getIssuerState() {
             return issuerState;
         }

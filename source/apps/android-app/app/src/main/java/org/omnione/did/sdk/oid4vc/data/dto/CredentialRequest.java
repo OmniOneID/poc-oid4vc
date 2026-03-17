@@ -27,26 +27,50 @@ public class CredentialRequest {
     @SerializedName("proofs")
     private Proofs proofs;
 
+    /**
+     * Gets the credential configuration ID.
+     * @return the credential configuration ID string.
+     */
     public String getCredentialConfigurationId() {
         return credentialConfigurationId;
     }
 
+    /**
+     * Sets the credential configuration ID.
+     * @param credentialConfigurationId the credential configuration ID string to set.
+     */
     public void setCredentialConfigurationId(String credentialConfigurationId) {
         this.credentialConfigurationId = credentialConfigurationId;
     }
 
+    /**
+     * Gets the credential identifier.
+     * @return the credential identifier object.
+     */
     public Object getCredentialIdentifier() {
         return credentialIdentifier;
     }
 
+    /**
+     * Sets the credential identifier.
+     * @param credentialIdentifier the credential identifier object to set.
+     */
     public void setCredentialIdentifier(Object credentialIdentifier) {
         this.credentialIdentifier = credentialIdentifier;
     }
 
+    /**
+     * Gets the proofs associated with the credential request.
+     * @return the proofs object.
+     */
     public Proofs getProofs() {
         return proofs;
     }
 
+    /**
+     * Sets the proofs associated with the credential request.
+     * @param proofs the proofs object to set.
+     */
     public void setProofs(Proofs proofs) {
         this.proofs = proofs;
     }

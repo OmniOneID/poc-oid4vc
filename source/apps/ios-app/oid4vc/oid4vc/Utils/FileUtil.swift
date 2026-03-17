@@ -1,5 +1,6 @@
+//
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +15,13 @@
  * limitations under the License.
  */
 
-//
-//  WalletData.swift
-//  oid4vc
-//
-//  Created by sjkim on 10/10/25.
-//
-
-
 import Foundation
 
-struct WalletData: Codable {
-    let format: String
-    let credential: String
+public class FileUtil {
+    public static func readFile(name: String) -> String? {
+        if let path = Bundle.main.path(forResource: name, ofType: nil) {
+            return try? String(contentsOfFile: path)
+        }
+        return nil
+    }
 }

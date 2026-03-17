@@ -55,6 +55,11 @@ public class ApiActivity extends AppCompatActivity {
     private Button buttonCredentialOffer, buttonIssuer, buttonCredentials, buttonAuthorize, buttonToken;
     private Gson gson;
 
+    /**
+     * Called when the activity is first created.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +133,12 @@ public class ApiActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * Creates and configures an ApiService instance for network requests.
+     *
+     * @param url The base URL for the API service.
+     * @return A configured ApiService instance.
+     */
     private ApiService getApiService(String url) {
         String baseUrl = url;
         if (!baseUrl.startsWith("http")) {
@@ -149,6 +160,12 @@ public class ApiActivity extends AppCompatActivity {
         return retrofit.create(ApiService.class);
     }
 
+    /**
+     * Executes a network request and starts the ResultActivity to display the request and response data.
+     *
+     * @param call The network call to execute.
+     * @param requestBodyString The string representation of the request body.
+     */
     private void executeNetworkRequest(Call<ResponseBody> call, String requestBodyString) {
         String requestUrl = call.request().url().toString();
         String httpMethod = call.request().method();
@@ -186,13 +203,18 @@ public class ApiActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 String errorData = "Error: " + t.getMessage();
-                Log.e("sangjun", "Network request failed", t);
                 Toast.makeText(ApiActivity.this, "Network error occurred", Toast.LENGTH_SHORT).show();
                 startResultActivity(requestInfo.toString(), errorData);
             }
         });
     }
 
+    /**
+     * Starts the ResultActivity with the given request and response data.
+     *
+     * @param request The request data string.
+     * @param response The response data string.
+     */
     private void startResultActivity(String request, String response) {
         Intent intent = new Intent(this, ResultActivity.class);
         intent.putExtra("REQUEST_DATA", request);
@@ -200,12 +222,22 @@ public class ApiActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    /**
+     * Handles the up navigation action.
+     *
+     * @return True if the action was handled, false otherwise.
+     */
     @Override
     public boolean onSupportNavigateUp() {
         finish();
         return true;
     }
 
+    /**
+     * Creates a dummy CredentialRequest object for testing purposes.
+     *
+     * @return A CredentialRequest object.
+     */
     private CredentialRequest createAndUseCredentialRequest() {
         String exampleJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM0MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
         Proofs proof = new Proofs();

@@ -47,24 +47,56 @@ struct IssuerMetadataResponse: Codable {
     }
 }
 
+// MARK: - Flexible Type for Signing Algorithms (handles String and Int)
+enum SigningAlg: Codable {
+    case string(String)
+    case int(Int)
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let x = try? container.decode(String.self) {
+            self = .string(x)
+        } else if let x = try? container.decode(Int.self) {
+            self = .int(x)
+        } else {
+            throw DecodingError.typeMismatch(SigningAlg.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for SigningAlg"))
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let x): try container.encode(x)
+        case .int(let x): try container.encode(x)
+        }
+    }
+}
+
 // MARK: - Credential Configuration (Main Expanded Model)
 struct CredentialConfiguration: Codable {
     let format: String
     let scope: String?
     let cryptographicBindingMethodsSupported: [String]?
-    let credentialSigningAlgValuesSupported: [String]?
+    let credentialSigningAlgValuesSupported: [SigningAlg]?
     let display: [DisplayInfo]?
     let proofTypesSupported: [String: ProofSupport]?
     let vct: String?
-    let claims: [String: ClaimDetail]?
+    let claims: [String: ClaimDetail]? // Keep for backward compatibility if needed
     let doctype: String?
+    let credentialMetadata: CredentialMetadata?
 
     enum CodingKeys: String, CodingKey {
         case format, scope, display, vct, claims, doctype
         case cryptographicBindingMethodsSupported = "cryptographic_binding_methods_supported"
         case credentialSigningAlgValuesSupported = "credential_signing_alg_values_supported"
         case proofTypesSupported = "proof_types_supported"
+        case credentialMetadata = "credential_metadata"
     }
+}
+
+struct CredentialMetadata: Codable {
+    let claims: [ClaimDetail]?
+    let display: [DisplayInfo]?
 }
 
 // MARK: - Sub-Models for Nested JSON
@@ -94,7 +126,7 @@ struct LogoInfo: Codable {
 }
 
 struct ProofSupport: Codable {
-    let proofSigningAlgValuesSupported: [String]
+    let proofSigningAlgValuesSupported: [String]?
 
     enum CodingKeys: String, CodingKey {
         case proofSigningAlgValuesSupported = "proof_signing_alg_values_supported"
@@ -102,10 +134,13 @@ struct ProofSupport: Codable {
 }
 
 struct ClaimDetail: Codable {
-    let display: [DisplayLocaleName]?
-}
-
-struct DisplayLocaleName: Codable {
-    let name: String?
-    let locale: String?
+    let display: [DisplayInfo]? // Flexible: use DisplayInfo which covers name/locale
+    let mandatory: Bool?
+    let path: [String]?
+    let valueType: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case display, mandatory, path
+        case valueType = "value_type"
+    }
 }

@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		DF610BA62E7C01CA0052ED8C /* MultiFormatVC-iOS in Frameworks */ = {isa = PBXBuildFile; productRef = DF610BA52E7C01CA0052ED8C /* MultiFormatVC-iOS */; };
-		DFA727272E6F96AE00091332 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = DFA727262E6F96AE00091332 /* CodeScanner */; };
+		DF3CEF8F2F67CFE900DF71AD /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = DF3CEF8E2F67CFE900DF71AD /* SwiftCBOR */; };
+		DF3CEF912F67D00F00DF71AD /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = DF3CEF902F67D00F00DF71AD /* CodeScanner */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,8 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DF610BA62E7C01CA0052ED8C /* MultiFormatVC-iOS in Frameworks */,
-				DFA727272E6F96AE00091332 /* CodeScanner in Frameworks */,
+				DF3CEF912F67D00F00DF71AD /* CodeScanner in Frameworks */,
+				DF3CEF8F2F67CFE900DF71AD /* SwiftCBOR in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,8 +140,8 @@
 			);
 			name = oid4vc;
 			packageProductDependencies = (
-				DFA727262E6F96AE00091332 /* CodeScanner */,
-				DF610BA52E7C01CA0052ED8C /* MultiFormatVC-iOS */,
+				DF3CEF8E2F67CFE900DF71AD /* SwiftCBOR */,
+				DF3CEF902F67D00F00DF71AD /* CodeScanner */,
 			);
 			productName = oid4vc;
 			productReference = DF5A8F832E603F0A00F6262D /* oid4vc.app */;
@@ -227,8 +227,8 @@
 			mainGroup = DF5A8F7A2E603F0A00F6262D;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				DFA7271C2E6F925000091332 /* XCRemoteSwiftPackageReference "CodeScanner" */,
-				DF610BA42E7BFF850052ED8C /* XCRemoteSwiftPackageReference "MultiformatVC-iOS" */,
+				DF3CEF8C2F67CFAA00DF71AD /* XCRemoteSwiftPackageReference "CodeScanner" */,
+				DF3CEF8D2F67CFE900DF71AD /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF5A8F842E603F0A00F6262D /* Products */;
@@ -595,33 +595,33 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		DF610BA42E7BFF850052ED8C /* XCRemoteSwiftPackageReference "MultiformatVC-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pingidentity/MultiformatVC-iOS";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-		DFA7271C2E6F925000091332 /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
+		DF3CEF8C2F67CFAA00DF71AD /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/twostraws/CodeScanner.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.5.2;
+				minimumVersion = 2.3.3;
+			};
+		};
+		DF3CEF8D2F67CFE900DF71AD /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/unrelentingtech/SwiftCBOR.git";
+			requirement = {
+				branch = master;
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		DF610BA52E7C01CA0052ED8C /* MultiFormatVC-iOS */ = {
+		DF3CEF8E2F67CFE900DF71AD /* SwiftCBOR */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DF610BA42E7BFF850052ED8C /* XCRemoteSwiftPackageReference "MultiformatVC-iOS" */;
-			productName = "MultiFormatVC-iOS";
+			package = DF3CEF8D2F67CFE900DF71AD /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
+			productName = SwiftCBOR;
 		};
-		DFA727262E6F96AE00091332 /* CodeScanner */ = {
+		DF3CEF902F67D00F00DF71AD /* CodeScanner */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DFA7271C2E6F925000091332 /* XCRemoteSwiftPackageReference "CodeScanner" */;
+			package = DF3CEF8C2F67CFAA00DF71AD /* XCRemoteSwiftPackageReference "CodeScanner" */;
 			productName = CodeScanner;
 		};
 /* End XCSwiftPackageProductDependency section */

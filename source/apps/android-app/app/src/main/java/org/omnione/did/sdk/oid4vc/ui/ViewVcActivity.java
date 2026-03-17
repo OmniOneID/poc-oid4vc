@@ -26,46 +26,33 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Base64;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
-import org.omnione.did.sdjwt.datamodel.Disclosure;
-import org.omnione.did.sdjwt.datamodel.SDJWT;
-import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
 import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.VerifiableCredential;
+import org.omnione.did.sdk.oid4vc.format.Mdoc;
+import org.omnione.did.sdk.oid4vc.format.OpenDid;
+import org.omnione.did.sdk.oid4vc.format.SdjwtVc;
+import org.omnione.did.sdk.oid4vc.util.WalletUtil;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.omnione.did.sdk.oid4vc.R;
-
-import COSE.CoseException;
-import COSE.Message;
-import COSE.MessageTag;
-import COSE.OneKey;
-import COSE.Sign1Message;
 
 public class ViewVcActivity extends AppCompatActivity {
 
@@ -75,8 +62,7 @@ public class ViewVcActivity extends AppCompatActivity {
     private Button deleteVcButton;
     private Button buttonDebugAction;
     private EditText debugInputEditText;
-    private Gson gson = new Gson();
-    private VerifiableCredential loadedVc;
+    private List<CheckBox> claimCheckBoxes = new ArrayList<>();
 
     private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(new ScanContract(),
             result -> {
@@ -88,6 +74,11 @@ public class ViewVcActivity extends AppCompatActivity {
                 }
             });
 
+    /**
+     * Called when the activity is first created.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,193 +105,110 @@ public class ViewVcActivity extends AppCompatActivity {
         loadVcFile();
     }
 
+    /**
+     * Loads the VC file from internal storage and displays its claims.
+     */
     private void loadVcFile() {
-        File file = new File(getFilesDir(), "vc.json");
+        List<WalletData> credentialList = WalletUtil.loadVcFileAsVcItem(this);
 
-        if (file.exists()) {
-            String encodedVcData = readStringFromFile(file);
-            if (encodedVcData != null) {
-                displayVcClaims(encodedVcData);
-            } else {
-                showError("Failed to read file.");
-            }
+        if (credentialList != null && !credentialList.isEmpty()) {
+            displayVcClaims(credentialList);
         } else {
             showFileNotFoundDialog();
         }
     }
 
-    private String readStringFromFile(File file) {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] buffer = new byte[(int) file.length()];
-            fis.read(buffer);
-            return new String(buffer, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            Log.e("sangjun", "File read error", e);
-            return null;
-        }
-    }
-
+    /**
+     * Processes the submission of selected claims to the verifier's URI.
+     *
+     * @param scannedUriString The verifier's URI obtained from the QR scan.
+     */
     private void handleSubmit(String scannedUriString) {
+        ArrayList<String> selectedClaimsKeys = new ArrayList<>();
+        ArrayList<String> selectedClaimsNamespaces = new ArrayList<>();
+        
+        for (CheckBox cb : claimCheckBoxes) {
+            if (cb.isChecked()) {
+                Object tag = cb.getTag();
+                if (tag instanceof Bundle) {
+                    Bundle bundle = (Bundle) tag;
+                    String key = bundle.getString("key");
+                    String namespace = bundle.getString("namespace");
+                    
+                    if (key != null && !key.isEmpty() && !"-".equals(key)) {
+                        selectedClaimsKeys.add(key);
+                        selectedClaimsNamespaces.add(namespace != null ? namespace : "");
+                    }
+                }
+            }
+        }
+
         Uri deepLinkUri = Uri.parse(scannedUriString);
         Intent intent = new Intent(Intent.ACTION_VIEW, deepLinkUri);
+        intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
+        intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
+        
         startActivity(intent);
     }
 
+    /**
+     * Displays the claims of the provided credential based on its format.
+     *
+     * @param credentialList The list of wallet data containing the credential.
+     */
+    private void displayVcClaims(List<WalletData> credentialList) {
+        WalletData walletData = credentialList.get(0);
+        String format = walletData.getFormat();
+        String credentialData = (String) walletData.getCredential();
 
-    private void displayVcClaims(String base64EncodedVcArray) {
-        Log.d("sangjun", "Encoded VC array JSON: " + base64EncodedVcArray);
+        claimsContainer.setVisibility(ViewGroup.VISIBLE);
+        claimsContainer.removeAllViews();
+        claimCheckBoxes.clear();
 
-            Type listType = new TypeToken<ArrayList<WalletData>>() {}.getType();
-            List<WalletData> credentialList = gson.fromJson(base64EncodedVcArray, listType);
-
-            if (credentialList == null || credentialList.isEmpty()) {
-                showError("No saved VC found.");
-                return;
+        if (SdjwtVc.isSupported(format)) {
+            Map<String, Object> claims = SdjwtVc.getClaims(credentialData);
+            for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                addClaimView(entry.getKey(), entry.getValue(), null, 0, false, null);
             }
-
-            WalletData walletData = credentialList.get(0);
-            String format = walletData.getFormat();
-            Log.d("sangjun",  "vc json format: " + format);
-            Object credentialData = walletData.getCredential();
-
-            // Branch based on format value
-            if (format.equals("NationalID") || format.equals("NationalIDCert")) {
-                if (credentialData instanceof String) {
-                    displayJwtVc((String) credentialData);
-                } else {
-                    showError("Invalid JWT format VC.");
-                }
-
-            }
-            else if(format.equals("TEC") || format.equals("UCR")) {
-                byte[] decodedBytes = Base64.decode((String) credentialData, Base64.DEFAULT);
-                String jsonArrayString = new String(decodedBytes, StandardCharsets.UTF_8);
-                VerifiableCredential vc = gson.fromJson(jsonArrayString, VerifiableCredential.class);
-                tec(vc);
-            }
-            else if( format.equals("mDL") || format.equals("mDocPID")) {
-                if (credentialData instanceof String) {
-                    displaymDL((String) credentialData);
-                } else {
-                    showError("Invalid mDL format VC.");
-                }
-            }
-            else {
-                showError("Unsupported VC format: " + format);
-            }
-
-    }
-
-    private void displaymDL(String mDlData) {
-        try {
-            claimsContainer.setVisibility(ViewGroup.VISIBLE);
-            claimsContainer.removeAllViews();
-
-            addClaimView("Format", "mDoc", 0);
-
-            try {
-                byte[] decodedBytes = Base64.decode(mDlData, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-                
-                // Use Jackson CBOR decoding
-                ObjectMapper mapper = new ObjectMapper(new CBORFactory());
-                Map<String, Object> map = mapper.readValue(decodedBytes, Map.class);
-                
-                if (map != null) {
-                    // Try to extract namespaces if they exist in a typical mDL structure
-                    if (map.containsKey("nameSpaces")) {
-                        Object nameSpacesObj = map.get("nameSpaces");
-                        if (nameSpacesObj instanceof Map) {
-                            Map<String, Object> nameSpaces = (Map<String, Object>) nameSpacesObj;
-                            for (Map.Entry<String, Object> entry : nameSpaces.entrySet()) {
-                                Log.d("sangjun", "Namespace: " + entry.getKey());
-                                addClaimView("Namespace", entry.getKey(), 0);
-                                Object itemsObj = entry.getValue();
-                                if (itemsObj instanceof List) {
-                                    List<?> items = (List<?>) itemsObj;
-                                    for (Object item : items) {
-                                        if (item instanceof byte[]) {
-                                            try {
-                                                Map<String, Object> decodedItem = mapper.readValue((byte[]) item, Map.class);
-                                                if (decodedItem.containsKey("elementIdentifier") && decodedItem.containsKey("elementValue")) {
-                                                    String identifier = (String) decodedItem.get("elementIdentifier");
-                                                    Object value = decodedItem.get("elementValue");
-                                                    Log.d("sangjun", "mDL Item - Key: " + identifier + ", Value: " + value);
-                                                    addClaimView(identifier, value, 1);
-                                                }
-                                            } catch (Exception ignored) {
-                                                // Fallback: if it's not a map, just show it
-                                                Log.d("sangjun", "mDL Item (Raw) - Value: " + item);
-                                                addClaimView("Item", item, 1);
-                                            }
-                                        } else {
-                                            Log.d("sangjun", "mDL Item (Non-byte[]) - Value: " + item);
-                                            addClaimView("Item", item, 1);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    addClaimView("mDL Data", mDlData, 0);
-                }
-            } catch (Exception e) {
-                Log.e("sangjun", "CBOR decoding failed", e);
-                // If CBOR decoding fails, try to show the base64url data
-                addClaimView("mDL Data (Base64URL)", mDlData, 0);
-            }
-
             submitButton.setVisibility(View.VISIBLE);
-        } catch (Exception e) {
-            Log.e("sangjun", "mDL display failed", e);
-            showError("Failed to display mDL data.");
-        }
-    }
-
-    private void tec(VerifiableCredential vc){
-        try {
-             List<VerifiableCredential.Claim> claims = vc.getCredentialSubject().getClaims();
-
-            if (claims == null || claims.isEmpty()) {
-                showError("No Claim information in VC.");
-                return;
-            }
-
-            claimsContainer.setVisibility(ViewGroup.VISIBLE);
-            claimsContainer.removeAllViews();
-
+        } else if (OpenDid.isSupported(format)) {
+            List<VerifiableCredential.Claim> claims = OpenDid.getClaims(credentialData);
             for (VerifiableCredential.Claim claim : claims) {
-                if ("image".equalsIgnoreCase(claim.getType())) {
-                    Log.d("sangjun", "Image data found: " + claim.getCaption());
-                } else {
-                    TextView captionTextView = new TextView(this);
-                    captionTextView.setText(claim.getCaption());
-                    captionTextView.setTextSize(14f);
-
-                    TextView valueTextView = new TextView(this);
-                    valueTextView.setText(claim.getValue());
-                    valueTextView.setTextSize(18f);
-                    valueTextView.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
-
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
-                    );
-                    params.setMargins(0, 0, 0, 48);
-                    valueTextView.setLayoutParams(params);
-
-                    claimsContainer.addView(captionTextView);
-                    claimsContainer.addView(valueTextView);
+                renderOpenDidClaim(claim);
+            }
+            submitButton.setVisibility(View.VISIBLE);
+        } else if (Mdoc.isSupported(format)) {
+            addClaimView("Format", "mDoc", null, 0, false, null);
+            Map<String, Object> nsMap = Mdoc.getClaims(credentialData);
+            for (Map.Entry<String, Object> nsEntry : nsMap.entrySet()) {
+                String namespace = nsEntry.getKey();
+                addClaimView("Namespace", namespace, null, 0, false, null);
+                Map<String, Object> claims = (Map<String, Object>) nsEntry.getValue();
+                for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                    boolean isSelectableParent = "driving_privileges".equals(entry.getKey());
+                    addClaimView(entry.getKey(), entry.getValue(), namespace, 1, isSelectableParent, null);
                 }
             }
             submitButton.setVisibility(View.VISIBLE);
-
-        } catch (IllegalArgumentException e) {
-            Log.e("sangjun", "Base64 decoding failed", e);
-            showError("Invalid VC data format. (Base64 error)");
+        } else {
+            showError("Unsupported VC format: " + format);
         }
     }
 
+    /**
+     * Renders a claim specifically for the OpenDID format.
+     *
+     * @param claim The claim to render.
+     */
+    private void renderOpenDidClaim(VerifiableCredential.Claim claim) {
+        if (!"image".equalsIgnoreCase(claim.getType())) {
+            addClaimView(claim.getCaption(), claim.getValue(), null, 0, false, null);
+        }
+    }
+
+    /**
+     * Displays a dialog when the VC file is not found.
+     */
     private void showFileNotFoundDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Notification")
@@ -312,6 +220,9 @@ public class ViewVcActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Displays a confirmation dialog before deleting the VC file.
+     */
     private void showDeleteConfirmationDialog() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete VC File")
@@ -321,14 +232,16 @@ public class ViewVcActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Deletes the stored VC file.
+     */
     private void deleteVcFile() {
         File file = new File(getFilesDir(), "vc.json");
         if (file.delete()) {
-            if (deleteVcButton != null) { // Add null check
+            if (deleteVcButton != null) {
                 deleteVcButton.setVisibility(View.GONE);
             }
             finish();
-
         } else {
             if (!file.exists()) {
                 Toast.makeText(this, "No VC file to delete.", Toast.LENGTH_SHORT).show();
@@ -336,11 +249,14 @@ public class ViewVcActivity extends AppCompatActivity {
                     deleteVcButton.setVisibility(View.GONE);
                 }
             } else {
-                Toast.makeText(this, "Failed to delete VC file. File may be in use or there may be a permission issue.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Failed to delete VC file.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
+    /**
+     * Configures and launches the QR code scanner for submission.
+     */
     private void launchQrScanner() {
         ScanOptions options = new ScanOptions();
         options.setOrientationLocked(true);
@@ -350,83 +266,147 @@ public class ViewVcActivity extends AppCompatActivity {
         qrCodeLauncher.launch(options);
     }
 
+    /**
+     * Displays an error message when something goes wrong with VC processing.
+     *
+     * @param message The error message to display.
+     */
     private void showError(String message) {
         noFileTextView.setText(message);
         noFileTextView.setVisibility(ViewGroup.VISIBLE);
         claimsContainer.setVisibility(ViewGroup.GONE);
     }
 
+    /**
+     * Handles the up navigation action.
+     *
+     * @return True if the action was handled, false otherwise.
+     */
     @Override
     public boolean onSupportNavigateUp() {
         finish();
         return true;
     }
 
-    private void displayJwtVc(String sdJwtVc) {
-        SDJWT parsedVC = SDJWT.parse(sdJwtVc);
-
-        SimpleJWTDecoder.SimpleJWT credentialJWT = SimpleJWTDecoder.parse(parsedVC.getCredentialJwt());
-        if (credentialJWT == null) {
-            showError("SD-JWT payload not found.");
-            return;
-        }
-
-        claimsContainer.setVisibility(ViewGroup.VISIBLE);
-        claimsContainer.removeAllViews();
-        addClaimView("Issuer", credentialJWT.getPayload().get("iss"), 0);
-        addClaimView("Subject", credentialJWT.getPayload().get("sub"), 0);
-        addClaimView("vct", credentialJWT.getPayload().get("vct"), 0);
-
-        for (int i = 0; i < parsedVC.getDisclosureCount(); i++) {
-            Disclosure disclosure = parsedVC.getDisclosures().get(i);
-            addClaimView(disclosure.getClaimName(), disclosure.getClaimValue(), 0);
-        }
-
-        submitButton.setVisibility(View.VISIBLE);
-    }
-
-    private void addClaimView(String caption, Object value, int indentLevel) {
+    /**
+     * Dynamically adds a claim view to the container, handling nested maps and lists recursively.
+     *
+     * @param caption The label for the claim.
+     * @param value The value of the claim.
+     * @param namespace The namespace for the claim (relevant for mDoc).
+     * @param indentLevel The level of indentation for nested claims.
+     * @param isSelectableParent Whether this claim is a parent that can be selected to toggle its children.
+     * @param parentCheckBox The checkbox of the parent claim, if any.
+     */
+    private void addClaimView(String caption, Object value, String namespace, int indentLevel, boolean isSelectableParent, CheckBox parentCheckBox) {
         if (caption == null || value == null) return;
 
         int marginLeft = (int) (getResources().getDisplayMetrics().density * 20 * indentLevel);
 
-        if (value instanceof Map) {
+        if (value instanceof Map || value instanceof List) {
             String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
 
-            TextView parentCaptionTextView = new TextView(this);
-            parentCaptionTextView.setText(formattedCaption + ":"); // e.g., "Address:"
-            parentCaptionTextView.setTextSize(14f);
-            parentCaptionTextView.setTextColor(getResources().getColor(android.R.color.darker_gray, getTheme()));
-            parentCaptionTextView.setPadding(marginLeft, 0, 0, 0); // Apply indentation
-            claimsContainer.addView(parentCaptionTextView);
+            LinearLayout headerRow = new LinearLayout(this);
+            headerRow.setOrientation(LinearLayout.HORIZONTAL);
+            headerRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            headerRow.setPadding(marginLeft, 0, 0, 0);
 
-            Map<String, Object> nestedMap = (Map<String, Object>) value;
-            for (Map.Entry<String, Object> entry : nestedMap.entrySet()) {
-                addClaimView(entry.getKey(), entry.getValue(), indentLevel + 1); // Increase indentation level
+            CheckBox currentCheckBox = null;
+            List<CheckBox> childrenCheckBoxes = new ArrayList<>();
+            if (isSelectableParent) {
+                currentCheckBox = new CheckBox(this);
+                currentCheckBox.setChecked(true);
+                Bundle tag = new Bundle();
+                tag.putBoolean("isParent", true);
+                tag.putString("key", caption);
+                tag.putString("namespace", namespace);
+                currentCheckBox.setTag(tag);
+                headerRow.addView(currentCheckBox);
+                claimCheckBoxes.add(currentCheckBox);
+
+                CheckBox finalCurrentCheckBox = currentCheckBox;
+                currentCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    for (CheckBox child : childrenCheckBoxes) {
+                        child.setChecked(isChecked);
+                    }
+                });
+            } else {
+                currentCheckBox = parentCheckBox;
             }
 
-        } else if (value instanceof List) {
-            String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
+            TextView captionTextView = new TextView(this);
+            captionTextView.setText(formattedCaption + ":");
+            captionTextView.setTextSize(14f);
+            captionTextView.setTextColor(getResources().getColor(android.R.color.darker_gray, getTheme()));
+            headerRow.addView(captionTextView);
+            claimsContainer.addView(headerRow);
 
-            TextView listCaptionTextView = new TextView(this);
-            listCaptionTextView.setText(formattedCaption + ":");
-            listCaptionTextView.setTextSize(14f);
-            listCaptionTextView.setTextColor(getResources().getColor(android.R.color.darker_gray, getTheme()));
-            listCaptionTextView.setPadding(marginLeft, 0, 0, 0);
-            claimsContainer.addView(listCaptionTextView);
+            int beforeCount = claimCheckBoxes.size();
 
-            List<?> nestedList = (List<?>) value;
-            for (int i = 0; i < nestedList.size(); i++) {
-                addClaimView("-", nestedList.get(i), indentLevel + 1); // Each item is displayed with "-" caption
+            if (value instanceof Map) {
+                Map<String, Object> nestedMap = (Map<String, Object>) value;
+                for (Map.Entry<String, Object> entry : nestedMap.entrySet()) {
+                    addClaimView(entry.getKey(), entry.getValue(), namespace, indentLevel + 1, false, currentCheckBox);
+                }
+            } else {
+                List<?> nestedList = (List<?>) value;
+                for (int i = 0; i < nestedList.size(); i++) {
+                    addClaimView("-", nestedList.get(i), namespace, indentLevel + 1, false, currentCheckBox);
+                }
+            }
+
+            if (isSelectableParent && currentCheckBox != null) {
+                int afterCount = claimCheckBoxes.size();
+                for (int i = beforeCount; i < afterCount; i++) {
+                    childrenCheckBoxes.add(claimCheckBoxes.get(i));
+                }
             }
 
         } else {
+            LinearLayout claimRow = new LinearLayout(this);
+            claimRow.setOrientation(LinearLayout.HORIZONTAL);
+            claimRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            claimRow.setPadding(marginLeft, 0, 0, (int) (getResources().getDisplayMetrics().density * 16));
+
+            List<String> metadataCaptions = Arrays.asList("Format", "Namespace", "Issuer", "Subject", "vct");
+            boolean isMetadata = metadataCaptions.contains(caption);
+
+            if (!isMetadata) {
+                CheckBox checkBox = new CheckBox(this);
+                checkBox.setChecked(true);
+                
+                Bundle tag = new Bundle();
+                if (parentCheckBox == null) {
+                    tag.putString("namespace", namespace);
+                    tag.putString("key", caption);
+                } else {
+                    tag.putString("key", "-");
+                }
+                tag.putString("value", String.valueOf(value));
+                checkBox.setTag(tag);
+                
+                if (parentCheckBox != null) {
+                    checkBox.setClickable(false);
+                    checkBox.setFocusable(false);
+                }
+                
+                claimCheckBoxes.add(checkBox);
+                claimRow.addView(checkBox);
+            }
+
+            LinearLayout textContainer = new LinearLayout(this);
+            textContainer.setOrientation(LinearLayout.VERTICAL);
+            textContainer.setPadding((int) (getResources().getDisplayMetrics().density * (isMetadata ? 0 : 8)), 0, 0, 0);
+            
+            LinearLayout.LayoutParams textContainerParams = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+            textContainer.setLayoutParams(textContainerParams);
+
             TextView captionTextView = new TextView(this);
             String formattedCaption = (caption.length() > 0) ? caption.substring(0, 1).toUpperCase() + caption.substring(1) : caption;
             captionTextView.setText(formattedCaption);
             captionTextView.setTextSize(14f);
-            captionTextView.setPadding(marginLeft, 0, 0, 0); // Apply indentation
-            claimsContainer.addView(captionTextView);
+            textContainer.addView(captionTextView);
 
             if ("portrait".equalsIgnoreCase(caption) && value instanceof byte[]) {
                 byte[] imageBytes = (byte[]) value;
@@ -435,16 +415,18 @@ public class ViewVcActivity extends AppCompatActivity {
                     ImageView imageView = new ImageView(this);
                     imageView.setImageBitmap(bitmap);
                     imageView.setAdjustViewBounds(true);
-                    int maxHeightPx = (int) (getResources().getDisplayMetrics().density * 200);
-                    imageView.setMaxHeight(maxHeightPx);
-
+                    
                     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT
                     );
-                    params.setMargins(marginLeft, 0, 0, (int)(getResources().getDisplayMetrics().density * 16));
+                    params.setMargins(0, (int)(getResources().getDisplayMetrics().density * 8), 0, (int)(getResources().getDisplayMetrics().density * 16));
                     imageView.setLayoutParams(params);
-                    claimsContainer.addView(imageView);
+                    imageView.setScaleType(ImageView.ScaleType.FIT_START);
+                    
+                    textContainer.addView(imageView);
+                    claimRow.addView(textContainer);
+                    claimsContainer.addView(claimRow);
                     return;
                 }
             }
@@ -459,42 +441,11 @@ public class ViewVcActivity extends AppCompatActivity {
             valueTextView.setText(displayValue);
             valueTextView.setTextSize(18f);
             valueTextView.setTextColor(getResources().getColor(android.R.color.black, getTheme()));
-            valueTextView.setPadding(marginLeft, 0, 0, 0); // Apply indentation
 
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            params.setMargins(0, 0, 0, (int)(getResources().getDisplayMetrics().density * 4)); // Reduce margin slightly for better appearance
-            valueTextView.setLayoutParams(params);
-
-            claimsContainer.addView(valueTextView);
+            textContainer.addView(valueTextView);
+            claimRow.addView(textContainer);
+            claimsContainer.addView(claimRow);
         }
     }
 
-    public boolean verifySignatureMdl(byte[] issuerAuthBytes) {
-//        try {
-//            String publicKey= "Ay/5wNs8D1oX+FDRYgnJUmZ/Ovnff+/73G8LD53+m1tk";
-//
-//            PublicKey publicKeyObject = KeyUtil.getPublicKeyObject(KeyUtil.unCompressPublicKey(org.bouncycastle.util.encoders.Base64.decode(publicKey)));
-//            // 1. 바이트를 COSE Sign1 메시지 객체로 변환
-//            Sign1Message msg = (Sign1Message) Message.DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1);
-//
-//            // 2. 검증에 사용할 공개키를 OneKey 객체로 변환
-//            OneKey key = new OneKey(publicKeyObject, null);
-//
-//            // 3. 라이브러리 내장 함수로 검증 수행
-//            // 내부적으로 [Protected Header + Payload(MSO) + External AAD]를 해시하고
-//            // 서명값(Signature)과 비교합니다.
-//            boolean isValid = msg.validate(key);
-//
-//            System.out.println(">>> 서명 검증 결과: " + (isValid ? "성공 (Pass)" : "실패 (Fail)"));
-//            return isValid;
-//
-//        } catch (CoseException e) {
-//            System.err.println("서명 검증 중 오류: " + e.getMessage());
-//            return false;
-//        }
-        return true;
-    }
 }

@@ -24,10 +24,18 @@ public class CredentialResponse {
     @SerializedName("credentials")
     private List<Credential> credentials;
 
+    /**
+     * Gets the list of credentials.
+     * @return the list of Credential objects.
+     */
     public List<Credential> getCredentials() {
         return credentials;
     }
 
+    /**
+     * Sets the list of credentials.
+     * @param credentials the list of Credential objects to set.
+     */
     public void setCredentials(List<Credential> credentials) {
         this.credentials = credentials;
     }

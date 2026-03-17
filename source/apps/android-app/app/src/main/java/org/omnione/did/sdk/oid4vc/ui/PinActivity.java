@@ -37,6 +37,11 @@ public class PinActivity extends AppCompatActivity implements View.OnClickListen
 
     private List<ImageView> dots = new ArrayList<>();
 
+    /**
+     * Called when the activity is first created.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down then this Bundle contains the data it most recently supplied in onSaveInstanceState(Bundle).
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,6 +54,9 @@ public class PinActivity extends AppCompatActivity implements View.OnClickListen
         initViews();
     }
 
+    /**
+     * Initializes the views and sets click listeners for the PIN buttons.
+     */
     private void initViews() {
         dots.add(findViewById(R.id.dot1));
         dots.add(findViewById(R.id.dot2));
@@ -69,6 +77,11 @@ public class PinActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.buttonBackspace).setOnClickListener(this);
     }
 
+    /**
+     * Handles click events for the PIN buttons.
+     *
+     * @param v The view that was clicked.
+     */
     @Override
     public void onClick(View v) {
         if (v instanceof Button) {
@@ -90,6 +103,9 @@ public class PinActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
+    /**
+     * Updates the visual indicator for the entered PIN digits.
+     */
     private void updatePinIndicator() {
         for (int i = 0; i < dots.size(); i++) {
             if (i < pinBuilder.length()) {
@@ -104,6 +120,9 @@ public class PinActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
+    /**
+     * Called when the full PIN has been entered. Sets the result and finishes the activity.
+     */
     private void onPinComplete() {
         String pin = pinBuilder.toString();
         Intent resultIntent = new Intent();

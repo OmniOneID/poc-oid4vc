@@ -21,14 +21,27 @@ public class TokenRequest {
     private String grant_type;
     private String client_id;
 
+    /**
+     * Constructs a new TokenRequest with the specified grant type and client ID.
+     * @param grant_type the grant type for the token request.
+     * @param client_id the client ID for the token request.
+     */
     public TokenRequest(String grant_type, String client_id) {
         this.grant_type = grant_type;
         this.client_id = client_id;
     }
+    /**
+     * Gets the grant type of the token request.
+     * @return the grant type string.
+     */
     public String getGrant_type() {
         return grant_type;
     }
 
+    /**
+     * Gets the client ID of the token request.
+     * @return the client ID string.
+     */
     public String getClient_id() {
         return client_id;
     }

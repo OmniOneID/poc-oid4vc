@@ -22,14 +22,26 @@ public class Credential {
     @SerializedName("credential")
     private Object credential;
 
+    /**
+     * Constructs a new Credential with the specified credential object.
+     * @param credential the credential object.
+     */
     public Credential(Object credential) {
         this.credential = credential;
     }
 
+    /**
+     * Gets the credential object.
+     * @return the credential object.
+     */
     public Object getCredential() {
         return credential;
     }
 
+    /**
+     * Sets the credential object.
+     * @param credential the credential object to set.
+     */
     public void setCredential(Object credential) {
         this.credential = credential;
     }
