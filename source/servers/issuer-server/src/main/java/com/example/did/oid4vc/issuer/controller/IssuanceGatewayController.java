@@ -16,9 +16,11 @@
 
 package com.example.did.oid4vc.issuer.controller;
 
+import org.omnione.did.oid4vc.oid4vci.exception.OID4VCIErrorCode;
 import org.omnione.did.oid4vc.oid4vci.exception.OID4VCIException;
 import org.omnione.did.oid4vc.oid4vci.service.IssuanceGatewayService;
 import com.nimbusds.jose.shaded.gson.Gson;
+import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
@@ -56,10 +60,16 @@ public class IssuanceGatewayController {
         } catch (OID4VCIException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getErrorCode(), "message", e.getErrorMsg()));
-        } catch (Exception e) {
+        } catch (IOException | WriterException | NoSuchAlgorithmException e) {
             log.error("Error generating QR data", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Internal Server Error", "message", "An unexpected error occurred"));
+                    .body(Map.of("error", OID4VCIErrorCode.ERR_CODE_OFFER_GENERATE_FAILED.getCode(),
+                            "message", OID4VCIErrorCode.ERR_CODE_OFFER_GENERATE_FAILED.getMsg()));
+        } catch (RuntimeException e) {
+            log.error("Unexpected runtime error generating QR data", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", OID4VCIErrorCode.ERR_CODE_GENERAL_UNEXPECTED_ERROR.getCode(),
+                            "message", OID4VCIErrorCode.ERR_CODE_GENERAL_UNEXPECTED_ERROR.getMsg()));
         }
     }
 

@@ -51,7 +51,7 @@ public class MockUserDataProvider implements UserDataProvider {
                         byte[] portraitBytes = Base64.getDecoder().decode(portraitBase64);
                         claims.put("portrait", portraitBytes);
                     }
-                } catch (Exception e) {
+                } catch (IllegalArgumentException e) {
                     System.err.println("Failed to decode portrait Base64: " + e.getMessage());
                 }
             }

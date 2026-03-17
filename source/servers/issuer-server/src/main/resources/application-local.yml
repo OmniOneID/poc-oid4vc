@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8082
 
 spring:
   autoconfigure:
@@ -14,10 +14,4 @@ spring:
 #      - "classpath:application-database-local.yml"
       - "classpath:application-authorization-server-local.yml"
       - "classpath:application-issuer-sdk-local.yml"
-
-logging:
-  level:
-    root: INFO
-    org.omnione.did: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.security.oauth2.server.authorization: TRACE
+      - "classpath:application-wallet.yml"

@@ -23,17 +23,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.HtmlUtils;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.ArrayList;
 import java.util.Base64;
 import org.springframework.core.io.ClassPathResource;
+import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedHashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -52,8 +48,8 @@ public class UserClaimsController {
         mdocDefaults.put("family_name", "Kim");
         mdocDefaults.put("given_name", "Raon");
         mdocDefaults.put("birth_date", "1990-05-15");
-        mdocDefaults.put("issue_date", "2026-01-10T09:30:00Z");
-        mdocDefaults.put("expiry_date", "2036-01-10T00:00:00Z");
+        mdocDefaults.put("issue_date", "2026-01-10");
+        mdocDefaults.put("expiry_date", "2036-01-10");
         mdocDefaults.put("issuing_country", "KR");
         mdocDefaults.put("issuing_authority", "Korean National Police Agency");
         mdocDefaults.put("document_number", "11-123456-78");
@@ -64,7 +60,7 @@ public class UserClaimsController {
             byte[] bytes = is.readAllBytes();
             String portraitBase64 = Base64.getEncoder().encodeToString(bytes);
             mdocDefaults.put("portrait", portraitBase64);
-        } catch (Exception e) {
+        } catch (IOException e) {
             mdocDefaults.put("portrait", "IMAGE_NOT_FOUND");
         }
 

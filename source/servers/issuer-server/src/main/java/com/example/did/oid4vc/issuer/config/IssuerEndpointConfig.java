@@ -89,8 +89,12 @@ public class IssuerEndpointConfig {
             requestMappingHandlerMapping.registerMapping(mappingInfo, credentialIssuanceController, method);
             log.info("Registered issuer endpoint: {} {} -> {}", httpMethod, path, methodName);
 
-        } catch (NoSuchMethodException e) {
-            log.error("Method {} not found in CredentialIssuanceController", methodName, e);
+        } catch (NoSuchMethodException | SecurityException e) {
+            log.error("Method {} not found or accessible in CredentialIssuanceController", methodName, e);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.error("Invalid configuration or mapping conflict for endpoint {} -> {}", fullUrl, methodName, e);
+        } catch (RuntimeException e) {
+            log.error("Unexpected runtime error registering endpoint {} -> {}", fullUrl, methodName, e);
         }
     }
 }

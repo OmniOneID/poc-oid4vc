@@ -20,8 +20,10 @@ import com.example.did.oid4vc.issuer.property.WalletProperty;
 import lombok.RequiredArgsConstructor;
 import org.omnione.did.oid4vc.formatter.oid4vci.generator.CompactSigner;
 import org.omnione.did.oid4vc.formatter.oid4vci.generator.dto.IssuerKeyInfo;
+import org.omnione.did.oid4vc.formatter.util.SignatureUtil;
 import org.omnione.did.oid4vc.oid4vci.property.IssuerProperties;
 import org.omnione.did.oid4vc.oid4vci.service.KeyDataProvider;
+import org.omnione.did.oid4vc.oid4vci.util.VerifyUtil;
 import org.omnione.did.wallet.exception.WalletException;
 import org.omnione.did.wallet.key.WalletManagerFactory;
 import org.omnione.did.wallet.key.WalletManagerInterface;
@@ -63,7 +65,13 @@ public class MockKeyDataProvider implements KeyDataProvider {
         WalletManagerInterface finalWalletManager = walletManager;
         CompactSigner signer = (keyId, hash) -> {
             try {
-                return finalWalletManager.generateCompactSignatureFromHash(keyId, hash);
+//                return finalWalletManager.generateCompactSignatureFromHash(keyId, hash);
+                byte[] signature = finalWalletManager.generateCompactSignatureFromHash(keyId, hash);
+                System.out.println("signature length : " + signature.length);
+                //65 -> 64 (open did wallet의 개인키 필수)
+                byte[] convertSignature = SignatureUtil.convertSignature(signature);
+                System.out.println("convert signature length : " + convertSignature.length);
+                return convertSignature;
             } catch (WalletException e) {
                 throw new RuntimeException(e);
             }

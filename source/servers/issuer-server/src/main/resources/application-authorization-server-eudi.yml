@@ -1,9 +1,9 @@
 # 로컬 개발 환경용 인가 서버 설정
 issuer:
-#  server-ip: photospheric-nondyspeptically-donny.ngrok-free.dev
-  server-ip: 10.48.17.124
+  server-ip: photospheric-nondyspeptically-donny.ngrok-free.dev
+#  server-ip: 10.48.17.124
   server-port: 8082
-  base-url: http://${issuer.server-ip}:${issuer.server-port}
+  base-url: https://${issuer.server-ip}
 
 # google login
 spring:
