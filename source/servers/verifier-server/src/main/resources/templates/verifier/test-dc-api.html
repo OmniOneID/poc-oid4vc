@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DC API Test - Digital Credentials API</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <style>
+    .json-editor {
+      font-family: Monaco, Menlo, 'Ubuntu Mono', monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+
+  <!-- Secure Context Warning -->
+  <div id="insecureWarning" class="hidden bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
+    <div class="flex items-start gap-3">
+      <svg class="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3l9.66 16.59a1 1 0 01-.87 1.41H3.21a1 1 0 01-.87-1.41L12 3z"></path>
+      </svg>
+      <div>
+        <h3 class="font-bold text-red-700">Secure Context Required</h3>
+        <p class="text-sm text-red-600 mt-1">Digital Credentials API requires HTTPS. Current page is not in a secure context, so <code class="bg-red-100 px-1 rounded">navigator.credentials</code> is unavailable.</p>
+        <p class="text-sm text-red-600 mt-1">Use <strong>HTTPS</strong> or access via <strong>localhost</strong> to use DC API.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">DC API Test Console</h1>
+        <p class="text-gray-600">W3C Digital Credentials API + OID4VP</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="/oid4vp/test" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">OID4VP Test</a>
+        <a href="/oid4vp/config" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Config</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- DCQL Query -->
+  <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <h3 class="text-lg font-semibold mb-4">DCQL Query</h3>
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Quick Templates</label>
+      <select id="templateSelect" onchange="DCApiTest.loadTemplate(this.value)"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md">
+        <option value="">-- Loading... --</option>
+      </select>
+    </div>
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">DCQL Query JSON</label>
+      <textarea id="dcqlQuery" rows="13"
+                class="json-editor w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                placeholder='{"credentials": [...]}'></textarea>
+    </div>
+    <div class="flex space-x-2 mb-4">
+      <button onclick="DCApiTest.validateDCQL()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Validate DCQL</button>
+      <button onclick="DCApiTest.formatJSON()" class="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">Format</button>
+    </div>
+    <div id="validationResult" class="hidden"></div>
+  </div>
+
+  <!-- Run Button -->
+  <div class="mb-6">
+    <button id="runBtn" onclick="DCApiTest.run()"
+            class="w-full bg-gradient-to-r from-green-600 via-purple-600 to-yellow-600 text-white px-4 py-4 rounded-lg font-bold text-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
+      Run Full DC API Flow
+    </button>
+    <p id="flowStatus" class="text-center text-sm text-gray-500 mt-2"></p>
+  </div>
+
+  <!-- Result -->
+  <div id="resultSection" class="bg-white rounded-lg shadow-md p-6 hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">Result</h3>
+      <span id="resultBadge" class="text-xs px-3 py-1 rounded-full font-medium"></span>
+    </div>
+    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-xs overflow-auto max-h-96"><code id="resultCode" class="language-json"></code></pre>
+  </div>
+
+</div>
+
+<!-- VP Result Modal -->
+<div id="vpResultModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="DCApiTest.closeModal(event)">
+  <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div id="modalIcon" class="w-10 h-10 rounded-full flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 id="modalTitle" class="font-bold text-gray-800"></h3>
+          <p id="modalSubtitle" class="text-xs text-gray-500"></p>
+        </div>
+      </div>
+      <button onclick="DCApiTest.closeModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <!-- Modal Body -->
+    <div class="p-5 overflow-y-auto flex-1">
+      <div id="modalLoading" class="text-center py-8">
+        <div class="inline-block w-6 h-6 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
+        <p class="text-xs text-gray-500 mt-2">Loading credentials...</p>
+      </div>
+      <div id="modalContent" class="hidden space-y-3"></div>
+    </div>
+    <!-- Modal Footer -->
+    <div class="p-4 border-t border-gray-100">
+      <button onclick="DCApiTest.closeModal()" class="w-full bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/**
+ * DC API Test Console
+ *
+ * Flow: initiate session -> navigator.credentials.get() -> submit vp_token to server
+ *
+ * DC API protocol reference:
+ *   - Protocol: openid4vp-v1-unsigned
+ *   - Request data: { response_type, response_mode, nonce, dcql_query, client_metadata? }
+ *   - Do NOT include: client_id, state, response_uri
+ */
+const DCApiTest = (() => {
+
+  // ── Configuration ──────────────────────────────────────────────
+  const DC_API_PROTOCOL = 'openid4vp-v1-unsigned';
+
+  const API = Object.freeze({
+    INITIATE:      '/oid4vp/initiate',
+    VALIDATE_DCQL: '/oid4vp/validate-dcql',
+    DC_RESPONSE:   '/oid4vp/dc-api/response',
+    SCOPE_LIST:    '/oid4vp/config/api/scope',
+    VP_INFO:       '/sp/dc/vp-info/',
+  });
+
+  const WALLET_ERRORS = Object.freeze({
+    NotAllowedError:   'User denied the request or no wallet available',
+    NotSupportedError: 'DC API not supported — enable chrome://flags/#web-identity-digital-credentials',
+    AbortError:        'Request was aborted',
+  });
+
+  // ── State ──────────────────────────────────────────────────────
+  let scopeMappings = [];
+  let session = null;       // step 1 result
+  let walletResponse = null; // step 2 result
+
+  // ── DOM Helpers ────────────────────────────────────────────────
+  const $ = (id) => document.getElementById(id);
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function setStatus(text, color) {
+    const el = $('flowStatus');
+    el.textContent = text;
+    el.className = `text-center text-sm mt-2 font-medium text-${color}-600`;
+  }
+
+  function setRunning(running) {
+    const btn = $('runBtn');
+    btn.disabled = running;
+  }
+
+  function showResult(data, type) {
+    $('resultSection').classList.remove('hidden');
+
+    const code = $('resultCode');
+    code.textContent = JSON.stringify(data, null, 2);
+    Prism.highlightElement(code);
+
+    const badge = $('resultBadge');
+    const cfg = { success: ['Verified', 'green'], warning: ['Warning', 'yellow'], error: ['Error', 'red'] }[type] || ['Error', 'red'];
+    badge.textContent = cfg[0];
+    badge.className = `text-xs px-3 py-1 rounded-full font-medium bg-${cfg[1]}-100 text-${cfg[1]}-700`;
+  }
+
+  function hideResult() {
+    $('resultSection').classList.add('hidden');
+  }
+
+  // ── Modal ───────────────────────────────────────────────────────
+  function openModal(type) {
+    const modal = $('vpResultModal');
+    const icon = $('modalIcon');
+    const title = $('modalTitle');
+    const subtitle = $('modalSubtitle');
+
+    if (type === 'success') {
+      icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-green-500';
+      icon.innerHTML = '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+      title.textContent = 'Verification Successful';
+      subtitle.textContent = 'All credentials have been verified';
+    } else if (type === 'warning') {
+      icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-yellow-500';
+      icon.innerHTML = '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3l9.66 16.59a1 1 0 01-.87 1.41H3.21a1 1 0 01-.87-1.41L12 3z"></path></svg>';
+      title.textContent = 'Completed with Warning';
+      subtitle.textContent = 'VP Token received but not fully verified';
+    } else {
+      icon.className = 'w-10 h-10 rounded-full flex items-center justify-center bg-red-500';
+      icon.innerHTML = '<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+      title.textContent = 'Verification Failed';
+      subtitle.textContent = 'An error occurred';
+    }
+
+    $('modalLoading').classList.remove('hidden');
+    $('modalContent').classList.add('hidden');
+    $('modalContent').innerHTML = '';
+    modal.classList.remove('hidden');
+  }
+
+  function closeModal(event) {
+    if (event && event.target !== event.currentTarget) return;
+    $('vpResultModal').classList.add('hidden');
+  }
+
+  async function showParsedClaimsModal(transactionId, type) {
+    console.log('[DC-API] showParsedClaimsModal called:', transactionId, type);
+    openModal(type);
+
+    try {
+      const res = await fetch(API.VP_INFO + transactionId);
+      const data = await res.json();
+
+      $('modalLoading').classList.add('hidden');
+      const content = $('modalContent');
+      content.innerHTML = '';
+
+      console.log('[DC-API] VP_INFO response:', data);
+      if (!data.result || !data.credentials) {
+        content.innerHTML = '<p class="text-sm text-red-500 text-center py-4">' + escapeHtml(data.message || 'Failed to load credentials') + '</p>';
+        content.classList.remove('hidden');
+        return;
+      }
+
+      for (const cred of data.credentials) {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg p-4';
+
+        let html = '<div class="flex items-center justify-between mb-3">'
+          + '<span class="font-semibold text-sm text-gray-700">' + escapeHtml(cred.id) + '</span>'
+          + '<span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">' + escapeHtml(cred.format || '') + '</span>'
+          + '</div>';
+
+        if (cred.parseError) {
+          html += '<p class="text-sm text-red-500">' + escapeHtml(cred.parseError) + '</p>';
+        } else if (cred.claims) {
+          const meta = cred.metadata || {};
+          if (meta.vct || meta.docType || meta.iss) {
+            html += '<div class="mb-2 pb-2 border-b border-gray-200 space-y-1">';
+            if (meta.vct) html += claimRow('Type (vct)', meta.vct);
+            if (meta.docType) html += claimRow('DocType', meta.docType);
+            if (meta.iss) html += claimRow('Issuer', meta.iss);
+            html += '</div>';
+          }
+          html += renderNestedClaims(cred.claims, 0);
+        }
+
+        card.innerHTML = html;
+        content.appendChild(card);
+      }
+
+      // Transaction info
+      const infoCard = document.createElement('div');
+      infoCard.className = 'bg-blue-50 rounded-lg p-3';
+      infoCard.innerHTML = '<div class="space-y-1">'
+        + claimRow('Transaction ID', data.transactionId)
+        + claimRow('Status', data.status)
+        + '</div>';
+      content.appendChild(infoCard);
+
+      content.classList.remove('hidden');
+    } catch (e) {
+      $('modalLoading').classList.add('hidden');
+      const content = $('modalContent');
+      content.innerHTML = '<p class="text-sm text-red-500 text-center py-4">Error: ' + escapeHtml(e.message) + '</p>';
+      content.classList.remove('hidden');
+    }
+  }
+
+  function renderNestedClaims(obj, depth) {
+    let html = '';
+    const pl = depth > 0 ? ' pl-3 border-l border-gray-200' : '';
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        html += '<div class="mt-1' + pl + '"><p class="text-xs font-medium text-gray-500 mb-1">' + escapeHtml(key) + '</p>' + renderNestedClaims(value, depth + 1) + '</div>';
+      } else {
+        const v = value === null ? 'null' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+        html += '<div class="flex justify-between py-0.5' + pl + '"><span class="text-xs text-gray-500">' + escapeHtml(key) + '</span><span class="text-xs font-mono text-gray-700 break-all text-right max-w-[60%]">' + escapeHtml(v) + '</span></div>';
+      }
+    }
+    return html;
+  }
+
+  function claimRow(label, value) {
+    return '<div class="flex justify-between"><span class="text-xs text-gray-500">' + escapeHtml(label) + '</span><span class="text-xs font-mono text-gray-700 break-all">' + escapeHtml(String(value)) + '</span></div>';
+  }
+
+  function showValidation(html) {
+    const el = $('validationResult');
+    el.classList.remove('hidden');
+    el.innerHTML = html;
+  }
+
+  // ── Scope Templates ───────────────────────────────────────────
+  async function loadScopeMappings() {
+    try {
+      const res = await fetch(API.SCOPE_LIST);
+      scopeMappings = (await res.json()).filter(m => m.enabled !== false);
+    } catch {
+      $('templateSelect').innerHTML = '<option value="">-- Failed to load --</option>';
+      return;
+    }
+
+    const select = $('templateSelect');
+    select.innerHTML = '<option value="">-- Select Template --</option>';
+    for (const m of scopeMappings) {
+      const opt = document.createElement('option');
+      opt.value = m.scope;
+      opt.textContent = m.description ? `${m.scope} - ${m.description}` : m.scope;
+      select.appendChild(opt);
+    }
+
+    if (scopeMappings.length > 0) {
+      select.value = scopeMappings[0].scope;
+      loadTemplate(scopeMappings[0].scope);
+    }
+  }
+
+  function loadTemplate(scope) {
+    if (!scope) return;
+    const mapping = scopeMappings.find(m => m.scope === scope);
+    if (!mapping?.dcqlQuery) return;
+
+    const dcqlQuery = typeof mapping.dcqlQuery === 'string'
+      ? mapping.dcqlQuery
+      : JSON.stringify(mapping.dcqlQuery);
+
+    try {
+      $('dcqlQuery').value = JSON.stringify(JSON.parse(dcqlQuery), null, 2);
+    } catch {
+      $('dcqlQuery').value = dcqlQuery;
+    }
+  }
+
+  function formatJSON() {
+    const el = $('dcqlQuery');
+    try { el.value = JSON.stringify(JSON.parse(el.value), null, 2); } catch { /* ignore */ }
+  }
+
+  async function validateDCQL() {
+    try {
+      const res = await fetch(API.VALIDATE_DCQL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: $('dcqlQuery').value,
+      });
+      const result = await res.json();
+
+      if (result.valid) {
+        showValidation(`<div class="p-2 bg-green-50 text-green-700 rounded text-sm">Valid DCQL (credentials: ${result.credentialCount || 0})</div>`);
+      } else {
+        showValidation(`<div class="p-2 bg-red-50 text-red-700 rounded text-sm">Invalid: ${escapeHtml(result.message)}</div>`);
+      }
+    } catch (e) {
+      showValidation(`<div class="p-2 bg-red-50 text-red-700 rounded text-sm">Error: ${escapeHtml(e.message)}</div>`);
+    }
+  }
+
+  // ── Step 1: Initiate Session ──────────────────────────────────
+  async function initiateSession() {
+    setStatus('Step 1/3: Initiating session...', 'blue');
+
+    const params = new URLSearchParams({
+      dcql_query: $('dcqlQuery').value,
+      response_mode: 'dc_api',
+      use_request_uri: 'false',
+    });
+
+    const res = await fetch(API.INITIATE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params,
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error(data.error_description || data.error || 'Initiation failed');
+    }
+
+    session = data;
+  }
+
+  // ── Step 2: Call DC API (navigator.credentials.get) ───────────
+  async function requestCredential() {
+    setStatus('Step 2/3: Waiting for wallet...', 'purple');
+
+    // Use dc_api_request from server, add nonce for Chrome compatibility
+    const requestData = session.dc_api_request || {
+      response_type: 'vp_token',
+      response_mode: 'dc_api',
+      dcql_query: parseDCQLFromSession(session),
+    };
+    // Chrome DC API may require nonce even though OID4VP A.3.1 says MUST NOT
+    if (!requestData.nonce && session.nonce) {
+      requestData.nonce = session.nonce;
+    }
+
+    const credential = await navigator.credentials.get({
+      digital: {
+        requests: [{
+          protocol: DC_API_PROTOCOL,
+          data: requestData,
+        }],
+      },
+    });
+
+    walletResponse = {
+      protocol: credential.protocol || DC_API_PROTOCOL,
+      data: credential.data instanceof ArrayBuffer
+        ? new TextDecoder().decode(credential.data)
+        : (credential.data || credential.token),
+    };
+  }
+
+  function parseDCQLFromSession(s) {
+    if (typeof s.mapped_dcql === 'string') return JSON.parse(s.mapped_dcql);
+    if (s.dcql_query) return s.dcql_query;
+    return JSON.parse($('dcqlQuery').value);
+  }
+
+  // ── Step 3: Submit VP Token to Server ─────────────────────────
+  async function submitToServer() {
+    setStatus('Step 3/3: Submitting to server...', 'yellow');
+
+    const { vpToken } = extractVPToken(walletResponse.data);
+
+    const res = await fetch(API.DC_RESPONSE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vp_token: vpToken,
+        protocol: walletResponse.protocol,
+        transaction_id: session.transaction_id,
+      }),
+    });
+
+    return res.json();
+  }
+
+  /**
+   * Extract vp_token from wallet response data.
+   *
+   * Wallet can return:
+   *   1. JSON string: '{"vp_token": {...}, "state": "..."}'
+   *   2. URL-encoded form: 'vp_token=...&state=...'
+   *   3. Object directly: { vp_token: {...} }
+   */
+  function extractVPToken(data) {
+    const fallbackState = session.state;
+
+    // Case 1 & 2: string response
+    if (typeof data === 'string') {
+      try {
+        const json = JSON.parse(data);
+        return { vpToken: json.vp_token || json, state: json.state || fallbackState };
+      } catch {
+        const params = new URLSearchParams(data);
+        const vp = params.get('vp_token');
+        if (vp) return { vpToken: vp, state: params.get('state') || fallbackState };
+      }
+    }
+
+    // Case 3: object response
+    if (typeof data === 'object' && data !== null) {
+      return { vpToken: data.vp_token || data, state: data.state || fallbackState };
+    }
+
+    // Fallback: treat raw data as vp_token
+    return { vpToken: data, state: fallbackState };
+  }
+
+  // ── Full Flow ─────────────────────────────────────────────────
+  async function run() {
+    setRunning(true);
+    session = null;
+    walletResponse = null;
+    hideResult();
+
+    try {
+      await initiateSession();
+      await requestCredential();
+      const result = await submitToServer();
+
+      if (result.warning) {
+        showResult(result, 'warning');
+        setStatus('Completed with warning', 'yellow');
+        if (session && session.transaction_id) {
+          await showParsedClaimsModal(session.transaction_id, 'warning');
+        }
+      } else if (!result.error) {
+        showResult(result, 'success');
+        setStatus('Verification complete!', 'green');
+        if (session && session.transaction_id) {
+          await showParsedClaimsModal(session.transaction_id, 'success');
+        }
+      } else {
+        showResult(result, 'error');
+        setStatus('Server returned error', 'red');
+      }
+    } catch (e) {
+      const msg = WALLET_ERRORS[e.name] || e.message;
+      showResult({ error: e.name || 'error', error_description: msg }, 'error');
+      setStatus(msg, 'red');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  function checkSecureContext() {
+    if (!window.isSecureContext) {
+      $('insecureWarning').classList.remove('hidden');
+      $('runBtn').disabled = true;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkSecureContext();
+    loadScopeMappings();
+  });
+
+  // ── Public API ────────────────────────────────────────────────
+  return { run, loadTemplate, formatJSON, validateDCQL, closeModal };
+
+})();
+</script>
+</body>
+</html>

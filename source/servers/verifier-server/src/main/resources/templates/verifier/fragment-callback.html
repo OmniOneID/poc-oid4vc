@@ -1,0 +1,146 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>OID4VP Fragment Callback</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+
+<div class="px-4 py-5 max-w-lg mx-auto w-full">
+  <!-- Processing -->
+  <div id="processing" class="text-center">
+    <div class="bg-white rounded-xl shadow-sm p-8">
+      <div class="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+      <p class="text-sm text-gray-600">Processing VP Token...</p>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div id="success" class="hidden">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="text-center mb-4">
+        <span class="text-4xl">&#10003;</span>
+        <h2 class="text-lg font-semibold text-green-700 mt-2">Verification Complete</h2>
+      </div>
+      <div id="resultData" class="space-y-2"></div>
+      <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+        <p class="text-xs font-medium text-gray-500 mb-1">Transaction ID</p>
+        <p id="transactionId" class="text-xs font-mono text-gray-700"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div id="errorSection" class="hidden">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="text-center mb-4">
+        <span class="text-4xl">&#10007;</span>
+        <h2 class="text-lg font-semibold text-red-700 mt-2">Verification Failed</h2>
+      </div>
+      <div class="bg-red-50 rounded-lg p-3">
+        <p id="errorMessage" class="text-sm text-red-800"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    var fragment = window.location.hash.substring(1);
+    if (!fragment) {
+      showError('No fragment data received from wallet');
+      return;
+    }
+
+    // Clear fragment from URL to prevent replay on refresh
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+
+    // Parse fragment manually to avoid URLSearchParams converting '+' to space (Base64 issue)
+    var params = {};
+    fragment.split('&').forEach(function(pair) {
+      var idx = pair.indexOf('=');
+      if (idx > 0) {
+        var key = decodeURIComponent(pair.substring(0, idx));
+        var value = decodeURIComponent(pair.substring(idx + 1));
+        params[key] = value;
+      }
+    });
+
+    var vpToken = params['vp_token'];
+    var state = params['state'];
+    var error = params['error'];
+    var errorDescription = params['error_description'];
+
+    if (error) {
+      showError(errorDescription || error);
+      return;
+    }
+
+    if (!vpToken || !state) {
+      showError('Missing vp_token or state in fragment');
+      return;
+    }
+
+    // POST the fragment data to the server for verification
+    var formData = new URLSearchParams();
+    formData.append('vp_token', vpToken);
+    formData.append('state', state);
+
+    fetch('/oid4vp/response', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData
+    })
+    .then(function(response) {
+      if (!response.ok) {
+        return response.json().then(function(errData) {
+          throw new Error(errData.error_description || errData.error || ('HTTP ' + response.status));
+        });
+      }
+      return response.json();
+    })
+    .then(function(data) {
+      document.getElementById('processing').classList.add('hidden');
+
+      if (data.error) {
+        showError(data.error_description || data.error);
+        return;
+      }
+
+      // Check if there's a redirect_uri with response_code (callback flow)
+      if (data.redirect_uri) {
+        // Validate redirect stays on same origin
+        try {
+          var redirectUrl = new URL(data.redirect_uri, window.location.origin);
+          if (redirectUrl.origin === window.location.origin) {
+            window.location.href = data.redirect_uri;
+            return;
+          }
+        } catch(e) { /* fall through to direct display */ }
+        // Relative path is also safe
+        if (data.redirect_uri.startsWith('/')) {
+          window.location.href = data.redirect_uri;
+          return;
+        }
+      }
+
+      // Direct result display
+      document.getElementById('success').classList.remove('hidden');
+      if (data.transaction_id) {
+        document.getElementById('transactionId').textContent = data.transaction_id;
+      }
+    })
+    .catch(function(err) {
+      showError('Failed to verify VP Token: ' + err.message);
+    });
+  })();
+
+  function showError(message) {
+    document.getElementById('processing').classList.add('hidden');
+    document.getElementById('errorSection').classList.remove('hidden');
+    document.getElementById('errorMessage').textContent = message;
+  }
+</script>
+
+</body>
+</html>

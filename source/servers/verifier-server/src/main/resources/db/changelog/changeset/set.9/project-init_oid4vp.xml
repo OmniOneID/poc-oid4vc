@@ -25,7 +25,7 @@
     </createTable>
   </changeSet>
 
-  <changeSet id="insert-default-pure-oid4vp-config" author="shlee1223">
+  <changeSet id="insert-default-oid4vp-config" author="shlee1223">
     <insert tableName="oid4vp">
       <column name="type" value="OID4VP"/>
       <column name="config"><![CDATA[{
@@ -41,7 +41,8 @@
   },
   "endpoints": {
     "response": "/oid4vp/response",
-    "request": "/oid4vp/request"
+    "request": "/oid4vp/request",
+    "fragmentCallback": "/oid4vp/fragment/callback"
   },
   "clientMetadata": {
     "vpFormatsSupported": {
@@ -55,11 +56,17 @@
       "dc+sd-jwt": {
         "sd-jwt_alg_values": ["ES256"],
         "kb-jwt_alg_values": ["ES256"]
+      },
+      "mso_mdoc": {
+        "alg_values": ["ES256"]
       }
     }
   },
   "crypto": {
     "vpTokenEncryptionKey": "opAOdwHlm+TS4nFPAAVWKYxeRT0yrjfbScPf50tYp6I="
+  },
+  "verification": {
+    "skipX5cChainValidation": false
   }
 }]]></column>
     </insert>

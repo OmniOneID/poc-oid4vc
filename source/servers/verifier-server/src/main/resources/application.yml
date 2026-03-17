@@ -4,3 +4,7 @@ server:
 spring:
   profiles:
     active: file
+
+logging:
+  level:
+    org.omnione.did.oid4vc.dcql: DEBUG

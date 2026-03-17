@@ -11,7 +11,8 @@
   },
   "endpoints": {
     "response": "/oid4vp/response",
-    "request": "/oid4vp/request"
+    "request": "/oid4vp/request",
+    "fragmentCallback": "/oid4vp/fragment/callback"
   },
   "clientMetadata": {
     "vpFormatsSupported": {
@@ -25,10 +26,16 @@
       "dc+sd-jwt": {
         "sd-jwt_alg_values": ["ES256"],
         "kb-jwt_alg_values": ["ES256"]
+      },
+      "mso_mdoc": {
+        "alg_values": ["ES256"]
       }
     }
   },
   "crypto": {
     "vpTokenEncryptionKey": "opAOdwHlm+TS4nFPAAVWKYxeRT0yrjfbScPf50tYp6I="
+  },
+  "verification": {
+    "skipX5cChainValidation": false
   }
 }

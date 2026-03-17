@@ -98,26 +98,26 @@ public class SPController {
     }
 
     /**
-     * Get raw decrypted VP Token for EUDI/SD-JWT by transaction ID.
-     * Returns the raw vpToken without format-specific parsing.
+     * Get parsed VP Token with claims for Multiple Credentials by transaction ID.
+     * Returns parsed claims from each credential (mdoc, SD-JWT, etc.) in a unified format.
      *
      * @param transactionId the transaction ID
-     * @return raw decrypted VP Token with metadata or error response
+     * @return parsed credentials with claims or error response
      */
-    @GetMapping("/eudi/vp-info/{transactionId}")
-    public ResponseEntity<Map<String, Object>> getEudiVPToken(@PathVariable String transactionId) {
+    @GetMapping("/dc/vp-info/{transactionId}")
+    public ResponseEntity<Map<String, Object>> getVPTokenInfo(@PathVariable String transactionId) {
         try {
-            Map<String, Object> result = spHelperService.getDecryptedVPToken(transactionId);
+            Map<String, Object> result = spHelperService.getDecryptedVPTokenWithParsedClaims(transactionId);
             result.put("result", true);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid request for EUDI VP Token: {}", e.getMessage());
+            log.warn("Invalid request for DC VP Token: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of(
                     "result", false,
                     "message", e.getMessage()
             ));
         } catch (Exception e) {
-            log.error("Failed to get EUDI VP Token for transactionId: {}", transactionId, e);
+            log.error("Failed to get DC VP Token for transactionId: {}", transactionId, e);
             return ResponseEntity.internalServerError().body(Map.of(
                     "result", false,
                     "message", e.getMessage()

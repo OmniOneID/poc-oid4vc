@@ -12,9 +12,14 @@
           <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Request URI</span>
         </div>
       </div>
-      <a href="/oid4vp/config" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
-        OID4VP Config
-      </a>
+      <div class="flex gap-2">
+        <a href="/oid4vp/test/dc-api" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          DC API Test
+        </a>
+        <a href="/oid4vp/config" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+          OID4VP Config
+        </a>
+      </div>
     </div>
   </div>
 
@@ -93,11 +98,11 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">Response Mode (for fetched request)</label>
               <div class="space-y-2">
                 <label class="flex items-center">
-                  <input type="radio" name="responseMode" value="query" checked="checked" class="mr-2 text-blue-600">
-                  <span>query</span>
-                  <span style="padding-left: 5px;"></span>
-                  <input type="radio" name="responseMode" value="direct_post" checked="" class="mr-2 text-blue-600">
+                  <input type="radio" name="responseMode" value="direct_post" checked class="mr-2 text-blue-600">
                   <span>direct_post</span>
+                  <span style="padding-left: 5px;"></span>
+                  <input type="radio" name="responseMode" value="fragment" class="mr-2 text-blue-600">
+                  <span>fragment</span>
                 </label>
               </div>
             </div>
