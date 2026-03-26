@@ -19,7 +19,7 @@ This is a guide for the OpenDID SD-JWT VC Client SDK for Android. It provides fu
 
 ## Project Structure
 ```
-poc-client-sd-jwt-vc-sdk-aos/
+poc-sd-jwt-vc-sdk-aos/
 ├── build.gradle
 ├── settings.gradle
 ├── gradle.properties

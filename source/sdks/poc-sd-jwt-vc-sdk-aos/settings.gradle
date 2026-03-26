@@ -13,4 +13,4 @@ dependencyResolutionManagement {
         maven { url 'https://jitpack.io' }
     }
 }
-rootProject.name = "poc-client-sd-jwt-vc-sdk-aos"
+rootProject.name = "poc-sd-jwt-vc-sdk-aos"
