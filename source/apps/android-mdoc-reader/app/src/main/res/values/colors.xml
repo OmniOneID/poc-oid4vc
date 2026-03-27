@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Raon Secure orange brand palette -->
+    <color name="primary">#FFEF6C00</color>
+    <color name="primary_dark">#FFC43E00</color>
+    <color name="accent">#FFFFA726</color>
+    <color name="background_light">#FFFAF6F2</color>
+    <color name="background_dark">#FF121212</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="surface_dark">#FF1E1E1E</color>
+    <color name="on_primary">#FFFFFFFF</color>
+    <color name="on_surface">#FF1C1B1F</color>
+    <color name="on_surface_variant">#FF49454F</color>
+    <color name="outline">#FF79747E</color>
+    <color name="error">#FFB3261E</color>
+    <color name="success">#FF2E7D32</color>
+    <color name="warning">#FFED6C02</color>
+    <color name="divider">#1F000000</color>
+    <color name="chip_selected">#FFFFF3E0</color>
+    <color name="chip_unselected">#00000000</color>
+    <color name="ic_launcher_background">#FFEF6C00</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+    <color name="transparent">#00000000</color>
+</resources>

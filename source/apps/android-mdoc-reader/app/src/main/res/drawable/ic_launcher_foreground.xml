@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="22"
+        android:translateY="22">
+        <!-- Letter M in a circle -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M32,0C14.33,0,0,14.33,0,32s14.33,32,32,32s32,-14.33,32,-32S49.67,0,32,0zM32,58c-14.36,0,-26,-11.64,-26,-26S17.64,6,32,6s26,11.64,26,26S46.36,58,32,58z"/>
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M18,42V20h5.5l8.5,14.5L40.5,20H46v22h-4.5V28l-7,12h-5l-7,-12v14z"/>
+    </group>
+</vector>

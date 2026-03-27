@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="org.omnione.did.mdoc.reader.ui.home.HomeFragment"
+        android:label="Home">
+        <action
+            android:id="@+id/action_home_to_menu"
+            app:destination="@id/menuFragment"
+            app:enterAnim="@anim/slide_in_left"
+            app:exitAnim="@anim/slide_out_right"
+            app:popEnterAnim="@anim/slide_in_right"
+            app:popExitAnim="@anim/slide_out_left" />
+        <action
+            android:id="@+id/action_home_to_qrScan"
+            app:destination="@id/qrScanFragment"
+            app:enterAnim="@anim/no_anim"
+            app:exitAnim="@anim/no_anim"
+            app:popEnterAnim="@anim/no_anim"
+            app:popExitAnim="@anim/no_anim" />
+        <action
+            android:id="@+id/action_home_to_transferStatus"
+            app:destination="@id/transferStatusFragment"
+            app:enterAnim="@anim/no_anim"
+            app:exitAnim="@anim/no_anim"
+            app:popEnterAnim="@anim/no_anim"
+            app:popExitAnim="@anim/no_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/menuFragment"
+        android:name="org.omnione.did.mdoc.reader.di.menu.MenuFragment"
+        android:label="Menu">
+        <action
+            android:id="@+id/action_menu_to_settings"
+            app:destination="@id/settingsFragment"
+            app:enterAnim="@anim/no_anim"
+            app:exitAnim="@anim/no_anim"
+            app:popEnterAnim="@anim/no_anim"
+            app:popExitAnim="@anim/no_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="org.omnione.did.mdoc.reader.ui.settings.SettingsFragment"
+        android:label="Settings" />
+
+    <fragment
+        android:id="@+id/qrScanFragment"
+        android:name="org.omnione.did.mdoc.reader.ui.qrScan.QrScanFragment"
+        android:label="QR Scan">
+        <action
+            android:id="@+id/action_qrScan_to_transferStatus"
+            app:destination="@id/transferStatusFragment"
+            app:enterAnim="@anim/no_anim"
+            app:exitAnim="@anim/no_anim"
+            app:popEnterAnim="@anim/no_anim"
+            app:popExitAnim="@anim/no_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/transferStatusFragment"
+        android:name="org.omnione.did.mdoc.reader.ui.transferStatus.TransferStatusFragment"
+        android:label="Transfer Status">
+        <action
+            android:id="@+id/action_transferStatus_to_showDocuments"
+            app:destination="@id/showDocumentsFragment"
+            app:enterAnim="@anim/no_anim"
+            app:exitAnim="@anim/no_anim"
+            app:popEnterAnim="@anim/no_anim"
+            app:popExitAnim="@anim/no_anim" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/showDocumentsFragment"
+        android:name="org.omnione.did.mdoc.reader.ui.showDocuments.ShowDocumentsFragment"
+        android:label="Show Documents" />
+
+    <!-- Global action: pop everything and return to Home -->
+    <action
+        android:id="@+id/action_global_pop_to_home"
+        app:destination="@id/homeFragment"
+        app:popUpTo="@id/homeFragment"
+        app:popUpToInclusive="true"
+        app:enterAnim="@anim/no_anim"
+        app:exitAnim="@anim/no_anim"
+        app:popEnterAnim="@anim/no_anim"
+        app:popExitAnim="@anim/no_anim" />
+</navigation>
