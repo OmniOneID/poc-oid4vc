@@ -1,0 +1,625 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DF0E27612F74EAAC0098B2B1 /* CodeScanner in Frameworks */ = {isa = PBXBuildFile; productRef = DF0E27602F74EAAC0098B2B1 /* CodeScanner */; };
+		DF0E27642F74EAC20098B2B1 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = DF0E27632F74EAC20098B2B1 /* SwiftCBOR */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DF0E26F02F74E7110098B2B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DF0E26DA2F74E7100098B2B1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF0E26E12F74E7100098B2B1;
+			remoteInfo = mdocReader;
+		};
+		DF0E26FA2F74E7110098B2B1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DF0E26DA2F74E7100098B2B1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF0E26E12F74E7100098B2B1;
+			remoteInfo = mdocReader;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		DF0E26E22F74E7100098B2B1 /* mdocReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = mdocReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF0E26EF2F74E7110098B2B1 /* mdocReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = mdocReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF0E26F92F74E7110098B2B1 /* mdocReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = mdocReaderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DF0E27002F74E7110098B2B1 /* Exceptions for "mdocReader" folder in "mdocReader" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DF0E26E12F74E7100098B2B1 /* mdocReader */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		DF0E26E42F74E7100098B2B1 /* mdocReader */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DF0E27002F74E7110098B2B1 /* Exceptions for "mdocReader" folder in "mdocReader" target */,
+			);
+			path = mdocReader;
+			sourceTree = "<group>";
+		};
+		DF0E26F22F74E7110098B2B1 /* mdocReaderTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = mdocReaderTests;
+			sourceTree = "<group>";
+		};
+		DF0E26FC2F74E7110098B2B1 /* mdocReaderUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = mdocReaderUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DF0E26DF2F74E7100098B2B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DF0E27642F74EAC20098B2B1 /* SwiftCBOR in Frameworks */,
+				DF0E27612F74EAAC0098B2B1 /* CodeScanner in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26EC2F74E7110098B2B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26F62F74E7110098B2B1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DF0E26D92F74E7100098B2B1 = {
+			isa = PBXGroup;
+			children = (
+				DF0E26E42F74E7100098B2B1 /* mdocReader */,
+				DF0E26F22F74E7110098B2B1 /* mdocReaderTests */,
+				DF0E26FC2F74E7110098B2B1 /* mdocReaderUITests */,
+				DF0E26E32F74E7100098B2B1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DF0E26E32F74E7100098B2B1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DF0E26E22F74E7100098B2B1 /* mdocReader.app */,
+				DF0E26EF2F74E7110098B2B1 /* mdocReaderTests.xctest */,
+				DF0E26F92F74E7110098B2B1 /* mdocReaderUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DF0E26E12F74E7100098B2B1 /* mdocReader */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DF0E27032F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReader" */;
+			buildPhases = (
+				DF0E26DE2F74E7100098B2B1 /* Sources */,
+				DF0E26DF2F74E7100098B2B1 /* Frameworks */,
+				DF0E26E02F74E7100098B2B1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DF0E26E42F74E7100098B2B1 /* mdocReader */,
+			);
+			name = mdocReader;
+			packageProductDependencies = (
+				DF0E27602F74EAAC0098B2B1 /* CodeScanner */,
+				DF0E27632F74EAC20098B2B1 /* SwiftCBOR */,
+			);
+			productName = mdocReader;
+			productReference = DF0E26E22F74E7100098B2B1 /* mdocReader.app */;
+			productType = "com.apple.product-type.application";
+		};
+		DF0E26EE2F74E7110098B2B1 /* mdocReaderTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DF0E27062F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReaderTests" */;
+			buildPhases = (
+				DF0E26EB2F74E7110098B2B1 /* Sources */,
+				DF0E26EC2F74E7110098B2B1 /* Frameworks */,
+				DF0E26ED2F74E7110098B2B1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DF0E26F12F74E7110098B2B1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DF0E26F22F74E7110098B2B1 /* mdocReaderTests */,
+			);
+			name = mdocReaderTests;
+			packageProductDependencies = (
+			);
+			productName = mdocReaderTests;
+			productReference = DF0E26EF2F74E7110098B2B1 /* mdocReaderTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DF0E26F82F74E7110098B2B1 /* mdocReaderUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DF0E27092F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReaderUITests" */;
+			buildPhases = (
+				DF0E26F52F74E7110098B2B1 /* Sources */,
+				DF0E26F62F74E7110098B2B1 /* Frameworks */,
+				DF0E26F72F74E7110098B2B1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DF0E26FB2F74E7110098B2B1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DF0E26FC2F74E7110098B2B1 /* mdocReaderUITests */,
+			);
+			name = mdocReaderUITests;
+			packageProductDependencies = (
+			);
+			productName = mdocReaderUITests;
+			productReference = DF0E26F92F74E7110098B2B1 /* mdocReaderUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DF0E26DA2F74E7100098B2B1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					DF0E26E12F74E7100098B2B1 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					DF0E26EE2F74E7110098B2B1 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = DF0E26E12F74E7100098B2B1;
+					};
+					DF0E26F82F74E7110098B2B1 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = DF0E26E12F74E7100098B2B1;
+					};
+				};
+			};
+			buildConfigurationList = DF0E26DD2F74E7100098B2B1 /* Build configuration list for PBXProject "mdocReader" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DF0E26D92F74E7100098B2B1;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DF0E275F2F74EAAC0098B2B1 /* XCRemoteSwiftPackageReference "CodeScanner" */,
+				DF0E27622F74EAC20098B2B1 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = DF0E26E32F74E7100098B2B1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DF0E26E12F74E7100098B2B1 /* mdocReader */,
+				DF0E26EE2F74E7110098B2B1 /* mdocReaderTests */,
+				DF0E26F82F74E7110098B2B1 /* mdocReaderUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DF0E26E02F74E7100098B2B1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26ED2F74E7110098B2B1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26F72F74E7110098B2B1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DF0E26DE2F74E7100098B2B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26EB2F74E7110098B2B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF0E26F52F74E7110098B2B1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DF0E26F12F74E7110098B2B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF0E26E12F74E7100098B2B1 /* mdocReader */;
+			targetProxy = DF0E26F02F74E7110098B2B1 /* PBXContainerItemProxy */;
+		};
+		DF0E26FB2F74E7110098B2B1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF0E26E12F74E7100098B2B1 /* mdocReader */;
+			targetProxy = DF0E26FA2F74E7110098B2B1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		DF0E27012F74E7110098B2B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DF0E27022F74E7110098B2B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		DF0E27042F74E7110098B2B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = mdocReader/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReader;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DF0E27052F74E7110098B2B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = mdocReader/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReader;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DF0E27072F74E7110098B2B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReaderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/mdocReader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/mdocReader";
+			};
+			name = Debug;
+		};
+		DF0E27082F74E7110098B2B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReaderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/mdocReader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/mdocReader";
+			};
+			name = Release;
+		};
+		DF0E270A2F74E7110098B2B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReaderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = mdocReader;
+			};
+			name = Debug;
+		};
+		DF0E270B2F74E7110098B2B1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 27YP6UXGLH;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.opendid.mdoc.reader.mdocReaderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = mdocReader;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DF0E26DD2F74E7100098B2B1 /* Build configuration list for PBXProject "mdocReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF0E27012F74E7110098B2B1 /* Debug */,
+				DF0E27022F74E7110098B2B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DF0E27032F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF0E27042F74E7110098B2B1 /* Debug */,
+				DF0E27052F74E7110098B2B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DF0E27062F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReaderTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF0E27072F74E7110098B2B1 /* Debug */,
+				DF0E27082F74E7110098B2B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DF0E27092F74E7110098B2B1 /* Build configuration list for PBXNativeTarget "mdocReaderUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF0E270A2F74E7110098B2B1 /* Debug */,
+				DF0E270B2F74E7110098B2B1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DF0E275F2F74EAAC0098B2B1 /* XCRemoteSwiftPackageReference "CodeScanner" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/twostraws/CodeScanner.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.2;
+			};
+		};
+		DF0E27622F74EAC20098B2B1 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/unrelentingtech/SwiftCBOR.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DF0E27602F74EAAC0098B2B1 /* CodeScanner */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF0E275F2F74EAAC0098B2B1 /* XCRemoteSwiftPackageReference "CodeScanner" */;
+			productName = CodeScanner;
+		};
+		DF0E27632F74EAC20098B2B1 /* SwiftCBOR */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF0E27622F74EAC20098B2B1 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
+			productName = SwiftCBOR;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = DF0E26DA2F74E7100098B2B1 /* Project object */;
+}

@@ -1,0 +1,24 @@
+{
+  "originHash" : "348f083b6b2a78e38afb1b3664a9c93f0b3cada354e6768bba3e586f209828a5",
+  "pins" : [
+    {
+      "identity" : "codescanner",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/twostraws/CodeScanner.git",
+      "state" : {
+        "revision" : "5e886430238944c7200fc9e10dbf2d9550dba865",
+        "version" : "2.5.2"
+      }
+    },
+    {
+      "identity" : "swiftcbor",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/unrelentingtech/SwiftCBOR.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "fd929a6d8f7651ce0f63fc99397fd5762358cc29"
+      }
+    }
+  ],
+  "version" : 3
+}
