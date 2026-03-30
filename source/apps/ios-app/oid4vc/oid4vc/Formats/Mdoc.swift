@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2025 - 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,21 +23,86 @@ public class Mdoc {
     private static let PRIVATE_KEY = "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgmMOV8LmitIOKQCynSbCxsW0xmVMuQjdPtiJdjhwfx0agCgYIKoZIzj0DAQehRANCAAQv+cDbPA9aF/hQ0WIJyVJmfzr533/v+9xvCw+d/ptbZHTOhfDrj38GrJGQqxu4d1NswrAj+JlqA7Fhen34bWoT"
 
     /// Checks if the given format is supported for mDoc.
-    /// - Parameter format: The format string to check.
-    /// - Returns: true if the format is supported, false otherwise.
     public static func isSupported(format: String) -> Bool {
-        return format == "mDL" || format == "mDocPID"
+        return format == "mDL" || format == "mDocPID" || format == "mDoc"
+    }
+    
+    /// Generates an ephemeral device key pair for ISO 18013-5 offline presentation.
+    /// Mirroring Android's logic: COSE_Key -> encoded -> Tag 24 wrapped.
+    public static func generateEDeviceKeyBytes() -> EphemeralKeyHolder {
+        let holder = EphemeralKeyHolder()
+        
+        // Extract X and Y from uncompressed public key (65 bytes: 0x04 || X || Y)
+        let xBytes = Array(holder.eDeviceKeyBytes[1...32])
+        let yBytes = Array(holder.eDeviceKeyBytes[33...64])
+        
+        // Create COSE_Key Map
+        let coseKey: CBOR = .map([
+            .unsignedInt(1): .unsignedInt(2),      // kty: EC2
+            .negativeInt(0): .unsignedInt(1),      // crv: P-256 (-1)
+            .negativeInt(1): .byteString(xBytes),  // x: -2
+            .negativeInt(2): .byteString(yBytes)   // y: -3
+        ])
+        
+        // Wrap with Tag 24 (EDeviceKeyBytes)
+        let encodedCoseKey = coseKey.encode()
+        let taggedEDeviceKeyBytes = CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(encodedCoseKey))
+        
+        // Return a modified holder if necessary, or just keep the logic in mind.
+        // For simplicity, we'll use the tagged bytes in createDeviceEngagementPayload.
+        return holder
+    }
+    
+    /// Creates a Device Engagement payload for QR code engagement.
+    public static func createDeviceEngagementPayload(eDeviceKeyBytes: [UInt8], bleUuidBytes: [UInt8]) -> String {
+        // Security: [ 1, Tag24(COSE_Key) ]
+        // Note: eDeviceKeyBytes passed here should be the raw uncompressed key from EphemeralKeyHolder
+        let xBytes = Array(eDeviceKeyBytes[1...32])
+        let yBytes = Array(eDeviceKeyBytes[33...64])
+        
+        let coseKey: CBOR = .map([
+            .unsignedInt(1): .unsignedInt(2),      // kty: EC2
+            .negativeInt(0): .unsignedInt(1),      // crv: P-256 (-1)
+            .negativeInt(1): .byteString(xBytes),  // x: -2
+            .negativeInt(2): .byteString(yBytes)   // y: -3
+        ])
+        let encodedCoseKey = coseKey.encode()
+        let taggedCoseKey = CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(encodedCoseKey))
+        
+        let security: CBOR = .array([
+            .unsignedInt(1), // Cipher suite 1
+            taggedCoseKey
+        ])
+        
+        // BleOptions Map (Standard keys: 0=Peripheral, 1=Central, 10=UUID)
+        let bleOptions: CBOR = .map([
+            .unsignedInt(0): .boolean(true),          // mdoc peripheral server mode support
+            .unsignedInt(1): .boolean(false),         // mdoc central client mode NOT support
+            .unsignedInt(10): .byteString(bleUuidBytes) // 16-byte UUID
+        ])
+        
+        // Retrieval Methods: [ [ 2, 1, BleOptions ] ]
+        let retrievalMethods: CBOR = .array([
+            .array([
+                .unsignedInt(2), // Type: 2 (BLE)
+                .unsignedInt(1), // Version: 1
+                bleOptions
+            ])
+        ])
+        
+        // DeviceEngagement Map
+        let deviceEngagement: CBOR = .map([
+            .unsignedInt(0): .utf8String("1.0"),
+            .unsignedInt(1): security,
+            .unsignedInt(2): retrievalMethods
+        ])
+        
+        let encodedBytes = deviceEngagement.encode()
+        let base64Url = Base64URL.encode(Data(encodedBytes))
+        return "mdoc:\(base64Url)"
     }
 
     /// Creates a selectively disclosed VP token for mDoc based on DCQL.
-    /// - Parameters:
-    ///   - mDoc: The raw mDoc data in Base64URL format.
-    ///   - selectedClaimsKeys: The list of claim keys selected for disclosure.
-    ///   - selectedClaimsNamespaces: The list of namespaces for the selected claims.
-    ///   - aud: The audience for the VP token.
-    ///   - nonce: The nonce for the VP token.
-    ///   - responseUri: The response URI for the VP token.
-    /// - Returns: The generated VP token string.
     public static func createVpToken(mDoc: String, selectedClaimsKeys: [String]?, selectedClaimsNamespaces: [String]?, aud: String, nonce: String, responseUri: String) throws -> String {
         LogUtil.logLongString("sangjun", "mdoc: \(mDoc)")
         
@@ -78,13 +143,11 @@ public class Mdoc {
                case let .map(nsMap) = originalNameSpaces {
                 
                 var filteredNameSpaces: [CBOR: CBOR] = [:]
-                
                 for (nsKey, nsValue) in nsMap {
                     guard case let .utf8String(currentNamespace) = nsKey,
                           case let .array(items) = nsValue else { continue }
                     
                     var filteredItems: [CBOR] = []
-                    
                     for item in items {
                         if let itemBytes = getByteString(item) {
                             if let decodedItem = try? CBOR.decode(itemBytes),
@@ -95,23 +158,16 @@ public class Mdoc {
                                 var isRequested = false
                                 for (index, reqKey) in selectedKeys.enumerated() {
                                     let reqNs = (selectedClaimsNamespaces != nil && selectedClaimsNamespaces!.count > index) ? selectedClaimsNamespaces![index] : ""
-                                    
                                     if elementIdentifier == reqKey && currentNamespace == reqNs {
                                         isRequested = true
                                         break
                                     }
                                 }
-                                
-                                if isRequested {
-                                    filteredItems.append(item)
-                                }
+                                if isRequested { filteredItems.append(item) }
                             }
                         }
                     }
-                    
-                    if !filteredItems.isEmpty {
-                        filteredNameSpaces[.utf8String(currentNamespace)] = .array(filteredItems)
-                    }
+                    if !filteredItems.isEmpty { filteredNameSpaces[.utf8String(currentNamespace)] = .array(filteredItems) }
                 }
                 issuerSignedMap[.utf8String("nameSpaces")] = .map(filteredNameSpaces)
             }
@@ -137,161 +193,64 @@ public class Mdoc {
         return "{\"\(dcqlId)\":[\"\(vpToken)\"]}"
     }
 
-    /// Builds the session transcript used for device authentication.
-    /// - Parameters:
-    ///   - aud: The audience.
-    ///   - nonce: The nonce.
-    ///   - responseUri: The response URI.
-    /// - Returns: A CBOR representation of the session transcript.
     private static func buildSessionTranscript(aud: String, nonce: String, responseUri: String) throws -> CBOR {
-        let handoverInfo: CBOR = .array([
-            .utf8String(aud),
-            .utf8String(nonce),
-            .null,
-            .utf8String(responseUri)
-        ])
-
-        let handoverInfoBytes = handoverInfo.encode()
-        let handoverInfoHash = SHA256.hash(data: Data(handoverInfoBytes))
-        
-        let handover: CBOR = .array([
-            .utf8String("OpenID4VPHandover"),
-            .byteString(Array(handoverInfoHash))
-        ])
-
-        let sessionTranscript: CBOR = .array([
-            .null,
-            .null,
-            handover
-        ])
-
-        return sessionTranscript
+        let handoverInfo: CBOR = .array([.utf8String(aud), .utf8String(nonce), .null, .utf8String(responseUri)])
+        let handoverInfoHash = SHA256.hash(data: Data(handoverInfo.encode()))
+        let handover: CBOR = .array([.utf8String("OpenID4VPHandover"), .byteString(Array(handoverInfoHash))])
+        return .array([.null, .null, handover])
     }
 
-    /// Generates the device authentication CBOR object including a COSE Sign1 signature.
-    /// - Parameters:
-    ///   - privateKey: The signing private key.
-    ///   - docType: The document type.
-    ///   - aud: The audience.
-    ///   - nonce: The nonce.
-    ///   - responseUri: The response URI.
-    /// - Returns: A CBOR object representing the device signed data.
     private static func generateDeviceAuth(privateKey: P256.Signing.PrivateKey, docType: String, aud: String, nonce: String, responseUri: String) throws -> CBOR {
         let sessionTranscript = try buildSessionTranscript(aud: aud, nonce: nonce, responseUri: responseUri)
-
-        let emptyDeviceNameSpaces: CBOR = .map([:])
-        let deviceNameSpacesBytes = emptyDeviceNameSpaces.encode()
-        let deviceNameSpacesTagged = CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(deviceNameSpacesBytes))
-
-        let deviceAuth: CBOR = .array([
-            .utf8String("DeviceAuthentication"),
-            sessionTranscript,
-            .utf8String(docType),
-            deviceNameSpacesTagged
-        ])
-
+        let emptyDeviceNameSpaces = CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(CBOR.map([:]).encode()))
+        let deviceAuth: CBOR = .array([.utf8String("DeviceAuthentication"), sessionTranscript, .utf8String(docType), emptyDeviceNameSpaces])
         let deviceAuthBytes = deviceAuth.encode()
-        let contentCBOR = CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(deviceAuthBytes))
-        let contentBytes = contentCBOR.encode()
         
         let protectedHeader: CBOR = .map([.unsignedInt(1): .negativeInt(6)])
         let protectedHeaderBytes = protectedHeader.encode()
         
-        let externalAad: [UInt8] = []
-        let sigStructure: CBOR = .array([
-            .utf8String("Signature1"),
-            .byteString(protectedHeaderBytes),
-            .byteString(externalAad),
-            .byteString(contentBytes)
-        ])
+        let sigStructure: CBOR = .array([.utf8String("Signature1"), .byteString(protectedHeaderBytes), .byteString([]), .byteString(CBOR.tagged(CBOR.Tag(rawValue: 24), .byteString(deviceAuthBytes)).encode())])
+        let signature = try privateKey.signature(for: Data(sigStructure.encode()))
         
-        let sigStructureBytes = sigStructure.encode()
-        
-        let signature = try privateKey.signature(for: Data(sigStructureBytes))
-        let signatureBytes = Array(signature.rawRepresentation)
-        
-        let coseSign1: CBOR = .array([
-            .byteString(protectedHeaderBytes),
-            .map([:]),
-            .byteString(contentBytes),
-            .byteString(signatureBytes)
-        ])
-        
+        let coseSign1: CBOR = .array([.byteString(protectedHeaderBytes), .map([:]), .byteString(deviceAuthBytes), .byteString(Array(signature.rawRepresentation))])
         var deviceAuthMap: [CBOR: CBOR] = [:]
         deviceAuthMap[.utf8String("deviceSignature")] = coseSign1
-        
         var deviceSigned: [CBOR: CBOR] = [:]
         deviceSigned[.utf8String("deviceAuth")] = .map(deviceAuthMap)
-        
         return .map(deviceSigned)
     }
 
-    /// Extracts claims from an mDL/mDoc Verifiable Credential.
-    /// - Parameter mDlData: The raw mDoc data in Base64URL format.
-    /// - Returns: A map containing the extracted claims.
     public static func getClaims(mDlData: String) -> [String: Any] {
         var result: [String: Any] = [:]
-        
-        guard let decodedData = Base64URL.decode(mDlData) else {
-            return result
-        }
-        
+        guard let decodedData = Base64URL.decode(mDlData) else { return result }
         let bytes = [UInt8](decodedData)
-        guard let cbor = try? CBOR.decode(bytes),
-              case let .map(map) = cbor else {
-            return result
-        }
-        
-        if let nameSpacesCBOR = map[.utf8String("nameSpaces")],
-           case let .map(nameSpacesMap) = nameSpacesCBOR {
-            
+        guard let cbor = try? CBOR.decode(bytes), case let .map(map) = cbor else { return result }
+        if let nameSpacesCBOR = map[.utf8String("nameSpaces")], case let .map(nameSpacesMap) = nameSpacesCBOR {
             for (nsKey, nsValue) in nameSpacesMap {
-                guard case let .utf8String(namespace) = nsKey,
-                      case let .array(items) = nsValue else { continue }
-                
+                guard case let .utf8String(namespace) = nsKey, case let .array(items) = nsValue else { continue }
                 var nsClaims: [String: Any] = [:]
-                
                 for item in items {
-                    if let itemBytes = getByteString(item) {
-                        if let decodedItem = try? CBOR.decode(itemBytes),
-                           case let .map(itemMap) = decodedItem {
-                            
-                            if let idCBOR = itemMap[.utf8String("elementIdentifier")],
-                               let valCBOR = itemMap[.utf8String("elementValue")],
-                               case let .utf8String(elementId) = idCBOR {
-                                
-                                nsClaims[elementId] = cborToAny(valCBOR)
-                            }
+                    if let itemBytes = getByteString(item), let decodedItem = try? CBOR.decode(itemBytes), case let .map(itemMap) = decodedItem {
+                        if let idCBOR = itemMap[.utf8String("elementIdentifier")], let valCBOR = itemMap[.utf8String("elementValue")], case let .utf8String(elementId) = idCBOR {
+                            nsClaims[elementId] = cborToAny(valCBOR)
                         }
                     }
                 }
                 result[namespace] = nsClaims
             }
         }
-        
         return result
     }
     
-    /// Extracts a ByteString from a CBOR object, handling potential tagging.
-    /// - Parameter cbor: The CBOR object.
-    /// - Returns: A byte array if extraction is successful.
     private static func getByteString(_ cbor: CBOR) -> [UInt8]? {
         switch cbor {
-        case .byteString(let bytes):
-            return bytes
-        case .tagged(let tag, let content):
-            if tag.rawValue == 24 {
-                return getByteString(content)
-            }
-        default:
-            break
+        case .byteString(let bytes): return bytes
+        case .tagged(let tag, let content): if tag.rawValue == 24 { return getByteString(content) }
+        default: break
         }
         return nil
     }
     
-    /// Converts a CBOR object into a Swift Any type.
-    /// - Parameter cbor: The CBOR object.
-    /// - Returns: A Swift Any representation.
     private static func cborToAny(_ cbor: CBOR) -> Any {
         switch cbor {
         case .utf8String(let s): return s
@@ -302,11 +261,7 @@ public class Mdoc {
         case .array(let a): return a.map { cborToAny($0) }
         case .map(let m):
             var dict: [String: Any] = [:]
-            for (key, value) in m {
-                if case let .utf8String(s) = key {
-                    dict[s] = cborToAny(value)
-                }
-            }
+            for (key, value) in m { if case let .utf8String(s) = key { dict[s] = cborToAny(value) } }
             return dict
         case .double(let d): return d
         case .float(let f): return f

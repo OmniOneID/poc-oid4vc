@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2025 - 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,13 @@ struct ViewVcView: View {
     
     @State private var manualUriInput: String = ""
 
+    @State private var vcFormat: String = ""
+    @State private var rawCredential: String = ""
+    
+    // iOS 15용 내부 내비게이션 상태
+    @State private var isOfflineActiveInternal = false
+    @State private var offlineDataInternal: (mDoc: String, keys: [String], namespaces: [String])?
+
     /// The user interface body of the VC view.
     var body: some View {
         VStack {
@@ -44,13 +51,25 @@ struct ViewVcView: View {
                 ProgressView("Loading VC...")
                 Spacer()
             case .loaded:
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        ForEach(claimViewModels) { claim in
-                            ClaimView(viewModel: claim)
+                ZStack {
+                    // iOS 15 전용 숨겨진 내비게이션 링크
+                    if #unavailable(iOS 16.0) {
+                        if let data = offlineDataInternal {
+                            NavigationLink(
+                                destination: QRGeneratorView(mDoc: data.mDoc, selectedKeys: data.keys, namespaces: data.namespaces),
+                                isActive: $isOfflineActiveInternal
+                            ) { EmptyView() }
                         }
                     }
-                    .padding()
+                    
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            ForEach(claimViewModels) { claim in
+                                ClaimView(viewModel: claim)
+                            }
+                        }
+                        .padding()
+                    }
                 }
                 Spacer()
                 
@@ -109,47 +128,66 @@ struct ViewVcView: View {
     
     /// A view containing the bottom action buttons.
     private var bottomButtons: some View {
-        Button(action: { launchQrScanner() }) {
-            Text("Submit with QR Code")
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.green)
-                .foregroundStyle(.white)
-                .cornerRadius(10)
+        VStack(spacing: 12) {
+            Button(action: { 
+                print("DEBUG: [ViewVcView] Submit with QR Code tapped.")
+                launchQrScanner() 
+            }) {
+                Text("Submit with QR Code")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            
+            if Mdoc.isSupported(format: vcFormat) {
+                Button(action: { 
+                    print("DEBUG: [ViewVcView] Submit Offline (ISO 18013-5) tapped. Format: \(vcFormat)")
+                    handleOfflineSubmit() 
+                }) {
+                    Text("Submit Offline (ISO 18013-5)")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+            }
         }
         .padding()
     }
 
     /// Loads the Verifiable Credential from the local storage.
     private func loadVcFile() {
+        print("DEBUG: [ViewVcView] Loading VC file...")
         do {
             let documentsDirectory = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
             let fileURL = documentsDirectory.appendingPathComponent("vc.json")
             let data = try Data(contentsOf: fileURL)
             
-            if let content = String(data: data, encoding: .utf8) {
-                LogUtil.logLongString("sangjun", "Wallet file content: \(content)")
-            }
-            
             let walletDataArray = try JSONDecoder().decode([WalletData].self, from: data)
             
             if !walletDataArray.isEmpty {
+                print("DEBUG: [ViewVcView] VC file loaded. Format: \(walletDataArray[0].format)")
                 displayVcClaims(credentialList: walletDataArray)
             } else {
                 vcState = .error(message: "No saved VC found.")
             }
         } catch { 
+            print("ERROR: [ViewVcView] Failed to load VC: \(error.localizedDescription)")
             vcState = .error(message: "Failed to load or parse VC file: \(error.localizedDescription)")
         }
     }
     
     /// Displays the claims from a list of Verifiable Credentials.
-    /// - Parameter credentialList: The list of Verifiable Credentials.
     private func displayVcClaims(credentialList: [WalletData]) {
         let walletData = credentialList[0]
         let format = walletData.format
         let credentialData = walletData.credential
         
+        self.vcFormat = format
+        self.rawCredential = credentialData
         self.claimViewModels.removeAll()
         
         if SDJWT.isSupported(format: format) {
@@ -182,8 +220,6 @@ struct ViewVcView: View {
         }
     }
     
-    /// Renders a single OpenDID claim.
-    /// - Parameter claim: A dictionary representing the OpenDID claim.
     private func renderOpenDidClaim(claim: [String: Any]) {
         let type = claim["type"] as? String ?? ""
         if type.lowercased() != "image" {
@@ -193,55 +229,60 @@ struct ViewVcView: View {
         }
     }
     
-    /// Adds a claim to the view models list.
-    /// - Parameters:
-    ///   - caption: The caption of the claim.
-    ///   - value: The value of the claim.
-    ///   - namespace: The namespace of the claim, if any.
-    ///   - indentLevel: The indentation level for the claim.
-    ///   - isSelectableParent: A boolean indicating if the claim is a selectable parent.
     private func addClaimView(caption: String, value: Any, namespace: String?, indentLevel: Int, isSelectableParent: Bool) {
         let claimValue = convertToClaimValue(caption: caption, anyValue: value, namespace: namespace, indentLevel: indentLevel, isInteractive: !isSelectableParent)
-        
         let metadataCaptions = ["Format", "Namespace", "Issuer", "Subject", "vct"]
         let isMetadata = metadataCaptions.contains(caption)
-        
         let viewModel = ClaimViewModel(key: caption, value: claimValue, indentLevel: indentLevel, namespace: namespace, isSelectableParent: isSelectableParent, isMetadata: isMetadata, isInteractive: true)
         self.claimViewModels.append(viewModel)
     }
 
-    /// Handles the submission of selected claims.
-    /// - Parameter scannedUrl: The URL scanned from a QR code.
     private func handleSubmit(scannedUrl: String) {
         var selectedClaimsKeys: [String] = []
         var selectedClaimsNamespaces: [String] = []
+        collectAllSelected(keys: &selectedClaimsKeys, namespaces: &selectedClaimsNamespaces)
         
-        func collectSelected(viewModels: [ClaimViewModel]) {
+        print("DEBUG: [ViewVcView] Submitting with QR Code. Selected keys: \(selectedClaimsKeys.count)")
+        navigationManager.path.append(.verification(uri: scannedUrl, selectedClaimsKeys: selectedClaimsKeys, selectedClaimsNamespaces: selectedClaimsNamespaces))
+    }
+    
+    private func handleOfflineSubmit() {
+        var selectedClaimsKeys: [String] = []
+        var selectedClaimsNamespaces: [String] = []
+        collectAllSelected(keys: &selectedClaimsKeys, namespaces: &selectedClaimsNamespaces)
+        
+        print("DEBUG: [ViewVcView] Handling Offline Submit. Selected keys: \(selectedClaimsKeys.count)")
+        
+        if #available(iOS 16.0, *) {
+            navigationManager.path.append(.mdocOffline(mDoc: rawCredential, selectedKeys: selectedClaimsKeys, namespaces: selectedClaimsNamespaces))
+        } else {
+            self.offlineDataInternal = (rawCredential, selectedClaimsKeys, selectedClaimsNamespaces)
+            self.isOfflineActiveInternal = true
+        }
+    }
+    
+    private func collectAllSelected(keys: inout [String], namespaces: inout [String]) {
+        func collect(viewModels: [ClaimViewModel]) {
             for vm in viewModels {
                 if !vm.isMetadata && vm.isSelected {
                     if !vm.isSelectableParent {
                         if vm.key != "-" {
-                            selectedClaimsKeys.append(vm.key)
-                            selectedClaimsNamespaces.append(vm.namespace ?? "")
+                            keys.append(vm.key)
+                            namespaces.append(vm.namespace ?? "")
                         }
                     } else {
-                        selectedClaimsKeys.append(vm.key)
-                        selectedClaimsNamespaces.append(vm.namespace ?? "")
+                        keys.append(vm.key)
+                        namespaces.append(vm.namespace ?? "")
                     }
                 }
-                
                 if case .nested(let children) = vm.value {
-                    collectSelected(viewModels: children)
+                    collect(viewModels: children)
                 }
             }
         }
-        
-        collectSelected(viewModels: claimViewModels)
-        
-        navigationManager.path.append(.verification(uri: scannedUrl, selectedClaimsKeys: selectedClaimsKeys, selectedClaimsNamespaces: selectedClaimsNamespaces))
+        collect(viewModels: claimViewModels)
     }
     
-    /// Deletes the Verifiable Credential file from local storage.
     private func deleteVcFile() {
         do {
             let documentsDirectory = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
@@ -253,19 +294,10 @@ struct ViewVcView: View {
         }
     }
     
-    /// Launches the QR code scanner.
     private func launchQrScanner() {
         isShowingScanner = true
     }
 
-    /// Converts an arbitrary value to a structured ClaimValue.
-    /// - Parameters:
-    ///   - caption: The caption for the value.
-    ///   - anyValue: The value to convert.
-    ///   - namespace: The namespace of the value.
-    ///   - indentLevel: The indentation level.
-    ///   - isInteractive: Whether the value is interactive.
-    /// - Returns: A structured ClaimValue.
     private func convertToClaimValue(caption: String, anyValue: Any, namespace: String?, indentLevel: Int, isInteractive: Bool) -> ClaimValue {
         if let dataValue = anyValue as? Data {
             return .image(dataValue)
@@ -318,7 +350,6 @@ class ClaimViewModel: Identifiable, ObservableObject {
     let isMetadata: Bool
     let isInteractive: Bool
     
-    /// A boolean indicating whether the claim is selected.
     @Published var isSelected: Bool = true {
         didSet {
             if case .nested(let children) = value {
@@ -331,7 +362,6 @@ class ClaimViewModel: Identifiable, ObservableObject {
         }
     }
     
-    /// Initializes a new instance of ClaimViewModel.
     init(key: String, value: ClaimValue, indentLevel: Int, namespace: String? = nil, isSelectableParent: Bool = false, isMetadata: Bool = false, isInteractive: Bool = true) {
         self.key = key
         self.value = value
@@ -347,7 +377,6 @@ class ClaimViewModel: Identifiable, ObservableObject {
 struct ClaimView: View {
     @ObservedObject var viewModel: ClaimViewModel
     
-    /// The user interface body of the claim view.
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .center) {
@@ -361,7 +390,7 @@ struct ClaimView: View {
                 VStack(alignment: .leading) {
                     Text(viewModel.key.capitalized)
                         .font(.caption)
-                        .foregroundStyle(.gray)
+                        .foregroundColor(.gray)
                     
                     valueView
                 }
@@ -377,7 +406,6 @@ struct ClaimView: View {
         }
     }
     
-    /// Whether the current claim is a leaf node.
     private var isLeaf: Bool {
         switch viewModel.value {
         case .string, .image: return true
@@ -385,13 +413,11 @@ struct ClaimView: View {
         }
     }
     
-    /// Whether a selection toggle should be shown for this claim.
     private var shouldShowToggle: Bool {
         guard !viewModel.isMetadata && viewModel.key != "-" else { return false }
         return viewModel.isSelectableParent || isLeaf
     }
     
-    /// The view representing the value of the claim.
     @ViewBuilder
     private var valueView: some View {
         switch viewModel.value {
@@ -408,7 +434,7 @@ struct ClaimView: View {
             } else {
                 Text("Invalid Image Data")
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundColor(.red)
             }
         case .nested:
             EmptyView()
@@ -418,9 +444,6 @@ struct ClaimView: View {
 
 /// A custom toggle style that renders as a checkbox.
 struct CheckboxToggleStyle: ToggleStyle {
-    /// Builds the body of the checkbox toggle.
-    /// - Parameter configuration: The toggle configuration.
-    /// - Returns: A view representing the toggle.
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2025 - 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,11 @@ struct ContentView: View {
     
     @State private var isIssuanceViewActive = false
     @State private var isVerificationViewActive = false
+    @State private var isViewVcActive = false
+    @State private var isOfflineActive = false
     @State private var activeIssuanceUri: String? 
     @State private var activeVerificationUri: String?
+    @State private var offlineData: (mDoc: String, keys: [String], namespaces: [String])?
 
     /// The user interface body of the content view.
     var body: some View {
@@ -46,6 +49,11 @@ struct ContentView: View {
                     }
                     if let uri = activeVerificationUri {
                         NavigationLink(destination: VerifyView(verificationUri: uri), isActive: $isVerificationViewActive) { EmptyView() }
+                    }
+                    NavigationLink(destination: ViewVcView(), isActive: $isViewVcActive) { EmptyView() }
+                    
+                    if let data = offlineData {
+                        NavigationLink(destination: QRGeneratorView(mDoc: data.mDoc, selectedKeys: data.keys, namespaces: data.namespaces), isActive: $isOfflineActive) { EmptyView() }
                     }
                     
                     mainContent
@@ -75,13 +83,17 @@ struct ContentView: View {
                     .cornerRadius(10)
             }
             
-            NavigationLink("View VC", destination: ViewVcView())
-                .font(.title)
-                .frame(width: 250)
-                .padding()
-                .background(Color.gray)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+            Button(action: {
+                navigationManager.path.append(.viewVc)
+            }) {
+                Text("View VC")
+                    .font(.title)
+                    .frame(width: 250)
+                    .padding()
+                    .background(Color.gray)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
             
             NavigationLink("API Test Page", destination: APITestView())
                 .font(.title)
@@ -124,6 +136,10 @@ struct ContentView: View {
             CredentialIssuanceView(credentialOfferUri: uri)
         case .verification(let uri, let keys, let namespaces):
             VerifyView(verificationUri: uri, selectedClaimsKeys: keys, selectedClaimsNamespaces: namespaces)
+        case .mdocOffline(let mDoc, let keys, let namespaces):
+            QRGeneratorView(mDoc: mDoc, selectedKeys: keys, namespaces: namespaces)
+        case .viewVc:
+            ViewVcView()
         }
     }
     
@@ -139,8 +155,15 @@ struct ContentView: View {
             case .verification(let uri, _, _):
                 activeVerificationUri = uri
                 isVerificationViewActive = true
+            case .mdocOffline(let mDoc, let keys, let namespaces):
+                self.offlineData = (mDoc, keys, namespaces)
+                self.isOfflineActive = true
+            case .viewVc:
+                isViewVcActive = true
             }
-            navigationManager.path.removeFirst()
+            if !navigationManager.path.isEmpty {
+                navigationManager.path.removeFirst()
+            }
         }
     }
     

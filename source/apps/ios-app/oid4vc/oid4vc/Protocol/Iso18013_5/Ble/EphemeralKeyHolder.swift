@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-
 import Foundation
+import CryptoKit
 
-// Corresponds to TokenRequest.java
-struct TokenRequest: Codable {
-    let grantType: String
-    let preAuthorizedCode: String
-    let txCode: String?
-    let authorizationDetails: [AuthorizationDetails]
-
-    enum CodingKeys: String, CodingKey {
-        case grantType = "grant_type"
-        case preAuthorizedCode = "pre-authorized_code"
-        case txCode = "tx_code"
-        case authorizationDetails = "authorization_details"
+/// Holds an ephemeral P-256 key pair for mDoc session security.
+public struct EphemeralKeyHolder {
+    /// The private key for the session.
+    public let privateKey: P256.KeyAgreement.PrivateKey
+    
+    /// The public key bytes in uncompressed format (65 bytes: 0x04 + X + Y).
+    public let eDeviceKeyBytes: [UInt8]
+    
+    public init() {
+        let privateKey = P256.KeyAgreement.PrivateKey()
+        self.privateKey = privateKey
+        // x963Representation is uncompressed (0x04 || X || Y)
+        self.eDeviceKeyBytes = [UInt8](privateKey.publicKey.x963Representation)
     }
 }

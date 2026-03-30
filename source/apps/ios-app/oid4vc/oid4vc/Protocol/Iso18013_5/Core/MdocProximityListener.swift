@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-
 import Foundation
 
-// Corresponds to TokenRequest.java
-struct TokenRequest: Codable {
-    let grantType: String
-    let preAuthorizedCode: String
-    let txCode: String?
-    let authorizationDetails: [AuthorizationDetails]
-
-    enum CodingKeys: String, CodingKey {
-        case grantType = "grant_type"
-        case preAuthorizedCode = "pre-authorized_code"
-        case txCode = "tx_code"
-        case authorizationDetails = "authorization_details"
-    }
+/// Listener for events from an ISO 18013-5 proximity server.
+public protocol MdocProximityListener: AnyObject {
+    /// Called when a reader device is connected.
+    func onDeviceConnected()
+    
+    /// Called when a reader device is disconnected.
+    func onDeviceDisconnected()
+    
+    /// Called when a full request message is received from the reader.
+    /// - Parameter request: The raw request bytes.
+    func onRequestReceived(request: [UInt8])
 }

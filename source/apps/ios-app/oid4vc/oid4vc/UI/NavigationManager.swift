@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 OmniOne.
+ * Copyright 2025 - 2026 OmniOne.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ class NavigationManager: ObservableObject {
     enum Destination: Hashable {
         case issuance(uri: String)
         case verification(uri: String, selectedClaimsKeys: [String]?, selectedClaimsNamespaces: [String]?)
+        case mdocOffline(mDoc: String, selectedKeys: [String], namespaces: [String])
+        case viewVc
     }
     
     /// The current navigation path.

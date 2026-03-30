@@ -11,7 +11,7 @@ OID4VC(OpenID for Verifiable Credentials) iOS 샘플 앱을 사용하기 위한 
 | IDE               | Xcode 16.2                    |
 | Build System      | Xcode 기본 빌드 시스템            |
 | Compatibility     | iOS 15 or higher              |
-| Test Environment  | iPhone 15  (17.5) Simulator   |
+| Test Environment  | iPhone 17 (26.2.1)            |
 
 
 ## 사용된 라이브러리 (SDK)

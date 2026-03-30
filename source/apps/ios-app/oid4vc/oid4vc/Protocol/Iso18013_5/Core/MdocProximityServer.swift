@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-
 import Foundation
 
-// Corresponds to TokenRequest.java
-struct TokenRequest: Codable {
-    let grantType: String
-    let preAuthorizedCode: String
-    let txCode: String?
-    let authorizationDetails: [AuthorizationDetails]
-
-    enum CodingKeys: String, CodingKey {
-        case grantType = "grant_type"
-        case preAuthorizedCode = "pre-authorized_code"
-        case txCode = "tx_code"
-        case authorizationDetails = "authorization_details"
-    }
+/// Protocol for a proximity server (BLE or NFC) in the ISO 18013-5 context.
+public protocol MdocProximityServer {
+    /// Sets the listener for server events.
+    func setListener(_ listener: MdocProximityListener)
+    
+    /// Starts the server (e.g., starts BLE advertising).
+    func start()
+    
+    /// Stops the server.
+    func stop()
 }

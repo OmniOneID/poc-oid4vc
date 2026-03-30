@@ -22,5 +22,9 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app needs Bluetooth access to present mDoc to a reader offline.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app needs Bluetooth access to present mDoc to a reader offline.</string>
 </dict>
 </plist>

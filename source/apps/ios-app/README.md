@@ -11,7 +11,7 @@ This guide is for using the OID4VC (OpenID for Verifiable Credentials) iOS sampl
 | IDE | Xcode 16.2 |
 | Build System | Xcode Basic build system |
 | Compatibility | iOS 15 or higher |
-| Test Environment | iPhone 15 (17.5) Simulator |
+| Test Environment | iPhone 17 (26.2.1) |
 
 ## Used Libraries (SDK)
 This project uses the following open-source libraries via Swift Package Manager (SPM):
