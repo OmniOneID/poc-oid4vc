@@ -25,6 +25,8 @@ import android.nfc.tech.Ndef;
 import android.os.Parcelable;
 import android.util.Log;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public class NfcEngagementHandler implements NfcAdapter.ReaderCallback {
     private static final String TAG = "MDR/NfcHandler";
 
@@ -35,6 +37,7 @@ public class NfcEngagementHandler implements NfcAdapter.ReaderCallback {
     private final Activity activity;
     private final NfcAdapter nfcAdapter;
     private final NfcEngagementListener listener;
+    private final AtomicBoolean tagHandled = new AtomicBoolean(false);
 
     public NfcEngagementHandler(Activity activity, NfcEngagementListener listener) {
         this.activity = activity;
@@ -67,7 +70,6 @@ public class NfcEngagementHandler implements NfcAdapter.ReaderCallback {
                 NdefRecord record = ndefMessage.getRecords()[0];
                 byte[] deviceEngagementBytes = record.getPayload();
                 Log.i(TAG, "Received Device Engagement (Intent) size: " + deviceEngagementBytes.length);
-                // When received via Intent, extract the Tag from a separate extra
                 Tag intentTag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
                 listener.onDeviceEngagementReceived(deviceEngagementBytes, intentTag);
                 intent.setAction(null);
@@ -75,23 +77,27 @@ public class NfcEngagementHandler implements NfcAdapter.ReaderCallback {
         }
     }
 
+    public void reset() {
+        tagHandled.set(false);
+    }
+
     @Override
     public void onTagDiscovered(Tag tag) {
+        if (!tagHandled.compareAndSet(false, true)) {
+            Log.d(TAG, "Duplicate tag discovery ignored");
+            return;
+        }
         Ndef ndef = Ndef.get(tag);
         if (ndef != null) {
-            try {
-                ndef.connect();
-                NdefMessage ndefMessage = ndef.getNdefMessage();
-                if (ndefMessage != null && ndefMessage.getRecords().length > 0) {
-                    NdefRecord record = ndefMessage.getRecords()[0];
-                    byte[] deviceEngagementBytes = record.getPayload();
-                    Log.i(TAG, "Received Device Engagement (Reader Mode) size: " + deviceEngagementBytes.length);
-                    activity.runOnUiThread(() -> listener.onDeviceEngagementReceived(deviceEngagementBytes, tag));
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to read NDEF tag", e);
-            } finally {
-                try { ndef.close(); } catch (Exception ignore) {}
+            // Use cached NDEF message to avoid Ndef.connect() — connecting Ndef
+            // on the same Tag that the SDK will later open via IsoDep causes
+            // "Only one TagTechnology can be connected at a time" on some devices.
+            NdefMessage ndefMessage = ndef.getCachedNdefMessage();
+            if (ndefMessage != null && ndefMessage.getRecords().length > 0) {
+                NdefRecord record = ndefMessage.getRecords()[0];
+                byte[] deviceEngagementBytes = record.getPayload();
+                Log.i(TAG, "Received Device Engagement (Reader Mode) size: " + deviceEngagementBytes.length);
+                activity.runOnUiThread(() -> listener.onDeviceEngagementReceived(deviceEngagementBytes, tag));
             }
         }
     }

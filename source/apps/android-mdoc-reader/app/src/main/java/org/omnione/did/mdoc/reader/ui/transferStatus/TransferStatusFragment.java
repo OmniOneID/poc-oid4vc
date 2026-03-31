@@ -16,20 +16,14 @@
 
 package org.omnione.did.mdoc.reader.ui.transferStatus;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
@@ -49,6 +43,9 @@ import org.omnione.did.sdk.mdoc.proximity.reader.datamodel.document.TransferStat
 import org.omnione.did.sdk.mdoc.proximity.reader.communication.TransportConfig;
 import org.omnione.did.sdk.mdoc.proximity.reader.communication.WifiAwareTransportManager;
 import org.omnione.did.sdk.mdoc.proximity.reader.communication.NfcTransportManager;
+
+import android.net.wifi.WifiManager;
+import android.content.Context;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -71,18 +68,8 @@ public class TransferStatusFragment extends Fragment {
     private android.nfc.Tag pendingNfcTag;
     private ArrayList<RequestedDocument> pendingDocs;
 
+    private boolean transferStarted = false;
     private boolean navigated = false;
-
-    private final ActivityResultLauncher<String[]> blePermissionLauncher =
-        registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
-            boolean allGranted = !result.containsValue(false);
-            if (allGranted) {
-                startTransferIfReady();
-            } else {
-                Toast.makeText(requireContext(), "Bluetooth permissions are required", Toast.LENGTH_LONG).show();
-                NavHostFragment.findNavController(this).popBackStack();
-            }
-        });
 
     @Nullable
     @Override
@@ -115,38 +102,14 @@ public class TransferStatusFragment extends Fragment {
             pendingNfcTag = args.getParcelable("nfcTag");
             pendingDocs = args.getParcelableArrayList("requestedDocs");
             if ((pendingQrCode != null || pendingNfcData != null) && pendingDocs != null) {
-                requestPermissionsAndStart();
+                startTransferIfReady();
             }
         }
     }
 
-    private void requestPermissionsAndStart() {
-        List<String> needed = new ArrayList<>();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.BLUETOOTH_SCAN);
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.BLUETOOTH_CONNECT);
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.BLUETOOTH_ADVERTISE);
-        }
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            needed.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED)
-                needed.add(Manifest.permission.NEARBY_WIFI_DEVICES);
-        }
-
-        if (needed.isEmpty()) {
-            startTransferIfReady();
-        } else {
-            blePermissionLauncher.launch(needed.toArray(new String[0]));
-        }
-    }
-
     private void startTransferIfReady() {
-        if (pendingDocs == null) return;
+        if (transferStarted || pendingDocs == null) return;
+        transferStarted = true;
 
         EngagementSource source = null;
         if (pendingQrCode != null) {
@@ -170,26 +133,35 @@ public class TransferStatusFragment extends Fragment {
         TransportConfig config;
         try {
             DeviceEngagement de = source.resolve();
-            // Priority: 1) Wi-Fi Aware -> 2) BLE -> 3) NFC
-            if (de.hasWifiAwareConnectionMethod() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                config = new TransportConfig.WifiAware(
-                    de.getWifiAwarePassphrase(),
-                    de.getWifiAwareChannelInfo(),
-                    de.getWifiAwareBandInfo()
-                );
-            } else if (de.hasBleConnectionMethod()) {
-                config = new TransportConfig.Ble(
-                    preferencesManager.isBlePeripheralServer(),
-                    UUID.randomUUID(),
-                    UUID.randomUUID()
-                );
-            } else if (de.hasNfcConnectionMethod() && pendingNfcTag != null) {
-                android.nfc.tech.IsoDep isoDep = android.nfc.tech.IsoDep.get(pendingNfcTag);
-                if (isoDep != null) {
-                    config = new TransportConfig.Nfc(
-                        isoDep,
-                        de.getNfcMaxCommandDataLength(),
-                        de.getNfcMaxResponseDataLength()
+
+            if (source instanceof EngagementSource.Nfc) {
+                // NFC Engagement → Force NFC Retrieval
+                if (pendingNfcTag != null) {
+                    android.nfc.tech.IsoDep isoDep = android.nfc.tech.IsoDep.get(pendingNfcTag);
+                    if (isoDep != null) {
+                        config = new TransportConfig.Nfc(
+                            isoDep,
+                            de.getNfcMaxCommandDataLength(),
+                            de.getNfcMaxResponseDataLength()
+                        );
+                    } else {
+                        throw new IllegalStateException("NFC Engagement requires IsoDep interface");
+                    }
+                } else {
+                    throw new IllegalStateException("NFC Engagement requires NFC tag");
+                }
+            } else {
+                // QR Engagement → Exclude NFC, Wi-Fi Aware > BLE (only when Wi-Fi is enabled)
+                WifiManager wifiManager = (WifiManager) requireContext()
+                    .getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                boolean isWifiEnabled = wifiManager != null && wifiManager.isWifiEnabled();
+
+                if (isWifiEnabled && de.hasWifiAwareConnectionMethod()
+                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    config = new TransportConfig.WifiAware(
+                        de.getWifiAwarePassphrase(),
+                        de.getWifiAwareChannelInfo(),
+                        de.getWifiAwareBandInfo()
                     );
                 } else {
                     config = new TransportConfig.Ble(
@@ -198,12 +170,6 @@ public class TransferStatusFragment extends Fragment {
                         UUID.randomUUID()
                     );
                 }
-            } else {
-                config = new TransportConfig.Ble(
-                    preferencesManager.isBlePeripheralServer(),
-                    UUID.randomUUID(),
-                    UUID.randomUUID()
-                );
             }
         } catch (Exception e) {
             // Fall back to default BLE on parsing failure
@@ -215,10 +181,12 @@ public class TransferStatusFragment extends Fragment {
         }
         transferController.initializeTransferManager(config);
 
-        transferController.startEngagement(source);
-
+        // Register listener BEFORE starting engagement to avoid race condition.
+        // NFC SELECT completes in ~10ms, which can fire Connected before listener is set.
         boolean retainData = preferencesManager.isRetainData();
         transferController.sendRequest(requestedDocs, retainData, this::handleStatus);
+
+        transferController.startEngagement(source);
     }
 
     private void setRequestInfo(List<RequestedDocument> requestedDocs) {

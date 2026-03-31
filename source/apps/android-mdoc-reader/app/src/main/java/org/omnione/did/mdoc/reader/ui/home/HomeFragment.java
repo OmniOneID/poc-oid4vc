@@ -15,18 +15,31 @@
  */
 package org.omnione.did.mdoc.reader.ui.home;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
+
+import java.util.ArrayList;
 
 import org.omnione.did.mdoc.reader.R;
 import org.omnione.did.mdoc.reader.ui.ContainerActivity;
@@ -51,6 +64,30 @@ public class HomeFragment extends Fragment {
 
     private DocumentSelectionManager selectionManager;
     private NfcEngagementHandler nfcHandler;
+
+    private boolean nfcNavigating = false;
+    private static final String TAG = "HomeFragment";
+
+    private final ActivityResultLauncher<String[]> permissionLauncher =
+        registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+            Log.d(TAG, "Permission result: " + result);
+            if (!hasAllPermissions()) {
+                // Permanently denied permissions → Guide user to app settings
+                boolean permanentlyDenied = false;
+                for (String perm : getRequiredPermissions()) {
+                    if (ContextCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED
+                            && !shouldShowRequestPermissionRationale(perm)) {
+                        permanentlyDenied = true;
+                        break;
+                    }
+                }
+                if (permanentlyDenied) {
+                    Toast.makeText(requireContext(), "Please grant the required permissions in Settings", Toast.LENGTH_LONG).show();
+                    startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", requireContext().getPackageName(), null)));
+                }
+            }
+        });
 
     private DependencyProvider deps() {
         return (DependencyProvider) requireActivity().getApplication();
@@ -141,6 +178,46 @@ public class HomeFragment extends Fragment {
 
         // Handle NFC cold start
         nfcHandler.checkIntent(requireActivity().getIntent());
+
+        // Request all required permissions on home entry
+        requestAllPermissions();
+    }
+
+    private java.util.List<String> getRequiredPermissions() {
+        java.util.List<String> perms = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            perms.add(Manifest.permission.BLUETOOTH_SCAN);
+            perms.add(Manifest.permission.BLUETOOTH_CONNECT);
+            perms.add(Manifest.permission.BLUETOOTH_ADVERTISE);
+        }
+        perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        perms.add(Manifest.permission.CAMERA);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.NEARBY_WIFI_DEVICES);
+        }
+        return perms;
+    }
+
+    private boolean hasAllPermissions() {
+        for (String perm : getRequiredPermissions()) {
+            if (ContextCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void requestAllPermissions() {
+        java.util.List<String> needed = new ArrayList<>();
+        for (String perm : getRequiredPermissions()) {
+            if (ContextCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(perm);
+            }
+        }
+        Log.d(TAG, "Permissions needed: " + needed);
+        if (!needed.isEmpty()) {
+            permissionLauncher.launch(needed.toArray(new String[0]));
+        }
     }
 
     private void onSelectionChanged() {
@@ -155,6 +232,9 @@ public class HomeFragment extends Fragment {
     }
 
     private void handleDeviceEngagement(byte[] deviceEngagementBytes, android.nfc.Tag nfcTag) {
+        if (nfcNavigating) return;
+        nfcNavigating = true;
+
         List<RequestedDocument> docs = selectionManager.buildRequestedDocuments();
         if (!docs.isEmpty()) {
             Bundle args = new Bundle();
@@ -173,6 +253,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        nfcNavigating = false;
+        nfcHandler.reset();
         // Register delegate with Activity's Reader Mode (no Reader Mode re-invocation)
         if (requireActivity() instanceof ContainerActivity activity) {
             activity.setNfcReaderCallback(nfcHandler);
