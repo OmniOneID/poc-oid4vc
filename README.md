@@ -8,6 +8,7 @@ This repository contains a Proof of Concept (PoC) project for testing the OID4VC
 * Understand the issuance and verification flows of the OID4VC protocol
 * Evaluate the feasibility of building a DID-based VC (Verifiable Credential) ecosystem
 * Test integration between Spring Boot-based servers and native mobile applications (Android/iOS)
+* Verify ISO 18013-5 based mDoc offline proximity presentation (BLE/NFC)
 
 ## 🇪🇺🤝 EUDI Wallet Interoperability Demo
 
@@ -79,15 +80,22 @@ An overview of the main folders and documents in the project directory.
 poc-oid4vc
 ├── source
 │   ├── apps
-│   │   ├── android-app
-│   │   └── ios-app
+│   │   ├── android-app                # OID4VC Android Wallet App
+│   │   ├── ios-app                    # OID4VC iOS Wallet App
+│   │   ├── android-mdoc-reader        # mDoc Reader Android App
+│   │   └── ios-mdoc-reader            # mDoc Reader iOS App
+│   ├── sdks
+│   │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK (Android)
+│   │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK (Android)
 │   └── servers
-│       ├── issuer-server
-│       └── verifier-server
+│       ├── issuer-server              # OID4VC Issuer Server
+│       └── verifier-server            # OID4VC Verifier Server
 └── docs
     ├── api
-    │   ├── issuer-server
-    │   └── verifier-server
+    │   ├── issuer-server              # OID4VCI SDK API Docs
+    │   ├── verifier-server            # OID4VP SDK API Docs
+    │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK API Docs
+    │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK API Docs
     └── installation
 ```
 
@@ -98,12 +106,17 @@ Description of each folder:
 | **`source/servers`** | Contains server implementations for the OID4VC flow. |
 | ┖ `issuer-server` | Issues VC (Verifiable Credentials) according to the OID4VCI standard. |
 | ┖ `verifier-server` | Verifies VC according to the OID4VP standard. |
-| **`source/apps`** | Contains sample mobile wallet applications. |
-| ┖ `android-app` | Sample Android wallet application for storing and submitting VCs. |
-| ┖ `ios-app` | Sample iOS wallet application for storing and submitting VCs. |
+| **`source/apps`** | Contains sample mobile applications. |
+| ┖ `android-app` | Sample Android wallet for storing and submitting VCs. |
+| ┖ `ios-app` | Sample iOS wallet for storing and submitting VCs. |
+| ┖ `android-mdoc-reader` | Android mDoc Reader app for ISO 18013-5 proximity verification. |
+| ┖ `ios-mdoc-reader` | iOS mDoc Reader app for ISO 18013-5 proximity verification. |
+| **`source/sdks`** | Contains Android native SDKs. |
+| ┖ `poc-sd-jwt-vc-sdk-aos` | Android SDK for SD-JWT VC creation and verification. |
+| ┖ `poc-mso-mdoc-sdk-aos` | Android SDK for ISO 18013-5 mDoc processing. |
 | **`docs`** | Contains project documentation. |
-| ┖ `api` | SDK integration guides and API documentation for each server. |
-| ┖ `installation` | Installation and running guides. |
+| ┖ `api` | Integration guides and API documentation for servers and SDKs. |
+| ┖ `installation` | Installation and operation guides. |
 
 ## Supported Versions
 
@@ -111,6 +124,7 @@ Description of each folder:
 |------------|---------|------|
 | OID4VCI    | OpenID for Verifiable Credential Issuance 1.0 | [Specification](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) |
 | OID4VP     | OpenID for Verifiable Presentations 1.0 | [Specification](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) |
+| ISO 18013-5 | Personal identification — ISO-compliant driving licence — Part 5: Mobile driving licence (mDL) application | [ISO 18013-5:2021](https://www.iso.org/standard/69084.html) |
 
 ## Feature List
 * **OID4VCI**
@@ -153,8 +167,8 @@ Description of each folder:
 || Self-Issued OpenID Provider Authorization Requests | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
 || JWT Secured Authorization Request(JAR) | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 |Authorization Response| direct_post | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
-|| query | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
-|| fragment | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
+|| dc_api | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
+|| fragment | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || *.jwt | ![Planned](https://img.shields.io/badge/Planned-📅-blue) |
 |Query & Metadata| DCQL(Digital Credentials Query Language) | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
 || Client Metadata | ![Supported](https://img.shields.io/badge/Supported-✅-brightgreen) |
@@ -167,9 +181,10 @@ Description of each folder:
 
 ## Getting Started
 
-Please refer to the Installation and Operation Guide below to get started with OID4VC.
+Please refer to the installation and operation guides below to get started with OID4VC.
 
 *   [OID4VC PoC Project Installation and Operation Guide](docs/installation/oid4vc_Installation_Guide.md)
+*   [ISO 18013-5 Offline Presentation Installation and Test Guide](docs/installation/mdoc_Offline_Presentation_Guide.md)
 
 
 For information on each subproject, please refer to the `README.md` file in the respective directory.
@@ -178,6 +193,8 @@ For information on each subproject, please refer to the `README.md` file in the 
 * [Verifier Server README](source/servers/verifier-server/README.md)
 * [Android App README](source/apps/android-app/README.md)
 * [iOS App README](source/apps/ios-app/README.md)
+* [mDoc Reader Android README](source/apps/android-mdoc-reader/README.md)
+* [mDoc Reader iOS README](source/apps/ios-mdoc-reader/README.md)
 
 ## API Reference Documentation
 
