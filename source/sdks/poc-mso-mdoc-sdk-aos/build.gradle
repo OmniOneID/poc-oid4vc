@@ -1,0 +1,74 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    id 'com.android.library' version '8.2.1'
+}
+
+android {
+    namespace 'org.omnione.did.sdk.mdoc'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 26
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF']
+        }
+    }
+}
+
+ext {
+    customVersionMajorMinorBuild = "1.0.0"
+}
+
+task deleteObjectJar(type: Delete){
+    delete "release/${project.name}-${customVersionMajorMinorBuild}.jar"
+}
+
+task exportJar(type: Copy){
+    from('build/intermediates/aar_main_jar/release/')
+    into('release/')
+    include('classes.jar')
+    rename('classes.jar', "${project.name}-${customVersionMajorMinorBuild}.jar")
+}
+
+exportJar.dependsOn(deleteObjectJar, build)
+
+dependencies {
+    // AndroidX
+    implementation 'androidx.core:core:1.13.1'
+
+    // CBOR
+    implementation 'com.upokecenter:cbor:4.5.2'
+
+    // COSE
+    implementation 'com.github.cose-wg:COSE-JAVA:1.1.0'
+
+    // Crypto
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.79'
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.79'
+
+    // JSON
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    // Test
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
