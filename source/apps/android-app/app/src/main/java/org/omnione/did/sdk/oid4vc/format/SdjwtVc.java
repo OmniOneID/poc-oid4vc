@@ -23,7 +23,7 @@ import org.omnione.did.sdjwt.datamodel.Disclosure;
 import org.omnione.did.sdjwt.datamodel.SDJWT;
 import org.omnione.did.sdjwt.util.SimpleJWTDecoder;
 import org.omnione.did.sdk.oid4vc.util.CryptoUtil;
-import org.omnione.did.sdk.oid4vc.util.LogUtil;
+import org.omnione.did.sdk.mdoc.util.LogUtil;
 
 import java.security.PrivateKey;
 import java.util.Base64;

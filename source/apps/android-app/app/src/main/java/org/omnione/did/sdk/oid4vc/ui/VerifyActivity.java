@@ -33,7 +33,7 @@ import org.omnione.did.sdk.oid4vc.format.OpenDid;
 import org.omnione.did.sdk.oid4vc.format.SdjwtVc;
 import org.omnione.did.sdk.oid4vc.network.ApiService;
 import org.omnione.did.sdk.oid4vc.util.CryptoUtil;
-import org.omnione.did.sdk.oid4vc.util.LogUtil;
+import org.omnione.did.sdk.mdoc.util.LogUtil;
 import org.omnione.did.sdk.oid4vc.util.WalletUtil;
 
 import java.io.IOException;

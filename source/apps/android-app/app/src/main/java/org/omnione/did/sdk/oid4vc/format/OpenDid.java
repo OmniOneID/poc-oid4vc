@@ -21,7 +21,7 @@ import com.google.gson.Gson;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.Header;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.Payload;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.VerifiableCredential;
-import org.omnione.did.sdk.oid4vc.util.LogUtil;
+import org.omnione.did.sdk.mdoc.util.LogUtil;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;

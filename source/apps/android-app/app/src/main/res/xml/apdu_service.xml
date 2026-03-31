@@ -1,0 +1,11 @@
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/app_name"
+    android:requireDeviceUnlock="false">
+    <aid-group android:description="@string/app_name" android:category="other">
+        <!-- ISO 18013-5 mDoc AID -->
+        <aid-filter android:name="A0000002480400"/>
+        <!-- NDEF / Common AIDs detected in logs -->
+        <aid-filter android:name="D2760000850101"/>
+        <aid-filter android:name="D2760000850100"/>
+    </aid-group>
+</host-apdu-service>

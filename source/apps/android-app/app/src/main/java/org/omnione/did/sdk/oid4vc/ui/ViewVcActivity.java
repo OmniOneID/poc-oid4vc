@@ -20,6 +20,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Build;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -59,6 +60,8 @@ public class ViewVcActivity extends AppCompatActivity {
     private LinearLayout claimsContainer;
     private TextView noFileTextView;
     private Button submitButton;
+    private Button offlineSubmitButton;
+    private Button eudiOfflineSubmitButton;
     private Button deleteVcButton;
     private Button buttonDebugAction;
     private EditText debugInputEditText;
@@ -91,12 +94,23 @@ public class ViewVcActivity extends AppCompatActivity {
         claimsContainer = findViewById(R.id.claimsContainer);
         noFileTextView = findViewById(R.id.noFileTextView);
         submitButton = findViewById(R.id.submitButton);
+        offlineSubmitButton = findViewById(R.id.offlineSubmitButton);
+        eudiOfflineSubmitButton = findViewById(R.id.eudiOfflineSubmitButton);
         deleteVcButton = findViewById(R.id.deleteVcButton);
+
+        LinearLayout emulatorDebugContainer = findViewById(R.id.emulatorDebugContainer);
+        if (isEmulator()) {
+            emulatorDebugContainer.setVisibility(View.VISIBLE);
+        } else {
+            emulatorDebugContainer.setVisibility(View.GONE);
+        }
 
         buttonDebugAction = findViewById(R.id.debugActionButton);
         debugInputEditText = findViewById(R.id.debugInputEditText);
 
         submitButton.setOnClickListener(v -> launchQrScanner());
+        offlineSubmitButton.setOnClickListener(v -> handleOfflineSubmit());
+        eudiOfflineSubmitButton.setOnClickListener(v -> handleEudiwalletOfflineSubmit());
         deleteVcButton.setOnClickListener(v -> showDeleteConfirmationDialog());
 
         buttonDebugAction.setOnClickListener(v -> {
@@ -124,9 +138,66 @@ public class ViewVcActivity extends AppCompatActivity {
      * @param scannedUriString The verifier's URI obtained from the QR scan.
      */
     private void handleSubmit(String scannedUriString) {
+        Bundle selectedClaims = getSelectedClaims();
+        ArrayList<String> selectedClaimsKeys = selectedClaims.getStringArrayList("selected_claims_keys");
+        ArrayList<String> selectedClaimsNamespaces = selectedClaims.getStringArrayList("selected_claims_namespaces");
+
+        Uri deepLinkUri = Uri.parse(scannedUriString);
+        Intent intent = new Intent(Intent.ACTION_VIEW, deepLinkUri);
+        intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
+        intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
+        
+        startActivity(intent);
+    }
+
+    /**
+     * Handles the offline submission by showing the QR generator activity.
+     */
+    private void handleOfflineSubmit() {
+        Bundle selectedClaims = getSelectedClaims();
+        ArrayList<String> selectedClaimsKeys = selectedClaims.getStringArrayList("selected_claims_keys");
+        ArrayList<String> selectedClaimsNamespaces = selectedClaims.getStringArrayList("selected_claims_namespaces");
+
+        if (selectedClaimsKeys == null || selectedClaimsKeys.isEmpty()) {
+            Toast.makeText(this, "No claims selected.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, QRGeneratorActivity.class);
+        intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
+        intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
+        startActivity(intent);
+    }
+
+    /**
+     * Handles the Eudiwallet offline submission by showing the QR generator activity 2.
+     */
+    private void handleEudiwalletOfflineSubmit() {
+        Bundle selectedClaims = getSelectedClaims();
+        ArrayList<String> selectedClaimsKeys = selectedClaims.getStringArrayList("selected_claims_keys");
+        ArrayList<String> selectedClaimsNamespaces = selectedClaims.getStringArrayList("selected_claims_namespaces");
+
+        if (selectedClaimsKeys == null || selectedClaimsKeys.isEmpty()) {
+            Toast.makeText(this, "No claims selected.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent intent = new Intent(this, QRGeneratorActivity.class);
+        intent.putExtra("is_eudi_wallet", true);
+        intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
+        intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
+        startActivity(intent);
+    }
+
+    /**
+     * Gathers the selected claims from the UI.
+     *
+     * @return A Bundle containing the selected claims keys and namespaces.
+     */
+    private Bundle getSelectedClaims() {
         ArrayList<String> selectedClaimsKeys = new ArrayList<>();
         ArrayList<String> selectedClaimsNamespaces = new ArrayList<>();
-        
+
         for (CheckBox cb : claimCheckBoxes) {
             if (cb.isChecked()) {
                 Object tag = cb.getTag();
@@ -134,7 +205,7 @@ public class ViewVcActivity extends AppCompatActivity {
                     Bundle bundle = (Bundle) tag;
                     String key = bundle.getString("key");
                     String namespace = bundle.getString("namespace");
-                    
+
                     if (key != null && !key.isEmpty() && !"-".equals(key)) {
                         selectedClaimsKeys.add(key);
                         selectedClaimsNamespaces.add(namespace != null ? namespace : "");
@@ -143,12 +214,10 @@ public class ViewVcActivity extends AppCompatActivity {
             }
         }
 
-        Uri deepLinkUri = Uri.parse(scannedUriString);
-        Intent intent = new Intent(Intent.ACTION_VIEW, deepLinkUri);
-        intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
-        intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
-        
-        startActivity(intent);
+        Bundle result = new Bundle();
+        result.putStringArrayList("selected_claims_keys", selectedClaimsKeys);
+        result.putStringArrayList("selected_claims_namespaces", selectedClaimsNamespaces);
+        return result;
     }
 
     /**
@@ -171,12 +240,16 @@ public class ViewVcActivity extends AppCompatActivity {
                 addClaimView(entry.getKey(), entry.getValue(), null, 0, false, null);
             }
             submitButton.setVisibility(View.VISIBLE);
+            offlineSubmitButton.setVisibility(View.VISIBLE);
+            eudiOfflineSubmitButton.setVisibility(View.VISIBLE);
         } else if (OpenDid.isSupported(format)) {
             List<VerifiableCredential.Claim> claims = OpenDid.getClaims(credentialData);
             for (VerifiableCredential.Claim claim : claims) {
                 renderOpenDidClaim(claim);
             }
             submitButton.setVisibility(View.VISIBLE);
+            offlineSubmitButton.setVisibility(View.VISIBLE);
+            eudiOfflineSubmitButton.setVisibility(View.VISIBLE);
         } else if (Mdoc.isSupported(format)) {
             addClaimView("Format", "mDoc", null, 0, false, null);
             Map<String, Object> nsMap = Mdoc.getClaims(credentialData);
@@ -190,6 +263,8 @@ public class ViewVcActivity extends AppCompatActivity {
                 }
             }
             submitButton.setVisibility(View.VISIBLE);
+            offlineSubmitButton.setVisibility(View.VISIBLE);
+            eudiOfflineSubmitButton.setVisibility(View.VISIBLE);
         } else {
             showError("Unsupported VC format: " + format);
         }
@@ -286,6 +361,30 @@ public class ViewVcActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         finish();
         return true;
+    }
+
+    /**
+     * Checks if the app is running on an emulator.
+     *
+     * @return true if running on an emulator, false otherwise.
+     */
+    private boolean isEmulator() {
+        return (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.HARDWARE.contains("goldfish")
+                || Build.HARDWARE.contains("ranchu")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || Build.PRODUCT.contains("sdk_google")
+                || Build.PRODUCT.contains("google_sdk")
+                || Build.PRODUCT.contains("sdk")
+                || Build.PRODUCT.contains("sdk_x86")
+                || Build.PRODUCT.contains("vbox86p")
+                || Build.PRODUCT.contains("emulator")
+                || Build.PRODUCT.contains("simulator");
     }
 
     /**

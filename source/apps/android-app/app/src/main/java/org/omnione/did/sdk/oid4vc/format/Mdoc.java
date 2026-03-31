@@ -18,17 +18,15 @@ package org.omnione.did.sdk.oid4vc.format;
 
 import android.content.Context;
 import android.util.Base64;
-import android.util.Log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory;
 import com.upokecenter.cbor.CBORObject;
 
-import org.omnione.did.mdoc.core.oid4vci.OID4VCIssuer;
-import org.omnione.did.mdoc.core.oid4vp.OID4VPHandler;
-import org.omnione.did.sdk.oid4vc.util.CryptoUtil;
-import org.omnione.did.sdk.oid4vc.util.LogUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.omnione.did.mdoc.core.oid4vp.OID4VPHandler;
+import org.omnione.did.sdk.mdoc.util.LogUtil;
+import org.omnione.did.sdk.oid4vc.util.CryptoUtil;
 
 import java.security.MessageDigest;
 import java.security.PrivateKey;
@@ -38,7 +36,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import COSE.AlgorithmID;
 import COSE.Attribute;
+import COSE.KeyKeys;
 import COSE.OneKey;
 import COSE.Sign1Message;
 
