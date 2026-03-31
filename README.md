@@ -8,7 +8,7 @@ This repository contains a Proof of Concept (PoC) project for testing the OID4VC
 * Understand the issuance and verification flows of the OID4VC protocol
 * Evaluate the feasibility of building a DID-based VC (Verifiable Credential) ecosystem
 * Test integration between Spring Boot-based servers and native mobile applications (Android/iOS)
-* Verify ISO 18013-5 based mDoc offline proximity presentation (BLE/NFC)
+* Verify ISO 18013-5 based mDoc offline proximity presentation
 
 ## 🇪🇺🤝 EUDI Wallet Interoperability Demo
 
