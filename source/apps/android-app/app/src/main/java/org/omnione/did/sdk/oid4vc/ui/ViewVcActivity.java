@@ -40,6 +40,8 @@ import android.widget.Toast;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleMode;
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleModePreferences;
 import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
 import org.omnione.did.sdk.oid4vc.data.dto.tec.VerifiableCredential;
 import org.omnione.did.sdk.oid4vc.format.Mdoc;
@@ -164,6 +166,7 @@ public class ViewVcActivity extends AppCompatActivity {
         }
 
         Intent intent = new Intent(this, QRGeneratorActivity.class);
+        intent.putExtra(BleMode.EXTRA_KEY, BleModePreferences.getMode(this).getValue());
         intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
         intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
         startActivity(intent);
@@ -184,6 +187,7 @@ public class ViewVcActivity extends AppCompatActivity {
 
         Intent intent = new Intent(this, QRGeneratorActivity.class);
         intent.putExtra("is_eudi_wallet", true);
+        intent.putExtra(BleMode.EXTRA_KEY, BleModePreferences.getMode(this).getValue());
         intent.putStringArrayListExtra("selected_claims_keys", selectedClaimsKeys);
         intent.putStringArrayListExtra("selected_claims_namespaces", selectedClaimsNamespaces);
         startActivity(intent);

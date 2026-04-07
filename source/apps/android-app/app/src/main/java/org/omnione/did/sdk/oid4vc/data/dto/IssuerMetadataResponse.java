@@ -25,8 +25,8 @@ public class IssuerMetadataResponse {
     @SerializedName("credential_issuer")
     private String credentialIssuer;
 
-    @SerializedName("authorization_server")
-    private List<String> authorizationServer;
+    @SerializedName("authorization_servers")
+    private List<String> authorizationServers;
 
     @SerializedName("credential_endpoint")
     private String credentialEndpoint;
@@ -43,7 +43,7 @@ public class IssuerMetadataResponse {
      * Gets the list of authorization server URLs.
      * @return the list of authorization server strings.
      */
-    public List<String> getAuthorizationServer() { return authorizationServer; }
+    public List<String> getAuthorizationServers() { return authorizationServers; }
     /**
      * Gets the credential endpoint URL.
      * @return the credential endpoint string.

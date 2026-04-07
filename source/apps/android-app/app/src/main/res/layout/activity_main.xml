@@ -24,7 +24,7 @@
         android:id="@+id/mainButtonLayout"
         android:layout_marginTop="50dp"
         android:layout_width="180dp"
-        android:layout_height="188dp"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -56,6 +56,47 @@
             android:text="API Test Page"
             android:textAllCaps="false"
             android:textSize="20sp" />
+
+        <LinearLayout
+            android:id="@+id/bleModeLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/bleModeLabelTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BLE Mode"
+                android:textColor="#333333"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/bleModeSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:minWidth="0dp"
+                android:showText="false"
+                android:switchMinWidth="44dp"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/bleModeValueTextView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:gravity="end"
+                android:maxLines="1"
+                android:text="BLE Peripheral Server"
+                android:textColor="#444444"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
     <LinearLayout
         android:id="@+id/debugLayout"

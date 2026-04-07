@@ -205,17 +205,17 @@ public class CredentialIssuanceActivity extends AppCompatActivity {
                         String responseString = response.body().string();
                         IssuerMetadataResponse info = gson.fromJson(responseString, IssuerMetadataResponse.class);
 
-                        if (info.getAuthorizationServer() != null && !info.getAuthorizationServer().isEmpty()) {
-                            tokenEndpointUrl = info.getAuthorizationServer().get(0);
+                        if (info.getAuthorizationServers() != null && !info.getAuthorizationServers().isEmpty()) {
+                            tokenEndpointUrl = info.getAuthorizationServers().get(0);
                         } else {
-                            handleFailure("'authorization_server' information not in response.");
+                            handleFailure("'authorization_servers' information not in response.");
                             tokenEndpointUrl = issuerUrl;
                         }
 
                         issuerSupportedConfigurations = info.getCredentialConfigurationsSupported();
                         
                         if(preAuthCode.isEmpty()) {
-                            startAuthorizationCodeFlow(info.getAuthorizationServer().get(0), issuerState, credentialConfigurationIds);
+                            startAuthorizationCodeFlow(info.getAuthorizationServers().get(0), issuerState, credentialConfigurationIds);
                         } else {
                             Intent intent = new Intent(CredentialIssuanceActivity.this, PinActivity.class);
                             pinActivityLauncher.launch(intent);

@@ -1,5 +1,6 @@
 package org.omnione.did.sdk.mdoc.proximity.reader.communication;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.*;
 import android.bluetooth.le.*;
 import android.content.Context;
@@ -248,6 +249,7 @@ public class BleTransportManager implements TransportManager {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private void ensureGattCallbackThread() {
         if (gattCallbackThread == null || !gattCallbackThread.isAlive()) {
             gattCallbackThread = new HandlerThread("BLE-GATT-Callback");
@@ -257,6 +259,7 @@ public class BleTransportManager implements TransportManager {
     }
 
     // GATT 연결 실패 시 리트라이
+    @SuppressLint("MissingPermission")
     private void retryGattConnection() {
         if (gattRetryCount.get() < MAX_GATT_RETRIES && lastScannedDevice != null) {
             int count = gattRetryCount.incrementAndGet();
@@ -687,6 +690,7 @@ public class BleTransportManager implements TransportManager {
         }
     }
 
+    @SuppressLint("MissingPermission")
     @Override
     public void stopSession() {
         // ISO 18013-5 8.3.3.1.1.5: 닫기 전 State characteristic에 END 쓰기

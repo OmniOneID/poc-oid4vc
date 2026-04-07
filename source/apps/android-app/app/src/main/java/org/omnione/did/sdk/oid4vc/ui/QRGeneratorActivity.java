@@ -23,10 +23,12 @@ import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 import com.upokecenter.cbor.CBORObject;
 
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleMode;
 import org.omnione.did.sdk.oid4vc.R;
 import org.omnione.did.sdk.oid4vc.data.dto.WalletData;
 import org.omnione.did.sdk.oid4vc.format.Mdoc;
 import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleConstants;
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.MdocBleCentralClient;
 import org.omnione.did.sdk.mdoc.proximity.holder.core.EphemeralKeyHolder;
 import org.omnione.did.sdk.mdoc.proximity.holder.ble.MdocBleServer;
 import org.omnione.did.sdk.mdoc.proximity.holder.core.MdocEngagement;
@@ -49,6 +51,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
     private ImageView qrCodeImageView;
     private Button closeButton;
     private MdocBleServer bleServer;
+    private MdocBleCentralClient bleCentralClient;
     private MdocNfcServer nfcServer;
     private MdocWifiServer wifiServer;
     private static final int PERMISSION_REQUEST_CODE = 1001;
@@ -57,6 +60,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
     private ArrayList<String> selectedKeys;
     private ArrayList<String> namespaces;
     private byte[] deviceEngagementBytes;
+    private BleMode bleMode;
 
     private NfcAdapter nfcAdapter;
     private CardEmulation cardEmulation;
@@ -76,6 +80,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
         closeButton = findViewById(R.id.closeButton);
 
         closeButton.setOnClickListener(v -> finish());
+        bleMode = BleMode.fromValue(getIntent().getStringExtra(BleMode.EXTRA_KEY));
 
         // Load data from Intent
         selectedKeys = getIntent().getStringArrayListExtra("selected_claims_keys");
@@ -127,10 +132,15 @@ public class QRGeneratorActivity extends AppCompatActivity {
     private void checkPermissionsAndGenerateQR() {
         List<String> permissionsList = new ArrayList<>();
         permissionsList.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        boolean usePeripheralServerMode = bleMode != BleMode.CENTRAL_CLIENT;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissionsList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
             permissionsList.add(Manifest.permission.BLUETOOTH_CONNECT);
+            if (usePeripheralServerMode) {
+                permissionsList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
+            } else {
+                permissionsList.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -168,7 +178,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
             if (allGranted) {
                 generateQR();
             } else {
-                Toast.makeText(this, "Bluetooth permissions are required for offline presentation.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Required Bluetooth permissions were not granted for offline presentation.", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -178,6 +188,9 @@ public class QRGeneratorActivity extends AppCompatActivity {
         super.onDestroy();
         if (bleServer != null) {
             bleServer.stop();
+        }
+        if (bleCentralClient != null) {
+            bleCentralClient.stop();
         }
         if (nfcServer != null) {
             nfcServer.stop();
@@ -200,13 +213,14 @@ public class QRGeneratorActivity extends AppCompatActivity {
             // Create DeviceEngagement Payload using MdocEngagement utility
             String qrData;
             boolean isEudiWallet = getIntent().getBooleanExtra("is_eudi_wallet", false);
+            boolean usePeripheralServerMode = bleMode != BleMode.CENTRAL_CLIENT;
             if (isEudiWallet) {
-                qrData = MdocEngagement.createDeviceEngagementPayloadForEudi(eDeviceKeyBytes, bleUuidBytes);
+                qrData = MdocEngagement.createDeviceEngagementPayloadForEudi(eDeviceKeyBytes, bleUuidBytes, usePeripheralServerMode);
                 if (getSupportActionBar() != null) {
                     getSupportActionBar().setTitle("Eudiwallet Offline");
                 }
             } else {
-                qrData = MdocEngagement.createDeviceEngagementPayload(eDeviceKeyBytes, bleUuidBytes);
+                qrData = MdocEngagement.createDeviceEngagementPayload(eDeviceKeyBytes, bleUuidBytes, usePeripheralServerMode);
             }
 
             String base64UrlPayload = qrData.replace("mdoc:", "");
@@ -215,7 +229,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
 
             // BLE & NFC Server 시작 (개인키와 CBOR 객체를 함께 넘김)
             this.deviceEngagementBytes = deviceEngagementBytes;
-            startOfflineServers(bleUuidBytes, privateKey, deviceEngagementBytes);
+            startOfflineServers(bleUuidBytes, privateKey, deviceEngagementBytes, usePeripheralServerMode);
 
             BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
             Bitmap bitmap = barcodeEncoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 800, 800);
@@ -226,7 +240,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
         }
     }
 
-    private void startOfflineServers(byte[] bleUuidBytes, PrivateKey privateKey, byte[] deviceEngagementBytes) {
+    private void startOfflineServers(byte[] bleUuidBytes, PrivateKey privateKey, byte[] deviceEngagementBytes, boolean usePeripheralServerMode) {
         MdocProximityListener proximityListener = new MdocProximityListener() {
             @Override
             public void onDeviceConnected() {
@@ -256,6 +270,8 @@ public class QRGeneratorActivity extends AppCompatActivity {
                     byte[] deviceResponse;
                     if (bleServer != null && bleServer.getSessionManager().getEReaderKey() != null) {
                         deviceResponse = bleServer.getSessionManager().generateDeviceResponse(mDoc, selectedKeys, namespaces, holderPrivateKey);
+                    } else if (bleCentralClient != null && bleCentralClient.getSessionManager().getEReaderKey() != null) {
+                        deviceResponse = bleCentralClient.getSessionManager().generateDeviceResponse(mDoc, selectedKeys, namespaces, holderPrivateKey);
                     } else if (nfcServer != null && nfcServer.getSessionManager().getEReaderKey() != null) {
                         deviceResponse = nfcServer.getSessionManager().generateDeviceResponse(mDoc, selectedKeys, namespaces, holderPrivateKey);
                     } else if (wifiServer != null && wifiServer.getSessionManager().getEReaderKey() != null) {
@@ -267,6 +283,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
 
                     // 생성된 응답을 다시 서버를 통해 전송
                     if (bleServer != null) bleServer.sendResponse(deviceResponse);
+                    if (bleCentralClient != null) bleCentralClient.sendResponse(deviceResponse);
                     if (wifiServer != null) wifiServer.sendResponse(deviceResponse);
                     if (nfcServer != null) nfcServer.sendResponse(deviceResponse);
 
@@ -276,10 +293,15 @@ public class QRGeneratorActivity extends AppCompatActivity {
             }
         };
 
-        // BLE 서버 시작
-        bleServer = new MdocBleServer(this, bleUuidBytes, privateKey, deviceEngagementBytes);
-        bleServer.setListener(proximityListener);
-        bleServer.start();
+        if (usePeripheralServerMode) {
+            bleServer = new MdocBleServer(this, bleUuidBytes, privateKey, deviceEngagementBytes);
+            bleServer.setListener(proximityListener);
+            bleServer.start();
+        } else {
+            bleCentralClient = new MdocBleCentralClient(this, bleUuidBytes, privateKey, deviceEngagementBytes);
+            bleCentralClient.setListener(proximityListener);
+            bleCentralClient.start();
+        }
 
         // NFC 서버 시작
         nfcServer = new MdocNfcServer(privateKey, deviceEngagementBytes, null);
@@ -292,7 +314,7 @@ public class QRGeneratorActivity extends AppCompatActivity {
         wifiServer.setListener(proximityListener);
         wifiServer.start();
 
-        Log.i("QRGenerator", "==== Offline Servers (BLE, NFC & WiFi) Ready ====");
+        Log.i("QRGenerator", "==== Offline transports ready. BLE mode: " + bleMode.getDisplayName() + " ====");
     }
 
     @Override

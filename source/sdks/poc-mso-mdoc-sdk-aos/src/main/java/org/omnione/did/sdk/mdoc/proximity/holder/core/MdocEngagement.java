@@ -39,6 +39,10 @@ public class MdocEngagement {
      * @return The formatted QR payload string.
      */
     public static String createDeviceEngagementPayload(byte[] eDeviceKeyBytes, byte[] bleUuidBytes) {
+        return createDeviceEngagementPayload(eDeviceKeyBytes, bleUuidBytes, true);
+    }
+
+    public static String createDeviceEngagementPayload(byte[] eDeviceKeyBytes, byte[] bleUuidBytes, boolean usePeripheralServerMode) {
         if (eDeviceKeyBytes == null) throw new IllegalArgumentException("eDeviceKeyBytes is null");
 
         Log.d(TAG, "Generating DeviceEngagement with multiple retrieval methods.");
@@ -68,9 +72,9 @@ public class MdocEngagement {
         bleMethod.Add(2);
         bleMethod.Add(1);
         CBORObject bleOptions = CBORObject.NewMap();
-        bleOptions.Add(0, true);  // supportsPeripheralServerMode
-        bleOptions.Add(1, false); // supportsCentralClientMode
-        bleOptions.Add(10, bleUuidBytes);
+        bleOptions.Add(0, usePeripheralServerMode);
+        bleOptions.Add(1, !usePeripheralServerMode);
+        bleOptions.Add(usePeripheralServerMode ? 10 : 11, bleUuidBytes);
         bleMethod.Add(bleOptions);
         retrievalMethods.Add(bleMethod);
 
@@ -108,6 +112,10 @@ public class MdocEngagement {
      * @return The formatted QR payload string.
      */
     public static String createDeviceEngagementPayloadForEudi(byte[] eDeviceKeyBytes, byte[] bleUuidBytes) {
+        return createDeviceEngagementPayloadForEudi(eDeviceKeyBytes, bleUuidBytes, true);
+    }
+
+    public static String createDeviceEngagementPayloadForEudi(byte[] eDeviceKeyBytes, byte[] bleUuidBytes, boolean usePeripheralServerMode) {
         if (eDeviceKeyBytes == null) throw new IllegalArgumentException("eDeviceKeyBytes is null");
 
         Log.d(TAG, "Generating EUDI-compatible DeviceEngagement (BLE only).");
@@ -127,9 +135,9 @@ public class MdocEngagement {
         bleMethod.Add(2);
         bleMethod.Add(1);
         CBORObject bleOptions = CBORObject.NewMap();
-        bleOptions.Add(0, true);
-        bleOptions.Add(1, false);
-        bleOptions.Add(10, bleUuidBytes);
+        bleOptions.Add(0, usePeripheralServerMode);
+        bleOptions.Add(1, !usePeripheralServerMode);
+        bleOptions.Add(usePeripheralServerMode ? 10 : 11, bleUuidBytes);
         bleMethod.Add(bleOptions);
         retrievalMethods.Add(bleMethod);
 

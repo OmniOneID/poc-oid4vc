@@ -18,12 +18,14 @@ package org.omnione.did.sdk.oid4vc.ui;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -31,6 +33,8 @@ import com.google.gson.GsonBuilder;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleMode;
+import org.omnione.did.sdk.mdoc.proximity.holder.ble.BleModePreferences;
 import org.omnione.did.sdk.oid4vc.R;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonIssue, buttonViewVc, buttonApiTest, buttonDebugAction;
 
     private EditText debugInputEditText;
+    private TextView bleModeValueTextView;
+    private SwitchCompat bleModeSwitch;
     private Gson gson;
 
     private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(new ScanContract(),
@@ -66,6 +72,8 @@ public class MainActivity extends AppCompatActivity {
         buttonIssue = findViewById(R.id.buttonIssue);
         buttonViewVc = findViewById(R.id.buttonViewVc);
         buttonApiTest = findViewById(R.id.buttonApiTest);
+        bleModeValueTextView = findViewById(R.id.bleModeValueTextView);
+        bleModeSwitch = findViewById(R.id.bleModeSwitch);
 
         buttonDebugAction = findViewById(R.id.debugActionButton);
         debugInputEditText = findViewById(R.id.debugInputEditText);
@@ -92,6 +100,20 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             debugInputEditText.setText("");
         });
+
+        bleModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            BleMode mode = isChecked ? BleMode.CENTRAL_CLIENT : BleMode.PERIPHERAL_SERVER;
+            BleModePreferences.setMode(this, mode);
+            updateBleModeSummary();
+        });
+
+        updateBleModeSummary();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateBleModeSummary();
     }
 
     /**
@@ -104,5 +126,11 @@ public class MainActivity extends AppCompatActivity {
         options.setBeepEnabled(false);
         options.setCaptureActivity(QrActivity.class);
         qrCodeLauncher.launch(options);
+    }
+
+    private void updateBleModeSummary() {
+        BleMode mode = BleModePreferences.getMode(this);
+        bleModeSwitch.setChecked(mode == BleMode.CENTRAL_CLIENT);
+        bleModeValueTextView.setText(mode == BleMode.CENTRAL_CLIENT ? "Central Client" : "Peripheral Server");
     }
 }
