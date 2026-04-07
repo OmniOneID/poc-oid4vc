@@ -136,6 +136,16 @@ public class DeviceResponseParser {
             }
         }
 
+        // COSE_Mac0 검증을 위해 MSO의 deviceKey로 EMacKey 재도출
+        // ISO 18013-5 9.1.3.5: EMacKey = HKDF(ECDH(SDeviceKey, EReaderKey))
+        if (deviceKey != null && sessionEncryption != null) {
+            try {
+                sessionEncryption.deriveEMacKey(deviceKey);
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to derive EMacKey with deviceKey from MSO", e);
+            }
+        }
+
         // deviceSigned 파싱 및 DeviceAuth 검증
         Boolean deviceSignatureValid = null;
         CBORObject deviceSignedItem = docMap.get(CBORObject.FromObject("deviceSigned"));

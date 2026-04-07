@@ -10,6 +10,63 @@ OID4VC PoC 저장소에 오신 것을 환영합니다.
 *   Spring Boot 기반 서버와 네이티브 모바일 앱(Android/iOS) 연동 테스트
 *   ISO 18013-5 기반 mDoc 오프라인 근접 프레젠테이션 검증
 
+## 목표 프로토콜 및 데이터 모델
+
+**본 PoC가 목표로 하는 프로토콜과 Credential 데이터 모델은 다음과 같습니다.**
+
+| 구분 | 대상 |
+|:-----|:-----|
+| **프로토콜** | OID4VC (OID4VCI / OID4VP), ISO 18013-5 Proximity |
+| **데이터 모델** | SD-JWT VC, mDoc Format |
+
+* 본 PoC는 ISO 18013-7도 목표로 하며, 이는 OID4VC 프로토콜을 기반으로 mDL의 온라인 제시를 규정합니다.
+
+## 폴더 구조
+
+프로젝트 디렉터리 내 주요 폴더와 문서에 대한 개요입니다.
+
+```
+poc-oid4vc
+├── source
+│   ├── apps
+│   │   ├── android-app                # OID4VC Android 지갑 앱
+│   │   ├── ios-app                    # OID4VC iOS 지갑 앱
+│   │   ├── android-mdoc-reader        # mDoc Reader Android 앱
+│   │   └── ios-mdoc-reader            # mDoc Reader iOS 앱
+│   ├── sdks
+│   │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK (Android)
+│   │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK (Android)
+│   └── servers
+│       ├── issuer-server              # OID4VC Issuer Server
+│       └── verifier-server            # OID4VC Verifier Server
+└── docs
+    ├── api
+    │   ├── issuer-server              # OID4VCI SDK API 문서
+    │   ├── verifier-server            # OID4VP SDK API 문서
+    │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK API 문서
+    │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK API 문서
+    └── installation
+```
+
+각 폴더에 대한 설명은 다음과 같습니다.
+
+| 이름 | 설명 |
+| :--- | :--- |
+| **`source/servers`** | OID4VC 흐름을 위한 서버 구현체를 포함합니다. |
+| ┖ `issuer-server` | OID4VCI 표준에 따라 VC(Verifiable Credential)를 발급합니다. |
+| ┖ `verifier-server` | OID4VP 표준에 따라 VC를 검증합니다. |
+| **`source/apps`** | 샘플 모바일 애플리케이션을 포함합니다. |
+| ┖ `android-app` | VC를 저장하고 제출하는 샘플 안드로이드 지갑입니다. |
+| ┖ `ios-app` | VC를 저장하고 제출하는 샘플 iOS 지갑입니다. |
+| ┖ `android-mdoc-reader` | ISO 18013-5 근접 검증을 위한 Android mDoc Reader 앱입니다. |
+| ┖ `ios-mdoc-reader` | ISO 18013-5 근접 검증을 위한 iOS mDoc Reader 앱입니다. |
+| **`source/sdks`** | Android 네이티브 SDK를 포함합니다. |
+| ┖ `poc-sd-jwt-vc-sdk-aos` | SD-JWT VC 생성·검증을 위한 Android SDK입니다. |
+| ┖ `poc-mso-mdoc-sdk-aos` | ISO 18013-5 mDoc 처리를 위한 Android SDK입니다. |
+| **`docs`** | 프로젝트 문서를 포함합니다. |
+| ┖ `api` | 서버 및 SDK에 대한 연동 가이드 및 API 문서입니다. |
+| ┖ `installation` | 설치 및 구동 가이드입니다. |
+
 ## 🇪🇺🤝 EUDI Wallet 상호운용 시연 영상
 
 https://github.com/user-attachments/assets/be33f5b5-8114-4e47-aa73-e065e246085f
@@ -19,13 +76,7 @@ Open DID의 Issuer 및 Verifier 서버가 EUDI Wallet과 OID4VCI/OID4VP 표준 �
 
 - **테스트 기준 월렛 버전**: [EUDI Wallet 2026.02.35-Demo](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2026.02.35-Demo_Build%3D35) ([커밋](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/commit/bb008698fe48fcd3f7224d516aca0748fb1566f3))
 
-위 시연 영상의 주요 수행 내용은 다음과 같습니다.
-
-| 구분 | 방식 | 설명 |
-|:-----|:-----|:-----|
-| Credential | SD-JWT VC | PID(Person Identification Data) 형태로 발급 |
-| Issuance | Pre-Authorized Code Flow | 사전 인가 코드 기반의 VC 발급 수행 |
-| Verification | direct_post | VP Token을 direct_post 방식으로 제출하여 검증 수행 |
+위 시연 영상은 Pre-Authorized Code Flow를 통한 SD-JWT VC 발급(PID 형식)과 direct_post 방식의 VP Token 검증 과정을 보여줍니다.
 
 위 시연 영상은 SD-JWT VC 흐름을 기준으로 하며, 이 외에도 **mDoc 기반의 Credential 발급 및 검증**을 지원합니다. EUDI Wallet 상호운용 시 **PID(Person Identification Data)** 및 **mDL(Mobile Driving License)** 포맷의 mDoc 발급·검증이 가능합니다.
 
@@ -73,52 +124,6 @@ sequenceDiagram
         Verifier->>Verifier: VP Token 검증 (SD-JWT)
     end
 ```
-
-## 폴더 구조
-
-프로젝트 디렉터리 내 주요 폴더와 문서에 대한 개요입니다.
-
-```
-poc-oid4vc
-├── source
-│   ├── apps
-│   │   ├── android-app                # OID4VC Android 지갑 앱
-│   │   ├── ios-app                    # OID4VC iOS 지갑 앱
-│   │   ├── android-mdoc-reader        # mDoc Reader Android 앱
-│   │   └── ios-mdoc-reader            # mDoc Reader iOS 앱
-│   ├── sdks
-│   │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK (Android)
-│   │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK (Android)
-│   └── servers
-│       ├── issuer-server              # OID4VC Issuer Server
-│       └── verifier-server            # OID4VC Verifier Server
-└── docs
-    ├── api
-    │   ├── issuer-server              # OID4VCI SDK API 문서
-    │   ├── verifier-server            # OID4VP SDK API 문서
-    │   ├── poc-sd-jwt-vc-sdk-aos      # SD-JWT VC SDK API 문서
-    │   └── poc-mso-mdoc-sdk-aos       # MSO mDoc SDK API 문서
-    └── installation
-```
-
-각 폴더에 대한 설명은 다음과 같습니다.
-
-| 이름 | 설명 |
-| :--- | :--- |
-| **`source/servers`** | OID4VC 흐름을 위한 서버 구현체를 포함합니다. |
-| ┖ `issuer-server` | OID4VCI 표준에 따라 VC(Verifiable Credential)를 발급합니다. |
-| ┖ `verifier-server` | OID4VP 표준에 따라 VC를 검증합니다. |
-| **`source/apps`** | 샘플 모바일 애플리케이션을 포함합니다. |
-| ┖ `android-app` | VC를 저장하고 제출하는 샘플 안드로이드 지갑입니다. |
-| ┖ `ios-app` | VC를 저장하고 제출하는 샘플 iOS 지갑입니다. |
-| ┖ `android-mdoc-reader` | ISO 18013-5 근접 검증을 위한 Android mDoc Reader 앱입니다. |
-| ┖ `ios-mdoc-reader` | ISO 18013-5 근접 검증을 위한 iOS mDoc Reader 앱입니다. |
-| **`source/sdks`** | Android 네이티브 SDK를 포함합니다. |
-| ┖ `poc-sd-jwt-vc-sdk-aos` | SD-JWT VC 생성·검증을 위한 Android SDK입니다. |
-| ┖ `poc-mso-mdoc-sdk-aos` | ISO 18013-5 mDoc 처리를 위한 Android SDK입니다. |
-| **`docs`** | 프로젝트 문서를 포함합니다. |
-| ┖ `api` | 서버 및 SDK에 대한 연동 가이드 및 API 문서입니다. |
-| ┖ `installation` | 설치 및 구동 가이드입니다. |
 
 ## 지원 버전
 

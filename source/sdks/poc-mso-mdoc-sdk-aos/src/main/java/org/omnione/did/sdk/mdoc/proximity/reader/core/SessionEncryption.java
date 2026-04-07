@@ -82,8 +82,6 @@ public class SessionEncryption {
         skReader = hkdfExpand(prk, LABEL_SK_READER, SESSION_KEY_LENGTH);
         skDevice = hkdfExpand(prk, LABEL_SK_DEVICE, SESSION_KEY_LENGTH);
 
-        // DeviceAuth MAC 검증용 EMacKey 도출 (ISO 18013-5 9.1.3.5)
-        eMacKey = hkdfExpand(hkdfExtract(salt, sharedSecret), LABEL_EMAC_KEY, SESSION_KEY_LENGTH);
         this.encodedSessionTranscript = encodedSessionTranscript;
 
         ProtocolLogger.logSessionTranscript(encodedSessionTranscript, this.encodedEngagement, getEReaderKeyBytes());
@@ -122,6 +120,22 @@ public class SessionEncryption {
         coseKey.set(CBORObject.FromObject(COSE_KEY_Y), CBORObject.FromObject(y));
 
         return coseKey.EncodeToBytes();
+    }
+
+    // EDeviceKeyBytes = #6.24(bstr .cbor EDeviceKey)
+    // EDeviceKey는 DeviceEngagement Security 배열에서 추출한 COSE_Key
+    public byte[] getEDeviceKeyBytes() throws Exception {
+        ECPoint w = devicePublicKey.getW();
+        byte[] x = bigIntToFixedBytes(w.getAffineX(), 32);
+        byte[] y = bigIntToFixedBytes(w.getAffineY(), 32);
+
+        CBORObject coseKey = CBORObject.NewMap();
+        coseKey.set(CBORObject.FromObject(COSE_KEY_KTY), CBORObject.FromObject(COSE_KTY_EC2));
+        coseKey.set(CBORObject.FromObject(COSE_KEY_CRV), CBORObject.FromObject(COSE_CRV_P256));
+        coseKey.set(CBORObject.FromObject(COSE_KEY_X), CBORObject.FromObject(x));
+        coseKey.set(CBORObject.FromObject(COSE_KEY_Y), CBORObject.FromObject(y));
+
+        return cborEncodeTagged24(coseKey.EncodeToBytes());
     }
 
     public byte[] encryptRequest(byte[] plaintext) throws Exception {
@@ -252,6 +266,20 @@ public class SessionEncryption {
 
     public ECPublicKey getReaderPublicKey() {
         return (ECPublicKey) readerKeyPair.getPublic();
+    }
+
+    // ISO 18013-5 9.1.3.5에 따라 EMacKey 도출
+    // EMacKey는 SDeviceKey(MSO의 static device key) × EReaderKey로 도출해야 함
+    // (세션 암호화에 사용하는 EDeviceKey × EReaderKey 와는 다름)
+    public void deriveEMacKey(ECPublicKey deviceKeyFromMso) throws Exception {
+        KeyAgreement ka = KeyAgreement.getInstance("ECDH");
+        ka.init(readerKeyPair.getPrivate());
+        ka.doPhase(deviceKeyFromMso, true);
+        byte[] macSharedSecret = ka.generateSecret();
+
+        byte[] salt = sha256(cborEncodeTagged24(encodedSessionTranscript));
+        byte[] prk = hkdfExtract(salt, macSharedSecret);
+        this.eMacKey = hkdfExpand(prk, LABEL_EMAC_KEY, SESSION_KEY_LENGTH);
     }
 
     public byte[] getEMacKey() { return eMacKey; }

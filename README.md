@@ -10,67 +10,16 @@ This repository contains a Proof of Concept (PoC) project for testing the OID4VC
 * Test integration between Spring Boot-based servers and native mobile applications (Android/iOS)
 * Verify ISO 18013-5 based mDoc offline proximity presentation
 
-## 🇪🇺🤝 EUDI Wallet Interoperability Demo
+## Target Protocols & Data Models
 
-https://github.com/user-attachments/assets/d5637ebb-a11f-45dc-a161-28a8d50f5d2e
+**This PoC focuses on the following protocols and credential data models.**
 
-This project has successfully completed internal interoperability testing with the [EUDI Wallet](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui).
-It has been verified that Open DID's Issuer and Verifier servers interoperate with the EUDI Wallet based on the OID4VCI/OID4VP standards.
+| Category | Target |
+|:---------|:-------|
+| **Protocol** | OID4VC (OID4VCI / OID4VP), ISO 18013-5 Proximity |
+| **Data Model** | SD-JWT VC, mDoc Format |
 
-- **Test Wallet Version**: [EUDI Wallet 2026.02.35-Demo](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2026.02.35-Demo_Build%3D35) ([commit](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/commit/bb008698fe48fcd3f7224d516aca0748fb1566f3))
-
-The demo video above demonstrates the following:
-
-| Category | Method | Description |
-|:-----|:-----|:-----|
-| Credential | SD-JWT VC | Issued in PID (Person Identification Data) format |
-| Issuance | Pre-Authorized Code Flow | VC issuance via pre-authorized code |
-| Verification | direct_post | VP Token submitted and verified via direct_post |
-
-In addition to the SD-JWT VC flow shown in the demo, the project also supports **mDoc-based credential issuance and verification**, including **PID (Person Identification Data)** and **mDL (Mobile Driving License)** formats for EUDI Wallet interoperability.
-
-### Sequence Diagram
-
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#ffffff',
-    'mainBkg': '#ffffff',
-    'noteBkgColor': '#fff9e6',
-    'noteTextColor': '#333333',
-    'noteBorderColor': '#cccccc',
-    'actorBkg': '#e8eef4',
-    'actorBorder': '#7a8ea0',
-    'actorTextColor': '#2c3e50',
-    'signalColor': '#444444',
-    'signalTextColor': '#333333',
-    'sequenceNumberColor': '#ffffff',
-    'labelBoxBkgColor': '#ffffff',
-    'labelTextColor': '#333333'
-  }
-}}%%
-sequenceDiagram
-    participant Issuer as Open DID Issuer 🟠
-    participant Wallet as EUDI Wallet 🇪🇺
-    participant Verifier as Open DID Verifier 🟠
-    rect rgb(230, 245, 255)
-        Note over Issuer, Wallet: Credential Issuance - OID4VCI
-        Issuer->>Wallet: Credential Offer (pre-authorized code)
-        Wallet->>Issuer: Token Request
-        Issuer-->>Wallet: Access Token
-        Wallet->>Issuer: Credential Request
-        Issuer-->>Wallet: SD-JWT VC (PID) Issuance
-    end
-    rect rgb(245, 255, 230)
-        Note over Wallet, Verifier: Credential Presentation - OID4VP
-        Verifier->>Wallet: Authorization Request
-        Wallet->>Verifier: Fetch Request Object (JAR)
-        Verifier-->>Wallet: Signed Request Object (DCQL)
-        Wallet->>Verifier: Authorization Response (VP Token)
-        Verifier->>Verifier: VP Token Verification (SD-JWT)
-    end
-```
+* This PoC also targets ISO 18013-7, which defines online presentation of mDL based on the OID4VC protocol.
 
 ## Folder Structure
 
@@ -117,6 +66,62 @@ Description of each folder:
 | **`docs`** | Contains project documentation. |
 | ┖ `api` | Integration guides and API documentation for servers and SDKs. |
 | ┖ `installation` | Installation and operation guides. |
+
+## 🇪🇺🤝 EUDI Wallet Interoperability Demo
+
+https://github.com/user-attachments/assets/d5637ebb-a11f-45dc-a161-28a8d50f5d2e
+
+This project has successfully completed internal interoperability testing with the [EUDI Wallet](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui).
+It has been verified that Open DID's Issuer and Verifier servers interoperate with the EUDI Wallet based on the OID4VCI/OID4VP standards.
+
+- **Test Wallet Version**: [EUDI Wallet 2026.02.35-Demo](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2026.02.35-Demo_Build%3D35) ([commit](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/commit/bb008698fe48fcd3f7224d516aca0748fb1566f3))
+
+The demo video above demonstrates SD-JWT VC issuance (PID format) via Pre-Authorized Code Flow, followed by VP Token verification via direct_post.
+
+In addition to the SD-JWT VC flow shown in the demo, the project also supports **mDoc-based credential issuance and verification**, including **PID (Person Identification Data)** and **mDL (Mobile Driving License)** formats for EUDI Wallet interoperability.
+
+### Sequence Diagram
+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'mainBkg': '#ffffff',
+    'noteBkgColor': '#fff9e6',
+    'noteTextColor': '#333333',
+    'noteBorderColor': '#cccccc',
+    'actorBkg': '#e8eef4',
+    'actorBorder': '#7a8ea0',
+    'actorTextColor': '#2c3e50',
+    'signalColor': '#444444',
+    'signalTextColor': '#333333',
+    'sequenceNumberColor': '#ffffff',
+    'labelBoxBkgColor': '#ffffff',
+    'labelTextColor': '#333333'
+  }
+}}%%
+sequenceDiagram
+    participant Issuer as Open DID Issuer 🟠
+    participant Wallet as EUDI Wallet 🇪🇺
+    participant Verifier as Open DID Verifier 🟠
+    rect rgb(230, 245, 255)
+        Note over Issuer, Wallet: Credential Issuance - OID4VCI
+        Issuer->>Wallet: Credential Offer (pre-authorized code)
+        Wallet->>Issuer: Token Request
+        Issuer-->>Wallet: Access Token
+        Wallet->>Issuer: Credential Request
+        Issuer-->>Wallet: SD-JWT VC (PID) Issuance
+    end
+    rect rgb(245, 255, 230)
+        Note over Wallet, Verifier: Credential Presentation - OID4VP
+        Verifier->>Wallet: Authorization Request
+        Wallet->>Verifier: Fetch Request Object (JAR)
+        Verifier-->>Wallet: Signed Request Object (DCQL)
+        Wallet->>Verifier: Authorization Response (VP Token)
+        Verifier->>Verifier: VP Token Verification (SD-JWT)
+    end
+```
 
 ## Supported Versions
 

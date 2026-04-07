@@ -29,6 +29,7 @@ public class TransferController {
     private TransferEvent.Listener currentListener;
     private TransferCallback currentCallback;
     private ExecutorService executor;
+    private volatile boolean requestSent = false;
 
     public TransferController(Context context) {
         this.context = context;
@@ -58,6 +59,7 @@ public class TransferController {
                              boolean retainData,
                              TransferCallback callback) {
         this.currentCallback = callback;
+        this.requestSent = false;
 
         if (transportManager == null) {
             notifyCallback(TransferStatus.error("TransferManager not initialized"));
@@ -90,12 +92,18 @@ public class TransferController {
                 if (event instanceof TransferEvent.Connecting) {
                     notifyCallback(TransferStatus.connecting());
                 } else if (event instanceof TransferEvent.Connected) {
+                    if (requestSent) {
+                        Log.w(TAG, "Ignoring duplicate Connected event, request already sent");
+                        return;
+                    }
+                    requestSent = true;
                     Log.d(TAG, "Connected event received, sending request (" + deviceRequestBytes.length + " bytes)");
                     try {
                         transportManager.sendRequest(deviceRequestBytes);
                         Log.d(TAG, "sendRequest completed");
                     } catch (Exception e) {
                         Log.e(TAG, "sendRequest failed", e);
+                        requestSent = false;
                         notifyCallback(TransferStatus.error("Send failed: " + e.getMessage()));
                         return;
                     }
@@ -196,6 +204,7 @@ public class TransferController {
 
     public void stopConnection() {
         currentCallback = null;
+        requestSent = false;
         if (executor != null && !executor.isShutdown()) {
             executor.shutdownNow();
         }

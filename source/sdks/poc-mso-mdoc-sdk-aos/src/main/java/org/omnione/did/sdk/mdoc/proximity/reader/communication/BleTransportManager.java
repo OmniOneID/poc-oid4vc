@@ -15,9 +15,12 @@ import org.omnione.did.sdk.mdoc.proximity.reader.exception.MdocReaderException;
 import org.omnione.did.sdk.mdoc.proximity.reader.core.*;
 import org.omnione.did.sdk.mdoc.proximity.reader.utility.ProtocolLogger;
 
+import java.security.MessageDigest;
+
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,7 +71,13 @@ public class BleTransportManager implements TransportManager {
     private final ByteArrayOutputStream incomingData = new ByteArrayOutputStream();
 
     private final AtomicBoolean isConnected = new AtomicBoolean(false);
+    private final AtomicBoolean dataSending = new AtomicBoolean(false);
+    private final Set<BluetoothDevice> peripheralConnectedDevices = new CopyOnWriteArraySet<>();
     private final AtomicInteger negotiatedMtu = new AtomicInteger(23);
+    // CCCD 구독 타입 추적: true=indication(confirm), false=notification
+    private volatile boolean walletRequestedIndication = false;
+    // CCCD 구독 완료 여부: State 쓰기 시 Connected 발생 조건
+    private final AtomicBoolean cccdSubscribed = new AtomicBoolean(false);
 
     // BLE 스캔 타임아웃 및 GATT 연결 리트라이
     private static final long SCAN_TIMEOUT_MS = 30_000;
@@ -464,20 +473,58 @@ public class BleTransportManager implements TransportManager {
                 serviceUuid, BluetoothGattService.SERVICE_TYPE_PRIMARY);
 
             // Reader가 GATT 서버 → Reader UUID 사용 (5/6/7)
-            service.addCharacteristic(new BluetoothGattCharacteristic(
+            // ★ multipaz 참조 구현과 동일한 characteristic properties 사용
+            // PROPERTY_NOTIFY가 있으면 CCCD descriptor 추가 (multipaz 패턴)
+            BluetoothGattCharacteristic stateChar = new BluetoothGattCharacteristic(
                 stateCharUuid,
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
-                BluetoothGattCharacteristic.PERMISSION_WRITE));
+                BluetoothGattCharacteristic.PERMISSION_WRITE);
+            stateChar.addDescriptor(new BluetoothGattDescriptor(
+                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+                BluetoothGattDescriptor.PERMISSION_WRITE));
+            service.addCharacteristic(stateChar);
 
+            // ★ c2s: WRITE_NO_RESPONSE만 (PROPERTY_WRITE 제거 - multipaz 동일)
             service.addCharacteristic(new BluetoothGattCharacteristic(
                 client2serverCharUuid,
                 BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
                 BluetoothGattCharacteristic.PERMISSION_WRITE));
 
-            service.addCharacteristic(new BluetoothGattCharacteristic(
+            // ★ s2c: NOTIFY만 (INDICATE 제거 - multipaz 동일)
+            BluetoothGattCharacteristic s2cChar = new BluetoothGattCharacteristic(
                 server2clientCharUuid,
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ));
+                BluetoothGattCharacteristic.PERMISSION_WRITE);
+            s2cChar.addDescriptor(new BluetoothGattDescriptor(
+                UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+                BluetoothGattDescriptor.PERMISSION_WRITE));
+            service.addCharacteristic(s2cChar);
+
+            // ISO 18013-5 8.3.3.1.1.3: Ident characteristic (UUID 00000008)
+            // Ident = HKDF(SHA-256, IKM=EDeviceKeyBytes, salt=none, info="BLEIdent", L=16)
+            // EDeviceKeyBytes = #6.24(bstr .cbor EDeviceKey)
+            if (sessionEncryption != null) {
+                try {
+                    // EDeviceKeyBytes를 SessionEncryption에서 가져옴
+                    // DeviceEngagement의 Security 배열에서 EDeviceKey COSE_Key를 Tag 24로 래핑한 것
+                    byte[] eDeviceKeyBytes = sessionEncryption.getEDeviceKeyBytes();
+
+                    // HKDF-SHA256(IKM=eDeviceKeyBytes, salt=none, info="BLEIdent", L=16)
+                    byte[] identValue = hkdfForIdent(eDeviceKeyBytes, "BLEIdent".getBytes("UTF-8"), 16);
+
+                    BluetoothGattCharacteristic identChar = new BluetoothGattCharacteristic(
+                        READER_IDENT_CHAR_UUID,
+                        BluetoothGattCharacteristic.PROPERTY_READ,
+                        BluetoothGattCharacteristic.PERMISSION_READ);
+                    identChar.setValue(identValue);
+                    service.addCharacteristic(identChar);
+                    StringBuilder hex = new StringBuilder();
+                    for (byte b : identValue) hex.append(String.format("%02x", b));
+                    Log.d(TAG, "Ident characteristic added (HKDF, 16 bytes): " + hex);
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to add Ident characteristic", e);
+                }
+            }
 
             gattServer.addService(service);
 
@@ -519,13 +566,91 @@ public class BleTransportManager implements TransportManager {
         @Override
         public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                connectedDevice = device;
-                isConnected.set(true);
-                stopAdvertising();
-                notifyListeners(TransferEvent.Connected.INSTANCE);
+                peripheralConnectedDevices.add(device);
+                Log.d(TAG, "Device connected: " + device.getAddress()
+                    + " (total: " + peripheralConnectedDevices.size() + ")");
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                isConnected.set(false);
-                notifyListeners(TransferEvent.Disconnected.INSTANCE);
+                Log.d(TAG, "Device disconnected: " + device.getAddress()
+                    + " (remaining: " + (peripheralConnectedDevices.size() - 1) + ")");
+                peripheralConnectedDevices.remove(device);
+                if (connectedDevice != null && connectedDevice.getAddress().equals(device.getAddress())) {
+                    if (!peripheralConnectedDevices.isEmpty()) {
+                        connectedDevice = peripheralConnectedDevices.iterator().next();
+                    } else {
+                        isConnected.set(false);
+                        notifyListeners(TransferEvent.Disconnected.INSTANCE);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onMtuChanged(BluetoothDevice device, int mtu) {
+            negotiatedMtu.set(Math.min(mtu, MTU_SIZE));
+            Log.d(TAG, "MTU changed: " + mtu + " from " + device.getAddress());
+        }
+
+        @Override
+        public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
+                BluetoothGattDescriptor descriptor, boolean preparedWrite,
+                boolean responseNeeded, int offset, byte[] value) {
+            UUID charUuid = descriptor.getCharacteristic().getUuid();
+
+            // CCCD 값 로깅 (0x0100=notification, 0x0200=indication)
+            StringBuilder hexVal = new StringBuilder();
+            if (value != null) for (byte b : value) hexVal.append(String.format("%02x", b));
+            Log.d(TAG, "Descriptor write from " + device.getAddress() + " char=" + charUuid
+                + " value=" + hexVal);
+
+            // ★ CCCD descriptor 값을 로컬 GATT DB에 저장
+            // 이 값이 없으면 Samsung BLE 스택에서 notifyCharacteristicChanged()가 실패할 수 있음
+            descriptor.setValue(value);
+
+            if (responseNeeded) {
+                try {
+                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null);
+                } catch (SecurityException ignored) {}
+            }
+
+            // s2c CCCD 구독 = wallet이 notification 수신 준비 완료
+            // Connected는 아직 발생시키지 않음 → wallet이 State에 쓸 때까지 대기
+            if (charUuid.equals(server2clientCharUuid) && !cccdSubscribed.get()) {
+                // wallet이 indication(0x0200) 또는 notification(0x0100)을 요청했는지 확인
+                if (value != null && value.length >= 2) {
+                    walletRequestedIndication = (value[0] == 0x02);
+                    Log.d(TAG, "Wallet CCCD subscription type: "
+                        + (walletRequestedIndication ? "INDICATION (confirm)" : "NOTIFICATION"));
+                }
+                connectedDevice = device;
+                cccdSubscribed.set(true);
+                stopAdvertising();
+                Log.d(TAG, "CCCD subscription from " + device.getAddress()
+                    + ", waiting for State write before sending data");
+            }
+        }
+
+        @Override
+        public void onNotificationSent(BluetoothDevice device, int status) {
+            Log.d(TAG, "onNotificationSent to " + device.getAddress()
+                + " status=" + status + (status == BluetoothGatt.GATT_SUCCESS ? " (SUCCESS)" : " (FAIL)"));
+        }
+
+        @Override
+        public void onCharacteristicReadRequest(BluetoothDevice device, int requestId,
+                int offset, BluetoothGattCharacteristic characteristic) {
+            UUID charUuid = characteristic.getUuid();
+            Log.d(TAG, "Char read from " + device.getAddress() + " char=" + charUuid);
+            byte[] value = characteristic.getValue();
+            if (value != null) {
+                try {
+                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS,
+                        offset, value);
+                } catch (SecurityException ignored) {}
+            } else {
+                try {
+                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE,
+                        0, null);
+                } catch (SecurityException ignored) {}
             }
         }
 
@@ -534,9 +659,13 @@ public class BleTransportManager implements TransportManager {
                 BluetoothGattCharacteristic characteristic, boolean preparedWrite,
                 boolean responseNeeded, int offset, byte[] value) {
             UUID charUuid = characteristic.getUuid();
+            Log.d(TAG, "Char write from " + device.getAddress() + " char=" + charUuid
+                + " len=" + (value != null ? value.length : 0) + " responseNeeded=" + responseNeeded);
             if (charUuid.equals(stateCharUuid)) {
                 handleStateUpdate(value);
             } else if (charUuid.equals(client2serverCharUuid)) {
+                // c2s에 쓰는 디바이스가 진짜 wallet → connectedDevice 업데이트
+                connectedDevice = device;
                 handleIncomingData(value);
             }
             if (responseNeeded) {
@@ -550,9 +679,56 @@ public class BleTransportManager implements TransportManager {
     private void handleStateUpdate(byte[] value) {
         if (value == null || value.length == 0) return;
         ProtocolLogger.logBleStateUpdate(value[0]);
+
+        if (gattServer != null) {
+            // ★ multipaz 참조 구현과 동일: START(0x01)만 Connected 트리거
+            // END(0x02)는 세션 종료로 처리 (transport-specific termination)
+            if (value[0] == STATE_CHARACTERISTIC_START) {
+                if (!isConnected.get()) {
+                    isConnected.set(true);
+                    stopAdvertising();
+                    Log.d(TAG, "State START (0x01) received - firing Connected");
+                    notifyListeners(TransferEvent.Connected.INSTANCE);
+                }
+            } else if (value[0] == STATE_CHARACTERISTIC_END) {
+                Log.d(TAG, "State END (0x02) received in Peripheral Server Mode"
+                    + " - transport-specific termination (connected=" + isConnected.get() + ")");
+                if (!isConnected.get()) {
+                    // 아직 Connected 전 END → 이전 세션 cleanup, 무시
+                    Log.d(TAG, "END before Connected - ignoring (likely stale session cleanup)");
+                } else {
+                    // Connected 후 END → 세션 종료
+                    notifyListeners(TransferEvent.Disconnected.INSTANCE);
+                }
+            } else {
+                Log.w(TAG, "Unexpected State value: 0x" + String.format("%02x", value[0]));
+            }
+            return;
+        }
+
         if (value[0] == STATE_CHARACTERISTIC_END) {
             stopSession();
         }
+    }
+
+    // HKDF for BLE Ident (RFC 5869)
+    private byte[] hkdfForIdent(byte[] ikm, byte[] info, int length) throws Exception {
+        // Extract: PRK = HMAC-SHA256(salt, IKM) - salt is empty
+        javax.crypto.Mac hmac = javax.crypto.Mac.getInstance("HmacSHA256");
+        byte[] salt = new byte[32]; // SHA-256 hash length, all zeros (no salt)
+        hmac.init(new javax.crypto.spec.SecretKeySpec(salt, "HmacSHA256"));
+        byte[] prk = hmac.doFinal(ikm);
+
+        // Expand: OKM = HMAC-SHA256(PRK, info || 0x01)
+        hmac.init(new javax.crypto.spec.SecretKeySpec(prk, "HmacSHA256"));
+        byte[] expandInput = new byte[info.length + 1];
+        System.arraycopy(info, 0, expandInput, 0, info.length);
+        expandInput[info.length] = 0x01;
+        byte[] okm = hmac.doFinal(expandInput);
+
+        byte[] result = new byte[length];
+        System.arraycopy(okm, 0, result, 0, length);
+        return result;
     }
 
     private synchronized void handleIncomingData(byte[] chunk) {
@@ -606,6 +782,7 @@ public class BleTransportManager implements TransportManager {
     @Override
     public void sendRequest(byte[] deviceRequestBytes) {
         try {
+            dataSending.set(true);
             byte[] encrypted = sessionEncryption.encryptRequest(deviceRequestBytes);
             byte[] sessionEstablishment = sessionEncryption.buildSessionEstablishment(encrypted);
             sendData(sessionEstablishment);
@@ -633,17 +810,32 @@ public class BleTransportManager implements TransportManager {
         }
 
         ProtocolLogger.logBleSendStart(data.length, chunks.size(), maxChunkSize);
-        // GATT 큐 대신 mainHandler로 청크 간 간격을 두고 순차 전송
-        // Android 13+ BLE 스택에서 NO_RESPONSE 콜백이 불안정하므로 타이머 기반 전송
-        long chunkIntervalMs = 100;
-        for (int i = 0; i < chunks.size(); i++) {
-            final int chunkIndex = i;
-            final int totalChunks = chunks.size();
-            byte[] chunk = chunks.get(i);
-            mainHandler.postDelayed(() -> {
-                ProtocolLogger.logBleChunkSent(chunkIndex, totalChunks, chunk);
-                writeChunk(chunk);
-            }, (long) chunkIndex * chunkIntervalMs);
+
+        if (chunks.size() == 1) {
+            // 단일 청크: mainHandler 지연 없이 즉시 전송
+            // Wallet STATE END가 도착하기 전에 SessionEstablishment을 보내야 함
+            byte[] chunk = chunks.get(0);
+            ProtocolLogger.logBleChunkSent(0, 1, chunk);
+            writeChunk(chunk);
+            dataSending.set(false);
+            Log.d(TAG, "Single chunk sent immediately, dataSending=false");
+        } else {
+            // 다중 청크: mainHandler로 청크 간 간격을 두고 순차 전송
+            long chunkIntervalMs = 100;
+            for (int i = 0; i < chunks.size(); i++) {
+                final int chunkIndex = i;
+                final int totalChunks = chunks.size();
+                final boolean isLast = (i == chunks.size() - 1);
+                byte[] chunk = chunks.get(i);
+                mainHandler.postDelayed(() -> {
+                    ProtocolLogger.logBleChunkSent(chunkIndex, totalChunks, chunk);
+                    writeChunk(chunk);
+                    if (isLast) {
+                        dataSending.set(false);
+                        Log.d(TAG, "All chunks sent, dataSending=false");
+                    }
+                }, (long) chunkIndex * chunkIntervalMs);
+            }
         }
     }
 
@@ -664,8 +856,8 @@ public class BleTransportManager implements TransportManager {
                         gattClient.writeCharacteristic(c2s);
                     }
                 }
-            } else if (gattServer != null && connectedDevice != null) {
-                // Peripheral 서버 모드: server2client characteristic으로 알림
+            } else if (gattServer != null && !peripheralConnectedDevices.isEmpty()) {
+                // Peripheral 서버 모드: 모든 연결된 디바이스에 s2c notification/indication 전송
                 BluetoothGattService service = gattServer.getServices().stream()
                     .filter(s -> s.getCharacteristic(server2clientCharUuid) != null)
                     .findFirst().orElse(null);
@@ -673,7 +865,17 @@ public class BleTransportManager implements TransportManager {
                     BluetoothGattCharacteristic s2c = service.getCharacteristic(server2clientCharUuid);
                     if (s2c != null) {
                         s2c.setValue(chunk);
-                        gattServer.notifyCharacteristicChanged(connectedDevice, s2c, false);
+                        // wallet이 indication을 요청했으면 confirm=true, notification이면 false
+                        boolean confirm = walletRequestedIndication;
+                        for (BluetoothDevice device : peripheralConnectedDevices) {
+                            try {
+                                boolean sent = gattServer.notifyCharacteristicChanged(device, s2c, confirm);
+                                Log.d(TAG, "notifyCharacteristicChanged to " + device.getAddress()
+                                    + " confirm=" + confirm + " result=" + sent);
+                            } catch (Exception e) {
+                                Log.w(TAG, "Notify failed for " + device.getAddress(), e);
+                            }
+                        }
                     }
                 }
             }
@@ -720,7 +922,9 @@ public class BleTransportManager implements TransportManager {
 
         gattQueue.clear();
         isConnected.set(false);
+        cccdSubscribed.set(false);
         connectedDevice = null;
+        peripheralConnectedDevices.clear();
         incomingData.reset();
 
         if (gattCallbackThread != null) {
@@ -745,7 +949,7 @@ public class BleTransportManager implements TransportManager {
                         gattClient.writeCharacteristic(stateChar);
                     }
                 }
-            } else if (gattServer != null && connectedDevice != null) {
+            } else if (gattServer != null && !peripheralConnectedDevices.isEmpty()) {
                 BluetoothGattService service = gattServer.getServices().stream()
                     .filter(s -> s.getCharacteristic(stateCharUuid) != null)
                     .findFirst().orElse(null);
@@ -753,7 +957,12 @@ public class BleTransportManager implements TransportManager {
                     BluetoothGattCharacteristic stateChar = service.getCharacteristic(stateCharUuid);
                     if (stateChar != null) {
                         stateChar.setValue(new byte[]{state});
-                        gattServer.notifyCharacteristicChanged(connectedDevice, stateChar, false);
+                        for (BluetoothDevice device : peripheralConnectedDevices) {
+                            try {
+                                boolean sent = gattServer.notifyCharacteristicChanged(device, stateChar, false);
+                                Log.d(TAG, "State notify to " + device.getAddress() + " result=" + sent);
+                            } catch (Exception ignored) {}
+                        }
                     }
                 }
             }
