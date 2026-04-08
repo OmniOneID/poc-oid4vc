@@ -169,7 +169,7 @@ struct CredentialIssuanceView: View {
             let metadata: IssuerMetadataResponse = try await apiService.get(endpoint: ".well-known/openid-credential-issuer", url: url)
             self.issuerSupportedConfigurations = metadata.credentialConfigurationsSupported
             
-            if let authServers = metadata.authorizationServer, !authServers.isEmpty {
+            if let authServers = metadata.authorizationServers, !authServers.isEmpty {
                 self.tokenEndpointUrl = authServers[0]
             } else {
                 let endpoint = metadata.tokenEndpoint ?? ""

@@ -19,7 +19,7 @@ import Foundation
 
 struct IssuerMetadataResponse: Codable {
     let credentialIssuer: String
-    let authorizationServer: [String]?
+    let authorizationServers: [String]?
     let credentialEndpoint: String
     let tokenEndpoint: String?
     let nonceEndpoint: String?
@@ -33,7 +33,7 @@ struct IssuerMetadataResponse: Codable {
     
     enum CodingKeys: String, CodingKey {
         case credentialIssuer = "credential_issuer"
-        case authorizationServer = "authorization_server"
+        case authorizationServers = "authorization_servers"
         case credentialEndpoint = "credential_endpoint"
         case tokenEndpoint = "token_endpoint"
         case nonceEndpoint = "nonce_endpoint"
