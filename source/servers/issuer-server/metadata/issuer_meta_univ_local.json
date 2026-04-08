@@ -1,6 +1,6 @@
 {
   "credential_issuer": "http://10.48.17.124:8082",
-  "authorization_server": ["http://10.48.17.124:8082"],
+  "authorization_servers": ["http://10.48.17.124:8082"],
   "credential_offer_endpoint": "http://10.48.17.124:8082/credential-offer",
   "credential_endpoint": "http://10.48.17.124:8082/credential",
   "nonce_endpoint": "http://10.48.17.124:8082/nonce",

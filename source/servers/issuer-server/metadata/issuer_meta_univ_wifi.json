@@ -1,6 +1,6 @@
 {
   "credential_issuer": "http://10.48.201.164:8080",
-  "authorization_server": ["http://10.48.201.164:8081"],
+  "authorization_servers": ["http://10.48.201.164:8081"],
   "credential_endpoint": "http://10.48.201.164:8080/credential",
   "nonce_endpoint": "http://10.48.17.124/nonce",
   "deferred_credential_endpoint": "http://10.48.17.124/deferred_credential",

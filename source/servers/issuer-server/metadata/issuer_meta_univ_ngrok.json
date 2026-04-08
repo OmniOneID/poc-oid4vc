@@ -1,6 +1,6 @@
 {
   "credential_issuer": "https://photospheric-nondyspeptically-donny.ngrok-free.dev",
-  "authorization_server": ["https://photospheric-nondyspeptically-donny.ngrok-free.dev"],
+  "authorization_servers": ["https://photospheric-nondyspeptically-donny.ngrok-free.dev"],
   "credential_offer_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/credential-offer",
   "credential_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/credential",
   "nonce_endpoint": "https://photospheric-nondyspeptically-donny.ngrok-free.dev/nonce",

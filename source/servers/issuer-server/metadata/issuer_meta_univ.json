@@ -1,6 +1,6 @@
 {
   "credential_issuer": "http://192.168.3.130:8082",
-  "authorization_server": ["http://192.168.3.130:8082"],
+  "authorization_serverss": ["http://192.168.3.130:8082"],
   "credential_offer_endpoint": "http://192.168.3.130:8082/credential-offer",
   "credential_endpoint": "http://192.168.3.130:8082/credential",
   "nonce_endpoint": "http://192.168.3.130:8082/nonce",
