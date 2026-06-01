@@ -1,0 +1,67 @@
+@startuml
+title OID4VCI Issuance
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Holder as holder
+participant "Wallet" as wallet
+
+box "Issuer" #EEF7FF
+participant "Authorization Server" as auth
+participant "OID4VCI SDK" as vci
+participant "Formatter SDK\n(SD-JWT VC / mDoc)" as formatter
+end box
+
+holder -> vci: Start issuance request\n(userId, grantType)
+
+alt Pre-Authorized Code Flow
+    vci -> auth: Request Pre-Authorized Code
+    auth --> vci: pre-authorized_code, tx_code
+    vci -> vci: Store request_id(p*) and code
+else Authorization Code Flow
+    vci -> vci: Store issuer_state\nGenerate request_id(a*)
+end
+
+vci --> holder: Credential Offer URI / QR
+holder -> wallet: Pass QR or URI
+
+wallet -> vci: GET /credential-offer/{request_id}\nor use credential_offer directly
+vci -> vci: Look up and build Offer info
+vci --> wallet: Credential Offer\n(issuer, configuration_ids, grants)
+
+alt Pre-Authorized Code Flow
+    wallet -> auth: POST /token\npre-authorized_code, tx_code
+else Authorization Code Flow
+    wallet -> auth: Authorization Request / Login
+    auth --> wallet: authorization_code
+    wallet -> auth: POST /token\nauthorization_code
+end
+
+auth --> wallet: access_token, c_nonce
+
+opt c_nonce reissue needed
+    wallet -> vci: POST /nonce
+    vci -> vci: Generate and store c_nonce
+    vci --> wallet: c_nonce
+end
+
+wallet -> wallet: Build Holder Binding Proof\nJWT / DI-VP / Attestation
+wallet -> vci: POST /credential\nBearer access_token, CredentialRequest
+vci -> vci: Verify access_token, c_nonce, proof,\nconfiguration/identifier
+vci -> formatter: Request Credential generation\nclaims, issuer key, proof jwk
+formatter --> vci: Credential\nSD-JWT VC / mDoc, etc.
+vci --> wallet: CredentialResponse\nor 202 Deferred(transaction_id)
+
+opt Deferred issuance
+    wallet -> vci: POST /deferred_credential\ntransaction_id
+    vci -> formatter: Generate/retrieve deferred Credential
+    formatter --> vci: Credential
+    vci --> wallet: CredentialResponse
+end
+
+wallet -> vci: POST /notification\ncredential_accepted, etc.
+vci --> wallet: 200 OK / 204 No Content
+
+@enduml

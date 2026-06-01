@@ -1,0 +1,65 @@
+@startuml
+title OID4VP Presentation
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor User as user
+participant "Wallet" as wallet
+
+box "Verifier" #EEF7FF
+participant "Verifier Service" as sp
+participant "OID4VP SDK" as sdk
+participant "Formatter SDK\n(SD-JWT VC / mDoc)" as formatter
+end box
+
+sp -> sdk: POST /oid4vp/initiate\n(dcql_query or scope,\nresponse_mode, use_request_uri)
+sdk -> sdk: Validate DCQL\nmap scope and merge client_metadata
+sdk -> sdk: Store state, nonce, request_id,\ntransaction_id
+
+alt By Value
+    sdk --> sp: authorization_request_uri\n(openid4vp://?...dcql_query...)
+else By Reference
+    sdk --> sp: authorization_request_uri\n(openid4vp://?request_uri=...)
+else DC API
+    sdk --> sp: dc_api_request
+end
+
+sp -> user: Present request via QR, link, browser API, etc.
+user -> wallet: Pass Authorization Request
+
+opt By Reference
+    wallet -> sdk: GET /oid4vp/request/{request_id}
+    sdk -> sdk: Look up request_id session\nvalidate expiry/single-use
+    sdk -> sdk: Sign Authorization Request Object\nJWS or x5c header
+    sdk --> wallet: application/oauth-authz-req+jwt
+end
+
+wallet -> wallet: Select Credential matching DCQL
+wallet -> wallet: Build VP Token\nHolder Binding(aud, nonce)
+
+alt direct_post
+    wallet -> sdk: POST /oid4vp/response\nvp_token, state
+else query / fragment
+    wallet -> sdk: GET or callback\nvp_token, state
+else dc_api
+    wallet -> sp: navigator.credentials.get() response
+    sp -> sdk: POST /oid4vp/dc-api/response\nvp_token, transaction_id
+end
+
+sdk -> sdk: Look up session by state
+sdk -> sdk: Parse vp_token\nsplit by Credential Query ID
+sdk -> sdk: Extract Issuer/Holder identifiers and fetch public keys\nor prepare x5c trust chain validation
+sdk -> formatter: Verify signature, Holder Binding,\nnonce/aud, DCQL satisfaction
+formatter --> sdk: Verification result
+
+alt Verification success
+    sdk --> sp: 200 OK\nverification_result valid
+    sp --> user: Provide service
+else Verification failure or user cancellation
+    sdk --> sp: error, error_description,\nverification_result
+    sp --> user: Show error
+end
+
+@enduml

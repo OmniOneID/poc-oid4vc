@@ -1,100 +1,100 @@
-# SD-JWT 발급과 Disclosure 생성
+# SD-JWT Issuance and Disclosure Generation
 
-| 항목 | 내용 |
+| Item | Content |
 |------|------|
-| 주제 | SD-JWT 발급, Disclosure 생성, Salt·Hash·Decoy |
-| 작성 | 오픈소스개발팀 |
-| 일자 | 2026-06-01 |
-| 버전 | v1.0.0 |
+| Subject | SD-JWT Issuance, Disclosure Generation, Salt·Hash·Decoy |
+| Author | Open Source Development Team |
+| Date | 2026-06-01 |
+| Version | v1.0.0 |
 
-## 변경 이력
+## Change History
 
-| 버전 | 일자 | 변경 내용 |
+| Version | Date | Changes |
 |------|------|-----------|
-| v1.0.0 | 2026-06-01 | 초기 작성 |
+| v1.0.0 | 2026-06-01 | Initial version |
 
-## 목차
+## Table of Contents
 
-1. [발급 단계 개요](#1-발급-단계-개요)
-2. [Disclosure 만들기](#2-disclosure-만들기)
-3. [Salt의 역할](#3-salt의-역할)
-4. [digest 계산과 _sd 배열](#4-digest-계산과-_sd-배열)
-5. [중첩 구조와 배열 요소](#5-중첩-구조와-배열-요소)
+1. [Overview of the Issuance Phase](#1-overview-of-the-issuance-phase)
+2. [Creating Disclosures](#2-creating-disclosures)
+3. [The Role of Salt](#3-the-role-of-salt)
+4. [Digest Calculation and the _sd Array](#4-digest-calculation-and-the-_sd-array)
+5. [Nested Structures and Array Elements](#5-nested-structures-and-array-elements)
 6. [Decoy Digest](#6-decoy-digest)
-7. [Key Binding 준비: cnf](#7-key-binding-준비-cnf)
-8. [발급 결과물](#8-발급-결과물)
+7. [Preparing for Key Binding: cnf](#7-preparing-for-key-binding-cnf)
+8. [Issuance Output](#8-issuance-output)
 
 ---
 
-## 1. 발급 단계 개요
+## 1. Overview of the Issuance Phase
 
-발급자는 자격증명에 담을 클레임 중, **선택적 공개 대상**으로 만들 클레임을 정한다.
-그 클레임들은 값이 아니라 **Disclosure + digest** 형태로 변환되어 SD-JWT에 담긴다.
+The issuer decides which of the claims to include in the credential should be made **selectively disclosable**.
+Those claims are not stored as their values but are transformed into a **Disclosure + digest** form and embedded in the SD-JWT.
 
 ```mermaid
 flowchart TB
-    C[원본 클레임<br/>given_name = Gildong] --> S[salt 생성]
-    S --> DSC["Disclosure 생성<br/>[salt, name, value]"]
-    DSC -->|해시| DG[digest]
-    DG --> SD[SD-JWT의 _sd 배열]
-    SD -->|발급자 서명| JWT[서명된 SD-JWT]
+    C[Original claim<br/>given_name = Gildong] --> S[Generate salt]
+    S --> DSC["Create Disclosure<br/>[salt, name, value]"]
+    DSC -->|hash| DG[digest]
+    DG --> SD[_sd array of the SD-JWT]
+    SD -->|issuer signature| JWT[Signed SD-JWT]
 ```
 
-핵심은 발급자가 **값 자체가 아니라 digest를 서명**한다는 점이다.
-이 덕분에 나중에 일부 Disclosure를 빼도 서명이 유효하게 유지된다.
+The key point is that the issuer **signs the digest, not the value itself**.
+Thanks to this, the signature remains valid even when some Disclosures are removed later.
 
 ---
 
-## 2. Disclosure 만들기
+## 2. Creating Disclosures
 
-각 선택적 공개 클레임은 **Disclosure**라는 조각으로 변환된다.
-Disclosure는 다음 3요소를 담은 배열을 **Base64url로 인코딩**한 문자열이다.
-
-```
-[ <salt>, <클레임 이름>, <클레임 값> ]
-```
-
-예시:
+Each selectively disclosable claim is transformed into a fragment called a **Disclosure**.
+A Disclosure is a string produced by **Base64url-encoding** an array that contains the following three elements.
 
 ```
-원본:    "given_name": "Gildong"
-배열:    ["aQ7s9...zX", "given_name", "Gildong"]
+[ <salt>, <claim name>, <claim value> ]
+```
+
+Example:
+
+```
+Original:    "given_name": "Gildong"
+Array:       ["aQ7s9...zX", "given_name", "Gildong"]
 Disclosure(Base64url): "WyJhUTdzOS4uLnpYIiwgImdpdmVuX25hbWUiLCAiR2lsZG9uZyJd"
 ```
 
-| 요소 | 설명 |
+| Element | Description |
 |------|------|
-| `salt` | 클레임마다 새로 만드는 무작위 값 (아래 참고) |
-| 클레임 이름 | `given_name` 등. (배열 요소 Disclosure는 이름이 없다 → [5장](#5-중첩-구조와-배열-요소)) |
-| 클레임 값 | 실제 값 |
+| `salt` | A random value newly generated for each claim (see below) |
+| Claim name | e.g., `given_name`. (Array-element Disclosures have no name → [Section 5](#5-nested-structures-and-array-elements)) |
+| Claim value | The actual value |
 
 ---
 
-## 3. Salt의 역할
+## 3. The Role of Salt
 
-각 Disclosure에는 **클레임마다 새로 생성된 무작위 salt**가 들어간다.
-salt는 보안상 매우 중요하다.
+Each Disclosure includes a **random salt that is freshly generated per claim**.
+Salt is critically important for security.
 
-salt가 없다면, 검증자나 공격자가 흔한 값의 digest를 미리 계산해 두고
-**대조(사전 공격)** 로 숨겨진 값을 추측할 수 있다.
-예를 들어 `age_over_18 = true`의 digest는 항상 같을 것이므로, 숨겨도 의미가 없어진다.
+Without salt, a verifier or attacker could precompute the digests of common values and
+guess hidden values through **comparison (a dictionary attack)**.
+For example, the digest of `age_over_18 = true` would always be the same, so hiding it would be pointless.
 
-salt를 각 Disclosure에 섞으면 같은 값이라도 digest가 매번 달라지므로,
-**값을 공개하지 않는 한 digest만으로는 원본을 알 수 없다.**
+By mixing salt into each Disclosure, the digest changes every time even for identical values, so
+**the original value cannot be derived from the digest alone unless the value is disclosed.**
 
 ```
-salt 없음:   hash("given_name","Gildong")        → 항상 동일, 추측 가능
-salt 있음:   hash("aQ7s9...","given_name","Gildong") → 매번 달라짐, 추측 불가
+Without salt:   hash("given_name","Gildong")        → always identical, guessable
+With salt:      hash("aQ7s9...","given_name","Gildong") → different every time, not guessable
 ```
 
-> salt는 **충분히 길고 예측 불가능**해야 한다. 보통 128비트 이상의 난수를 Base64url로 인코딩해 쓴다.
+> Salt must be **sufficiently long and unpredictable**. Typically, a random value of at least 128 bits is Base64url-encoded for use.
 
 ---
 
-## 4. digest 계산과 _sd 배열
+## 4. Digest Calculation and the _sd Array
 
-각 Disclosure 문자열을 **`_sd_alg`에 지정된 해시 함수(보통 SHA-256)** 로 해시하면 digest가 나온다.
-숨김 처리된 클레임들의 digest는 SD-JWT 본문의 **`_sd`** 배열에 모인다.
+Hashing each Disclosure string with the **hash function specified in `_sd_alg` (usually SHA-256)** produces a digest.
+The digests of the hidden claims are collected into the **`_sd`** array of the SD-JWT body.
 
 ```jsonc
 {
@@ -102,86 +102,86 @@ salt 있음:   hash("aQ7s9...","given_name","Gildong") → 매번 달라짐, 추
   "vct": "https://example.com/identity_credential",
   "_sd_alg": "sha-256",
   "_sd": [
-    "X9yH0Ajr2pQ...",   // given_name의 digest
-    "n4hmF7y2kLm...",   // birth_date의 digest
-    "Pz3...decoy..."    // decoy (6장 참고)
+    "X9yH0Ajr2pQ...",   // digest of given_name
+    "n4hmF7y2kLm...",   // digest of birth_date
+    "Pz3...decoy..."    // decoy (see Section 6)
   ],
-  "address": "Seoul",   // 항상 공개되는 클레임은 평문으로
-  "cnf": { "jwk": { /* 보유자 공개키 */ } }
+  "address": "Seoul",   // always-disclosed claims are kept in plaintext
+  "cnf": { "jwk": { /* holder public key */ } }
 }
 ```
 
-이때 **`_sd` 배열은 순서를 섞어** 둔다. 그래야 digest의 위치로부터
-어떤 클레임이 숨겨졌는지 유추할 수 없다.
-또한 항상 공개해도 되는 클레임(예: `iss`, `vct`)은 평문으로 그대로 둔다.
+At this point, the **`_sd` array is shuffled** so that one cannot infer
+which claim is hidden from the position of a digest.
+Also, claims that may always be disclosed (e.g., `iss`, `vct`) are left as plaintext.
 
 ---
 
-## 5. 중첩 구조와 배열 요소
+## 5. Nested Structures and Array Elements
 
-선택적 공개는 단순 클레임뿐 아니라 **중첩 객체와 배열 요소**에도 적용된다.
+Selective disclosure applies not only to simple claims but also to **nested objects and array elements**.
 
-- **객체 속성**: 부모 객체 안에 다시 `_sd` 배열을 두어, 속성 단위로 숨긴다.
-- **배열 요소**: 배열의 개별 항목을 `{ "...": "<digest>" }` 형태로 치환해 숨긴다.
-  이 경우 Disclosure는 `[salt, 값]`처럼 **이름 없이 2요소**로 구성된다.
+- **Object properties**: A nested `_sd` array is placed inside the parent object to hide individual properties.
+- **Array elements**: Individual items of an array are replaced with the form `{ "...": "<digest>" }` to hide them.
+  In this case, the Disclosure consists of **two elements without a name**, like `[salt, value]`.
 
 ```jsonc
-// 배열 요소 선택적 공개 예시
+// Example of selective disclosure of array elements
 "nationalities": [
-  { "...": "Qg3...digest..." },   // 숨겨진 요소
-  "KR"                              // 공개 요소
+  { "...": "Qg3...digest..." },   // hidden element
+  "KR"                              // disclosed element
 ]
 ```
 
-이를 통해 "여러 국적 중 하나만 공개" 같은 세밀한 제어가 가능하다.
+This enables fine-grained control such as "disclose only one of multiple nationalities."
 
 ---
 
 ## 6. Decoy Digest
 
-**Decoy(미끼) digest**는 실제 클레임과 무관한 **가짜 digest**다.
-`_sd` 배열에 무작위로 몇 개를 섞어 넣는다.
+A **decoy digest** is a **fake digest** unrelated to any actual claim.
+A few of them are randomly mixed into the `_sd` array.
 
-목적은 **숨겨진 클레임의 개수를 감추는 것**이다.
-decoy가 없으면 검증자는 `_sd` 항목 수로 "숨겨진 클레임이 몇 개인지" 알 수 있다.
-decoy를 섞으면 실제 개수를 알 수 없게 되어 프라이버시가 강화된다.
+The purpose is to **conceal the number of hidden claims**.
+Without decoys, a verifier could tell "how many claims are hidden" from the number of `_sd` entries.
+Mixing in decoys makes the actual count unknowable, strengthening privacy.
 
 ```
-_sd = [ 진짜 digest, 진짜 digest, decoy, 진짜 digest, decoy ]
-        └────────── 몇 개가 진짜인지 알 수 없음 ──────────┘
+_sd = [ real digest, real digest, decoy, real digest, decoy ]
+        └────────── cannot tell how many are real ──────────┘
 ```
 
-decoy는 대응하는 Disclosure가 없으므로, 검증 시 매칭되지 않고 그냥 무시된다.
+Since a decoy has no corresponding Disclosure, it does not match during verification and is simply ignored.
 
 ---
 
-## 7. Key Binding 준비: cnf
+## 7. Preparing for Key Binding: cnf
 
-발급자는 SD-JWT 본문에 보유자의 공개키를 **`cnf`(confirmation)** 클레임으로 박아 둔다.
+The issuer embeds the holder's public key into the SD-JWT body as a **`cnf` (confirmation)** claim.
 
 ```jsonc
 "cnf": { "jwk": { "kty": "EC", "crv": "P-256", "x": "...", "y": "..." } }
 ```
 
-이 공개키는 제시 단계에서 보유자가 만드는 **Key Binding JWT** 검증에 사용된다.
-즉, 발급 시점에 "이 자격증명의 정당한 보유자는 이 키의 소유자"라고 못 박는 것이다.
-보유자 공개키는 OID4VCI 발급 시 [보유 증명(proof)](../oid4vci/oid4vci_metadata_and_proof.md#3-proof-of-possession)으로
-전달된 키와 동일하다.
+This public key is used to verify the **Key Binding JWT** that the holder creates during the presentation phase.
+In other words, at issuance time it is established that "the legitimate holder of this credential is the owner of this key."
+The holder public key is the same key delivered as the [proof of possession](../oid4vci/oid4vci_metadata_and_proof.md#3-proof-of-possession)
+during OID4VCI issuance.
 
 ---
 
-## 8. 발급 결과물
+## 8. Issuance Output
 
-발급이 끝나면 보유자(지갑)는 다음을 받는다.
+Once issuance is complete, the holder (wallet) receives the following.
 
 ```
 <SD-JWT>~<Disclosure 1>~<Disclosure 2>~ ... ~<Disclosure N>~
 ```
 
-- 맨 앞: 발급자가 서명한 SD-JWT 본문
-- 그 뒤: **가능한 모든 Disclosure** (이 시점엔 전부 첨부됨)
-- 맨 끝: 빈 자리(`~`로 끝남) — 아직 KB-JWT는 없음
+- At the front: the SD-JWT body signed by the issuer
+- After it: **all possible Disclosures** (all are attached at this point)
+- At the end: an empty slot (ends with `~`) — there is no KB-JWT yet
 
-지갑은 이 전체를 안전하게 저장한다.
-나중에 제시할 때 **공개할 Disclosure만 남기고** KB-JWT를 붙이는데,
-그 과정은 [SD-JWT 제시와 검증](sdjwt_presentation_and_verification.md)에서 다룬다.
+The wallet stores this entire string securely.
+When presenting it later, it **keeps only the Disclosures to be disclosed** and attaches a KB-JWT,
+a process covered in [SD-JWT Presentation and Verification](sdjwt_presentation_and_verification.md).

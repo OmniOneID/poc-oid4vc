@@ -1,67 +1,67 @@
-# SD-JWT VC 개요
+# SD-JWT VC Overview
 
-| 항목 | 내용 |
+| Item | Content |
 |------|------|
-| 주제 | SD-JWT VC 개요와 선택적 공개(Selective Disclosure) |
-| 작성 | 오픈소스개발팀 |
-| 일자 | 2026-06-01 |
-| 버전 | v1.0.0 |
+| Subject | SD-JWT VC Overview and Selective Disclosure |
+| Author | Open Source Development Team |
+| Date | 2026-06-01 |
+| Version | v1.0.0 |
 
-## 변경 이력
+## Change History
 
-| 버전 | 일자 | 변경 내용 |
+| Version | Date | Changes |
 |------|------|-----------|
-| v1.0.0 | 2026-06-01 | 초기 작성 |
+| v1.0.0 | 2026-06-01 | Initial version |
 
-## 목차
+## Table of Contents
 
-1. [SD-JWT VC란](#1-sd-jwt-vc란)
-2. [왜 선택적 공개인가](#2-왜-선택적-공개인가)
-3. [전체 구조](#3-전체-구조)
-4. [핵심 구성 요소](#4-핵심-구성-요소)
-5. [선택적 공개의 원리](#5-선택적-공개의-원리)
-6. [생애주기 한눈에 보기](#6-생애주기-한눈에-보기)
-7. [관련 표준](#7-관련-표준)
-
----
-
-## 1. SD-JWT VC란
-
-**SD-JWT VC(Selective Disclosure JWT Verifiable Credential)** 는
-**선택적 공개**가 가능한, JWT 기반 자격증명 포맷이다.
-
-일반 JWT는 토큰을 보여주면 그 안의 모든 클레임이 그대로 드러난다.
-반면 SD-JWT는 **어떤 클레임을 공개하고 어떤 클레임을 숨길지 보유자가 선택**할 수 있다.
-예를 들어 신분증에서 "성인 여부"만 보여주고 생년월일·주소는 숨길 수 있다.
-
-SD-JWT VC의 장점은 다음과 같다.
-
-- **최소 공개(data minimization)**: 검증에 필요한 항목만 공개해 프라이버시를 보호한다.
-- **JOSE 생태계 호환**: 익숙한 JWT/JWS 기술 위에서 동작한다.
-- **보유자 바인딩**: Key Binding을 통해 정당한 보유자만 제시할 수 있다.
-
-> SD-JWT는 IETF가 정의한 일반 메커니즘이고, **SD-JWT VC**는 이를 자격증명 용도로
-> 구체화한 프로파일이다(`vct`로 자격증명 타입을 지정하는 등).
+1. [What Is SD-JWT VC](#1-what-is-sd-jwt-vc)
+2. [Why Selective Disclosure](#2-why-selective-disclosure)
+3. [Overall Structure](#3-overall-structure)
+4. [Core Components](#4-core-components)
+5. [How Selective Disclosure Works](#5-how-selective-disclosure-works)
+6. [Lifecycle at a Glance](#6-lifecycle-at-a-glance)
+7. [Related Standards](#7-related-standards)
 
 ---
 
-## 2. 왜 선택적 공개인가
+## 1. What Is SD-JWT VC
 
-현실의 신분증은 "전부 아니면 전무"다. 술집에서 나이를 확인할 때도
-이름·주소·면허번호가 모두 노출된다. 디지털에서는 이를 개선할 수 있다.
+**SD-JWT VC (Selective Disclosure JWT Verifiable Credential)** is a
+JWT-based credential format that supports **selective disclosure**.
 
-| 방식 | 공개 범위 |
+With a regular JWT, presenting the token reveals every claim inside it as-is.
+By contrast, with SD-JWT the **holder can choose which claims to disclose and which to keep hidden**.
+For example, you can show only "whether the person is an adult" from an ID document while hiding the date of birth and address.
+
+The advantages of SD-JWT VC are as follows.
+
+- **Data minimization**: Only the items needed for verification are disclosed, protecting privacy.
+- **JOSE ecosystem compatibility**: It operates on top of familiar JWT/JWS technology.
+- **Holder binding**: Through Key Binding, only the legitimate holder can present the credential.
+
+> SD-JWT is a general mechanism defined by the IETF, while **SD-JWT VC** is a profile that
+> specializes it for credential use (e.g., specifying the credential type via `vct`).
+
+---
+
+## 2. Why Selective Disclosure
+
+Real-world ID documents are "all or nothing." Even when checking your age at a bar,
+your name, address, and license number are all exposed. In the digital world, this can be improved.
+
+| Approach | Disclosure Scope |
 |------|----------|
-| 일반 JWT | 토큰 안의 **모든** 클레임이 노출 |
-| SD-JWT | 보유자가 **선택한** 클레임만 노출, 나머지는 숨김 |
+| Regular JWT | **All** claims inside the token are exposed |
+| SD-JWT | Only the claims **selected** by the holder are exposed; the rest stay hidden |
 
-선택적 공개는 "필요한 만큼만 증명한다"는 **최소 공개 원칙**을 기술적으로 구현한 것이다.
+Selective disclosure is a technical implementation of the **data minimization principle** of "proving only as much as necessary."
 
 ---
 
-## 3. 전체 구조
+## 3. Overall Structure
 
-SD-JWT는 여러 부분을 **물결표(`~`)** 로 이어 붙인 문자열이다.
+An SD-JWT is a string formed by joining several parts with **tildes (`~`)**.
 
 ```
 <SD-JWT>~<Disclosure 1>~<Disclosure 2>~...~<Key Binding JWT>
@@ -69,73 +69,73 @@ SD-JWT는 여러 부분을 **물결표(`~`)** 로 이어 붙인 문자열이다.
 
 ```mermaid
 flowchart LR
-    A[SD-JWT<br/>서명된 본문] --- B[Disclosure 1] --- C[Disclosure 2] --- D[...] --- E[KB-JWT<br/>보유자 서명]
+    A[SD-JWT<br/>Signed body] --- B[Disclosure 1] --- C[Disclosure 2] --- D[...] --- E[KB-JWT<br/>Holder signature]
 ```
 
-| 부분 | 설명 |
+| Part | Description |
 |------|------|
-| **SD-JWT** | 발급자가 서명한 JWT 본문. 숨겨진 클레임은 **해시(digest)** 형태로 들어 있다 |
-| **Disclosure** | 숨겨진 클레임의 "원본 값"을 담은 조각. 공개할 것만 첨부한다 |
-| **KB-JWT** | 보유자가 제시 시점에 서명하는 Key Binding JWT (제시 단계에서만 존재) |
+| **SD-JWT** | The JWT body signed by the issuer. Hidden claims are included as **hashes (digests)** |
+| **Disclosure** | A fragment containing the "original value" of a hidden claim. Only those to be disclosed are attached |
+| **KB-JWT** | The Key Binding JWT signed by the holder at presentation time (exists only in the presentation stage) |
 
-> 발급 직후에는 가능한 모든 Disclosure가 붙어 있고, 마지막 `~`만 있다(KB-JWT 없음).
-> 제시 시점에 보유자가 **공개할 Disclosure만 남기고** KB-JWT를 덧붙인다.
+> Right after issuance, all possible Disclosures are attached, and there is only a trailing `~` (no KB-JWT).
+> At presentation time, the holder **keeps only the Disclosures to be disclosed** and appends the KB-JWT.
 
 ---
 
-## 4. 핵심 구성 요소
+## 4. Core Components
 
-### 4.1 SD-JWT 본문
-발급자가 서명한 JWT다. 숨김 처리된 클레임은 값이 아니라 **digest**로 들어가며,
-특별한 `_sd` 배열에 모인다.
+### 4.1 SD-JWT Body
+This is a JWT signed by the issuer. Hidden claims are included not as values but as **digests**,
+which are collected in a special `_sd` array.
 
 ```jsonc
 {
   "iss": "https://issuer.example.com",
   "vct": "https://example.com/identity_credential",
-  "_sd": [                       // 숨겨진 클레임들의 digest 목록
+  "_sd": [                       // List of digests of the hidden claims
     "X9yH0Ajr...", "n4hmF7y2..."
   ],
-  "_sd_alg": "sha-256",          // digest 해시 알고리즘
-  "cnf": { "jwk": { /* 보유자 공개키 */ } }  // Key Binding용
+  "_sd_alg": "sha-256",          // Digest hash algorithm
+  "cnf": { "jwk": { /* Holder public key */ } }  // For Key Binding
 }
 ```
 
 ### 4.2 Disclosure
-숨겨진 클레임 하나의 원본을 복원할 수 있는 조각이다.
-`[salt, 클레임 이름, 값]` 배열을 Base64url로 인코딩한 것이다.
+This is a fragment that allows the original value of a single hidden claim to be recovered.
+It is the Base64url encoding of a `[salt, claim name, value]` array.
 
 ```
-["<random salt>", "given_name", "Gildong"]   →  Base64url 인코딩
+["<random salt>", "given_name", "Gildong"]   →  Base64url encoding
 ```
 
 ### 4.3 Key Binding JWT (cnf)
-SD-JWT 본문의 **`cnf`** 클레임에는 보유자의 공개키가 들어 있다.
-제시 시 보유자는 대응하는 개인키로 **KB-JWT**를 서명해, 자신이 정당한 보유자임을 증명한다.
+The **`cnf`** claim in the SD-JWT body contains the holder's public key.
+At presentation time, the holder signs a **KB-JWT** with the corresponding private key to prove that they are the legitimate holder.
 
 ---
 
-## 5. 선택적 공개의 원리
+## 5. How Selective Disclosure Works
 
-핵심은 **"발급자는 값이 아니라 값의 해시를 서명한다"** 는 점이다.
+The key point is that **"the issuer signs the hash of a value, not the value itself."**
 
 ```mermaid
 flowchart TB
-    D[Disclosure<br/>salt + 이름 + 값] -->|해시| H[digest]
-    H --> SD["SD-JWT의 _sd 배열<br/>(발급자가 서명)"]
-    D -.공개 선택시 첨부.-> P[제시물]
+    D[Disclosure<br/>salt + name + value] -->|hash| H[digest]
+    H --> SD["The _sd array of the SD-JWT<br/>(signed by the issuer)"]
+    D -.Attached when disclosure is chosen.-> P[Presentation]
 ```
 
-- 발급 시: 각 클레임을 `[salt, 이름, 값]`(Disclosure)으로 만들고, 그 **해시를 `_sd`에 넣어 서명**한다.
-- 제시 시: 공개할 클레임의 **Disclosure만 첨부**한다.
-- 검증 시: 첨부된 Disclosure를 해시해서 `_sd`의 digest와 일치하는지 확인한다.
+- At issuance: Each claim is turned into a `[salt, name, value]` (Disclosure), and its **hash is placed into `_sd` and signed**.
+- At presentation: **Only the Disclosures of the claims to be disclosed are attached**.
+- At verification: The attached Disclosures are hashed and checked against the digests in `_sd` for a match.
 
-이 구조 덕분에 보유자가 일부 Disclosure를 빼더라도,
-**발급자 서명은 그대로 유효**하다. 서명 대상이 "값"이 아니라 "해시 목록"이기 때문이다.
+Thanks to this structure, even if the holder omits some Disclosures,
+the **issuer's signature remains valid**. This is because what is signed is not the "values" but the "list of hashes."
 
 ---
 
-## 6. 생애주기 한눈에 보기
+## 6. Lifecycle at a Glance
 
 ```mermaid
 sequenceDiagram
@@ -143,23 +143,23 @@ sequenceDiagram
     participant H as Holder(Wallet)
     participant V as Verifier
 
-    Note over I: ① 클레임 → Disclosure + digest<br/>SD-JWT 서명
-    I->>H: ② SD-JWT + 전체 Disclosure 발급
-    Note over H: ③ 안전 저장
-    V->>H: ④ 제시 요청 (필요 클레임, nonce)
-    Note over H: ⑤ 공개할 Disclosure만 선택<br/>KB-JWT 서명
-    H->>V: ⑥ SD-JWT~선택 Disclosure~KB-JWT
-    Note over V: ⑦ 발급자 서명·digest·KB 검증
+    Note over I: ① Claims → Disclosures + digests<br/>Sign SD-JWT
+    I->>H: ② Issue SD-JWT + all Disclosures
+    Note over H: ③ Secure storage
+    V->>H: ④ Presentation request (required claims, nonce)
+    Note over H: ⑤ Select only the Disclosures to disclose<br/>Sign KB-JWT
+    H->>V: ⑥ SD-JWT~selected Disclosures~KB-JWT
+    Note over V: ⑦ Verify issuer signature, digests, and KB
 ```
 
-- ①②: [SD-JWT 발급과 Disclosure 생성](sdjwt_issuance_and_disclosure.md)
-- ⑤⑥⑦: [SD-JWT 제시와 검증](sdjwt_presentation_and_verification.md)
+- ①②: [SD-JWT Issuance and Disclosure Creation](sdjwt_issuance_and_disclosure.md)
+- ⑤⑥⑦: [SD-JWT Presentation and Verification](sdjwt_presentation_and_verification.md)
 
 ---
 
-## 7. 관련 표준
+## 7. Related Standards
 
-| 표준 | 설명 | 링크 |
+| Standard | Description | Link |
 |------|------|------|
 | SD-JWT | Selective Disclosure for JWTs (IETF) | <https://datatracker.ietf.org/doc/draft-ietf-oauth-selective-disclosure-jwt/> |
 | SD-JWT VC | SD-JWT-based Verifiable Credentials | <https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/> |

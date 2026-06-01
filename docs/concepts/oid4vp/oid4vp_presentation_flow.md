@@ -1,151 +1,142 @@
-# OID4VP 제시 프로토콜 흐름
+# OID4VP Presentation Protocol Flow
 
-| 항목 | 내용 |
+| Item | Content |
 |------|------|
-| 주제 | OID4VP 제시 흐름, Authorization Request/Response, 응답 모드 |
-| 작성 | 오픈소스개발팀 |
-| 일자 | 2026-06-01 |
-| 버전 | v1.0.0 |
+| Subject | OID4VP presentation flow, Authorization Request/Response, response modes |
+| Author | Open Source Development Team |
+| Date | 2026-06-01 |
+| Version | v1.0.0 |
 
-## 변경 이력
+## Change History
 
-| 버전 | 일자 | 변경 내용 |
+| Version | Date | Changes |
 |------|------|-----------|
-| v1.0.0 | 2026-06-01 | 초기 작성 |
+| v1.0.0 | 2026-06-01 | Initial version |
 
-## 목차
+## Table of Contents
 
-1. [제시 흐름 개요](#1-제시-흐름-개요)
+1. [Presentation Flow Overview](#1-presentation-flow-overview)
 2. [Authorization Request](#2-authorization-request)
-3. [request_uri와 JAR](#3-request_uri와-jar)
-4. [Authorization Response와 응답 모드](#4-authorization-response와-응답-모드)
-5. [nonce와 재전송 방지](#5-nonce와-재전송-방지)
-6. [전체 시퀀스](#6-전체-시퀀스)
+3. [request_uri and JAR](#3-request_uri-and-jar)
+4. [Authorization Response and Response Modes](#4-authorization-response-and-response-modes)
+5. [nonce and Replay Prevention](#5-nonce-and-replay-prevention)
+6. [Full Sequence](#6-full-sequence)
 
 ---
 
-## 1. 제시 흐름 개요
+## 1. Presentation Flow Overview
 
-OID4VP의 제시 흐름은 크게 세 단계로 나뉜다.
+The OID4VP presentation flow is broadly divided into three stages.
 
-1. **요청(Request)**: 검증자가 무엇을 원하는지 지갑에 전달한다.
-2. **선택·생성(Select & Build)**: 지갑이 요청에 맞는 자격증명을 찾고, 사용자 동의를 받아 VP Token을 만든다.
-3. **응답(Response)**: 지갑이 VP Token을 검증자에게 전달하고, 검증자가 이를 검증한다.
+1. **Request**: The verifier conveys to the wallet what it wants.
+2. **Select & Build**: The wallet finds credentials matching the request, obtains user consent, and builds a VP Token.
+3. **Response**: The wallet delivers the VP Token to the verifier, which then verifies it.
 
 ```mermaid
 flowchart LR
-    A[요청<br/>Authorization Request] --> B[선택·생성<br/>VP Token Build]
-    B --> C[응답<br/>Authorization Response]
-    C --> D[검증<br/>Verification]
+    A[Request<br/>Authorization Request] --> B[Select & Build<br/>VP Token Build]
+    B --> C[Response<br/>Authorization Response]
+    C --> D[Verification<br/>Verification]
 ```
 
 ---
 
 ## 2. Authorization Request
 
-검증자가 지갑에 보내는 첫 메시지다. 주요 파라미터는 다음과 같다.
+This is the first message the verifier sends to the wallet. The main parameters are as follows.
 
-| 파라미터 | 설명 |
+| Parameter | Description |
 |----------|------|
-| `client_id` | 검증자(Relying Party)의 식별자 |
-| `response_type` | 보통 `vp_token` |
-| `response_mode` | 응답을 어떤 방식으로 돌려받을지 (예: `direct_post`) |
-| `dcql_query` | 어떤 자격증명/클레임을 원하는지에 대한 [DCQL](oid4vp_dcql_and_vptoken.md) 질의 |
-| `nonce` | 재전송 방지를 위한 일회성 난수 |
-| `response_uri` | 응답을 전송할 검증자 엔드포인트 |
-| `client_metadata` | 검증자의 메타데이터(응답 암호화 키 등) |
+| `client_id` | Identifier of the verifier (Relying Party) |
+| `response_type` | Usually `vp_token` |
+| `response_mode` | How the response is to be returned (e.g., `direct_post`) |
+| `dcql_query` | A [DCQL](oid4vp_dcql_and_vptoken.md) query describing which credentials/claims are wanted |
+| `nonce` | A one-time random value for replay prevention |
+| `response_uri` | The verifier endpoint to which the response is sent |
+| `client_metadata` | The verifier's metadata (response encryption key, etc.) |
 
-요청은 URL 파라미터로 직접 담길 수도 있지만, 길이·보안 문제로 보통은
-**`request_uri`** 를 통해 지갑이 별도로 가져오는 방식을 쓴다.
+The request can be carried directly as URL parameters, but due to length and security concerns it is usually retrieved separately by the wallet via **`request_uri`**.
 
 ---
 
-## 3. request_uri와 JAR
+## 3. request_uri and JAR
 
-요청 파라미터를 URL에 그대로 노출하면 길이 제한과 변조 위험이 있다.
-이를 해결하기 위해 OID4VP는 **`request_uri`** 와 **JAR(JWT-Secured Authorization Request)** 를 사용한다.
+Exposing request parameters directly in the URL carries length limits and tampering risks. To address this, OID4VP uses **`request_uri`** and **JAR (JWT-Secured Authorization Request)**.
 
-- **request_uri**: 검증자는 요청 본문을 직접 주는 대신, 그것을 가져올 수 있는 URL만 전달한다.
-  지갑은 이 URL에 접속해 실제 요청(Request Object)을 받아온다.
-- **JAR**: 가져온 Request Object는 검증자의 키로 **서명된 JWT** 형태다.
-  지갑은 이 서명을 검증해, 요청이 정당한 검증자에게서 왔고 변조되지 않았음을 확인한다.
+- **request_uri**: Instead of providing the request body directly, the verifier passes only a URL from which it can be fetched. The wallet accesses this URL to retrieve the actual request (Request Object).
+- **JAR**: The fetched Request Object takes the form of a **JWT signed** with the verifier's key. The wallet verifies this signature to confirm that the request came from a legitimate verifier and has not been tampered with.
 
 ```mermaid
 sequenceDiagram
     participant V as Verifier
     participant W as Wallet
-    V->>W: Authorization Request (request_uri만 포함)
+    V->>W: Authorization Request (contains only request_uri)
     W->>V: GET request_uri
-    V-->>W: 서명된 Request Object (JWT, DCQL 포함)
-    Note over W: 서명 검증 → 요청 신뢰 확인
+    V-->>W: Signed Request Object (JWT, includes DCQL)
+    Note over W: Verify signature -> confirm request trust
 ```
 
-`request_uri`를 가져오는 방식은 **GET**과 **POST** 두 가지가 있다.
-POST 방식에서는 지갑이 자신의 메타데이터 등을 함께 전달할 수 있다.
+There are two ways to fetch the `request_uri`: **GET** and **POST**. With the POST method, the wallet can also send along its own metadata and so on.
 
 ---
 
-## 4. Authorization Response와 응답 모드
+## 4. Authorization Response and Response Modes
 
-지갑은 VP Token을 만든 뒤 검증자에게 응답을 보낸다.
-어떤 방식으로 보낼지는 요청의 **`response_mode`** 가 결정한다.
+After building the VP Token, the wallet sends a response to the verifier. The request's **`response_mode`** determines how it is sent.
 
-| 응답 모드 | 설명 | 주 사용처 |
+| Response Mode | Description | Primary Use |
 |-----------|------|----------|
-| **`direct_post`** | 지갑이 VP Token을 검증자의 `response_uri`로 **HTTP POST** 전송 | Cross-Device, 서버 간 처리 |
-| **`direct_post.jwt`** | `direct_post`와 같되, 응답을 **암호화(JWE)** 하여 전송 | 응답 기밀성이 필요한 경우 |
-| **`dc_api`** | 브라우저의 **Digital Credentials API**를 통해 응답 전달 | Same-Device 웹 통합 |
-| **`fragment`** | 리다이렉트 URL의 fragment(`#`)에 응답을 실어 전달 | 단순 리다이렉트 기반 |
+| **`direct_post`** | The wallet sends the VP Token to the verifier's `response_uri` via **HTTP POST** | Cross-Device, server-to-server processing |
+| **`direct_post.jwt`** | Same as `direct_post`, but the response is **encrypted (JWE)** before sending | When response confidentiality is required |
+| **`dc_api`** | The response is delivered through the browser's **Digital Credentials API** | Same-Device web integration |
+| **`fragment`** | The response is carried in the fragment (`#`) of the redirect URL | Simple redirect-based |
 
 ```mermaid
 flowchart TB
-    W[Wallet: VP Token 생성] --> M{response_mode}
-    M -->|direct_post| P[검증자 response_uri로 POST]
-    M -->|dc_api| D[브라우저 Digital Credentials API]
-    M -->|fragment| F[리다이렉트 URL fragment]
-    P --> V[Verifier 수신·검증]
+    W[Wallet: build VP Token] --> M{response_mode}
+    M -->|direct_post| P[POST to verifier response_uri]
+    M -->|dc_api| D[Browser Digital Credentials API]
+    M -->|fragment| F[Redirect URL fragment]
+    P --> V[Verifier receives and verifies]
     D --> V
     F --> V
 ```
 
-대부분의 서버-주도 시나리오에서는 **`direct_post`** 가 기본으로 쓰인다.
-브라우저에 통합된 최신 방식이 필요하면 **`dc_api`** 를 사용한다.
+In most server-driven scenarios, **`direct_post`** is used by default. When a modern browser-integrated method is needed, **`dc_api`** is used.
 
 ---
 
-## 5. nonce와 재전송 방지
+## 5. nonce and Replay Prevention
 
-OID4VP에서 **nonce**는 핵심 보안 요소다.
-검증자는 요청마다 새로운 `nonce`를 생성해 보내고, 지갑은 이 값을 VP Token 생성 시 포함한다.
+In OID4VP, the **nonce** is a key security element. The verifier generates a new `nonce` for each request and sends it, and the wallet includes this value when building the VP Token.
 
-이렇게 하면 검증자는 받은 VP Token이 **이번 요청에 대한 응답**임을 확인할 수 있다.
-과거에 캡처한 VP Token을 재사용하는 **재전송 공격(replay attack)** 을 막는 장치다.
+This allows the verifier to confirm that the received VP Token is a **response to this particular request**. It is a mechanism that prevents **replay attacks**, in which a previously captured VP Token is reused.
 
-> nonce는 자격증명 포맷에 따라 다른 위치에 묶인다.
-> SD-JWT VC는 Key Binding JWT의 클레임으로, mDoc은 세션/SessionTranscript에 반영된다.
-> 자세한 내용은 [DCQL과 VP Token](oid4vp_dcql_and_vptoken.md) 및 각 포맷 문서를 참고한다.
+> The nonce is bound in different locations depending on the credential format.
+> For SD-JWT VC it is a claim of the Key Binding JWT, while for mDoc it is reflected in the session/SessionTranscript.
+> For details, refer to [DCQL and VP Token](oid4vp_dcql_and_vptoken.md) and the documentation for each format.
 
 ---
 
-## 6. 전체 시퀀스
+## 6. Full Sequence
 
-아래는 `request_uri` + `direct_post`를 사용하는 전형적인 Cross-Device 흐름이다.
+Below is a typical Cross-Device flow using `request_uri` + `direct_post`.
 
 ```mermaid
 sequenceDiagram
     participant V as Verifier
     participant W as Wallet
-    participant U as 사용자
+    participant U as User
 
-    V->>W: ① QR/딥링크 (request_uri 포함)
-    W->>V: ② GET request_uri
-    V-->>W: ③ 서명된 Request Object (DCQL, nonce)
-    Note over W: 서명 검증 → 요청 신뢰 확인
-    W->>W: ④ DCQL과 매칭되는 자격증명 탐색
-    W->>U: ⑤ 제출 동의/항목 선택 요청
-    U-->>W: ⑥ 동의
-    W->>W: ⑦ VP Token 생성 (nonce·보유 증명 포함)
-    W->>V: ⑧ POST response_uri (VP Token)
-    V->>V: ⑨ VP Token 검증
-    V-->>W: ⑩ (선택) redirect_uri 반환
+    V->>W: (1) QR/deep link (includes request_uri)
+    W->>V: (2) GET request_uri
+    V-->>W: (3) Signed Request Object (DCQL, nonce)
+    Note over W: Verify signature -> confirm request trust
+    W->>W: (4) Search for credentials matching DCQL
+    W->>U: (5) Request submission consent / item selection
+    U-->>W: (6) Consent
+    W->>W: (7) Build VP Token (includes nonce, proof of possession)
+    W->>V: (8) POST response_uri (VP Token)
+    V->>V: (9) Verify VP Token
+    V-->>W: (10) (optional) Return redirect_uri
 ```
