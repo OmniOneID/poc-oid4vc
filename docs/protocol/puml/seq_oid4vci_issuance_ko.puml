@@ -1,0 +1,67 @@
+@startuml
+title OID4VCI 발급
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor Holder as holder
+participant "Wallet" as wallet
+
+box "Issuer" #EEF7FF
+participant "Authorization Server" as auth
+participant "OID4VCI SDK" as vci
+participant "Formatter SDK\n(SD-JWT VC / mDoc)" as formatter
+end box
+
+holder -> vci: 발급 시작 요청\n(userId, grantType)
+
+alt Pre-Authorized Code Flow
+    vci -> auth: Pre-Authorized Code 요청
+    auth --> vci: pre-authorized_code, tx_code
+    vci -> vci: request_id(p*)와 code 저장
+else Authorization Code Flow
+    vci -> vci: issuer_state 저장\nrequest_id(a*) 생성
+end
+
+vci --> holder: Credential Offer URI / QR
+holder -> wallet: QR 또는 URI 전달
+
+wallet -> vci: GET /credential-offer/{request_id}\n또는 credential_offer 직접 사용
+vci -> vci: Offer 정보 조회 및 생성
+vci --> wallet: Credential Offer\n(issuer, configuration_ids, grants)
+
+alt Pre-Authorized Code Flow
+    wallet -> auth: POST /token\npre-authorized_code, tx_code
+else Authorization Code Flow
+    wallet -> auth: Authorization Request / Login
+    auth --> wallet: authorization_code
+    wallet -> auth: POST /token\nauthorization_code
+end
+
+auth --> wallet: access_token, c_nonce
+
+opt c_nonce 재발급 필요
+    wallet -> vci: POST /nonce
+    vci -> vci: c_nonce 생성 및 저장
+    vci --> wallet: c_nonce
+end
+
+wallet -> wallet: Holder Binding Proof 생성\nJWT / DI-VP / Attestation
+wallet -> vci: POST /credential\nBearer access_token, CredentialRequest
+vci -> vci: access_token, c_nonce, proof,\nconfiguration/identifier 검증
+vci -> formatter: Credential 생성 요청\nclaims, issuer key, proof jwk
+formatter --> vci: Credential\nSD-JWT VC / mDoc 등
+vci --> wallet: CredentialResponse\n또는 202 Deferred(transaction_id)
+
+opt Deferred 발급
+    wallet -> vci: POST /deferred_credential\ntransaction_id
+    vci -> formatter: 지연 Credential 생성/조회
+    formatter --> vci: Credential
+    vci --> wallet: CredentialResponse
+end
+
+wallet -> vci: POST /notification\ncredential_accepted 등
+vci --> wallet: 200 OK / 204 No Content
+
+@enduml

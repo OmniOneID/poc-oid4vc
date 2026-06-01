@@ -1,0 +1,65 @@
+@startuml
+title OID4VP 제출
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor User as user
+participant "Wallet" as wallet
+
+box "Verifier" #EEF7FF
+participant "Verifier Service" as sp
+participant "OID4VP SDK" as sdk
+participant "Formatter SDK\n(SD-JWT VC / mDoc)" as formatter
+end box
+
+sp -> sdk: POST /oid4vp/initiate\n(dcql_query 또는 scope,\nresponse_mode, use_request_uri)
+sdk -> sdk: DCQL 검증\nscope 매핑 및 client_metadata 병합
+sdk -> sdk: state, nonce, request_id,\ntransaction_id 저장
+
+alt By Value
+    sdk --> sp: authorization_request_uri\n(openid4vp://?...dcql_query...)
+else By Reference
+    sdk --> sp: authorization_request_uri\n(openid4vp://?request_uri=...)
+else DC API
+    sdk --> sp: dc_api_request
+end
+
+sp -> user: QR, 링크, 브라우저 API 등으로 요청 표시
+user -> wallet: Authorization Request 전달
+
+opt By Reference
+    wallet -> sdk: GET /oid4vp/request/{request_id}
+    sdk -> sdk: request_id 세션 조회\n만료/1회 사용 검증
+    sdk -> sdk: Authorization Request Object 서명\nJWS 또는 x5c header
+    sdk --> wallet: application/oauth-authz-req+jwt
+end
+
+wallet -> wallet: DCQL 조건에 맞는 Credential 선택
+wallet -> wallet: VP Token 생성\nHolder Binding(aud, nonce)
+
+alt direct_post
+    wallet -> sdk: POST /oid4vp/response\nvp_token, state
+else query / fragment
+    wallet -> sdk: GET 또는 callback\nvp_token, state
+else dc_api
+    wallet -> sp: navigator.credentials.get() 응답
+    sp -> sdk: POST /oid4vp/dc-api/response\nvp_token, transaction_id
+end
+
+sdk -> sdk: state로 세션 조회
+sdk -> sdk: vp_token 파싱\nCredential Query ID별 분리
+sdk -> sdk: Issuer/Holder 식별자 추출 및 공개키 조회\n또는 x5c 신뢰 체인 검증 준비
+sdk -> formatter: 서명, Holder Binding,\nnonce/aud, DCQL 충족 검증
+formatter --> sdk: 검증 결과
+
+alt 검증 성공
+    sdk --> sp: 200 OK\nverification_result valid
+    sp --> user: 서비스 제공
+else 검증 실패 또는 사용자 취소
+    sdk --> sp: error, error_description,\nverification_result
+    sp --> user: 오류 안내
+end
+
+@enduml
